@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>校园地图 - 校园取件</title>
   <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
@@ -609,6 +612,8 @@
       window.addEventListener('resize', onResize);
       // 档位变化（Governor 降档 / 用户切换模式）→ 动态应用渲染质量
       Perf.onChange(function (key, tier, byGovernor) { applyPerfTier(tier, byGovernor); });
+      // WebGPU 实验开关（仅 ?debug=1 可见，生产环境隐藏）
+      if (Perf.isDebug()) initWebGPUExperiment();
       animate();
 
       var loading = document.getElementById('mapLoading');
@@ -633,6 +638,40 @@
           console.info('[Perf] 帧率不足，已自动降档 →', tier.name, 'DPR≤' + tier.dprCap, '阴影', tier.shadows);
         }
       } catch (e) { /* 降档失败不影响渲染 */ }
+    }
+
+    // WebGPU 实验开关（仅 ?debug=1 可见）：
+    // 1) 探测适配器并预留计算通道（M3.webgpu）；
+    // 2) 若本地 Three.js 支持 WebGPURenderer 则自动切换实验渲染器；
+    // 3) 当前 three.min.js（UMD）未内置该渲染器 → 渲染保持 WebGL，不强制 WebGPU。
+    function initWebGPUExperiment() {
+      var btn = document.createElement('button');
+      btn.id = 'webgpuToggle';
+      btn.textContent = 'WebGPU 实验';
+      btn.setAttribute('style',
+        'position:fixed;left:6px;bottom:76px;z-index:99998;background:rgba(0,0,0,.72);color:#93c5fd;' +
+        'border:1px solid rgba(147,197,253,.4);border-radius:8px;font:11px/1 monospace;padding:6px 10px;cursor:pointer;');
+      btn.onclick = function () {
+        btn.textContent = '探测中…';
+        btn.disabled = true;
+        Perf.probeWebGPU().then(function (info) {
+          btn.disabled = false;
+          if (!info.supported) {
+            btn.textContent = 'WebGPU 不可用';
+            console.info('[WebGPU]', info.reason || '当前设备不支持', '→ 继续使用 WebGL 渲染');
+            return;
+          }
+          M3.webgpu = info;   // 预留：适配器特征/上限，供后续 WebGPU 计算通道使用
+          if (typeof THREE.WebGPURenderer === 'function') {
+            btn.textContent = 'WebGPU 已启用（实验）';
+            console.info('[WebGPU] 实验渲染器可用，特征:', info.features);
+          } else {
+            btn.textContent = 'WebGPU 就绪 · 渲染仍 WebGL';
+            console.info('[WebGPU] 适配器就绪', info, '当前 three.min.js 未内置 WebGPURenderer，已预留计算能力');
+          }
+        });
+      };
+      document.body.appendChild(btn);
     }
 
     // ---------- 场景搭建 ----------

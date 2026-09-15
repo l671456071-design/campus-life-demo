@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -6,6 +6,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>取件记录 - 校园取件</title>
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
@@ -136,17 +139,20 @@
         return;
       }
 
+      // 展开为「日期头 + 记录卡」序列，走 App.renderChunked 分片渲染（>50 条分帧追加，避免长任务）
       var groups = groupByDate(filtered);
-      var html = '';
+      var items = [];
       groups.forEach(function (group, idx) {
         var label = idx === 0 ? '今天' : (idx === 1 ? '昨天' : '更早');
-        html += '<div style="font-size:12px; color:var(--color-text-sub); font-weight:500; margin:' + (idx === 0 ? '0 0 8px' : '20px 0 8px') + ';">' + label + '</div>';
-        group.forEach(function (r, i) {
-          html += renderRecordCard(r, idx, i);
-        });
+        items.push({ header: label, margin: idx === 0 ? '0 0 8px' : '20px 0 8px' });
+        group.forEach(function (r, i) { items.push({ record: r, gi: idx, i: i }); });
       });
-
-      list.innerHTML = html;
+      App.renderChunked(list, items, function (it) {
+        if (it.header) {
+          return '<div style="font-size:12px; color:var(--color-text-sub); font-weight:500; margin:' + it.margin + ';">' + it.header + '</div>';
+        }
+        return renderRecordCard(it.record, it.gi, it.i);
+      });
     }
 
     function groupByDate(records) {

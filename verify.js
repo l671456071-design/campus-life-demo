@@ -250,7 +250,7 @@ htmlFiles.forEach(f => {
       if (ref.startsWith('http://www.w3.org') || ref.startsWith('https://www.w3.org')) return; // SVG 命名空间，非资源加载
       externalRefs.push(f + ' → ' + ref);
     } else if (!ref.startsWith('javascript:') && !ref.startsWith('#') && ref !== '') {
-      const clean = ref.split('?')[0].split('#')[0];
+      const clean = ref.split('?')[0].split('#')[0].replace(/^\.\//, ''); // 归一化 ./ 相对前缀
       if (!localFiles.has(clean)) deadLinks.push(f + ' → ' + ref);
     }
   });
@@ -547,6 +547,57 @@ fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).forEach(f => {
   if (pPerf !== -1 && pPerf < html.indexOf('src="storage.js"')) perfOrderIssues.push(f);
 });
 check('perf.js 加载顺序全部正确（storage.js 之后）', perfOrderIssues.length === 0, perfOrderIssues.join(', '));
+
+// ---------- 8. PWA 离线缓存与体验增强 ----------
+console.log('\n[8] PWA 离线缓存（manifest/sw.js）+ 记录分片 + WebGPU 实验');
+const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.json'), 'utf8'));
+check('manifest.json 基本字段完整（name/start_url/scope/display）',
+  !!manifest.name && manifest.start_url === './index.html' && manifest.scope === './' && manifest.display === 'standalone');
+check('manifest 图标覆盖 192/512/maskable',
+  manifest.icons.some(i => i.sizes === '192x192' && i.type === 'image/png') &&
+  manifest.icons.filter(i => i.sizes === '512x512').length >= 2 &&
+  manifest.icons.some(i => i.purpose === 'maskable'));
+const icon192 = fs.readFileSync(path.join(ROOT, 'assets', 'icons', 'pwa-192.png'));
+const icon512 = fs.readFileSync(path.join(ROOT, 'assets', 'icons', 'pwa-512.png'));
+check('PWA PNG 图标真实有效（PNG 签名 + 非空）',
+  icon192.length > 100 && icon512.length > 100 &&
+  icon192.slice(1, 4).toString('ascii') === 'PNG' && icon512.slice(1, 4).toString('ascii') === 'PNG');
+
+const swSrc = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+check('sw.js 版本化缓存并在 activate 清理旧缓存',
+  /CACHE_NAME = 'campus-life-' \+ VERSION/.test(swSrc) && swSrc.indexOf('caches.delete') !== -1);
+check('sw.js 预缓存 App 外壳（页面/perf.js/ocr-worker.js/Three.js/jsQR）',
+  swSrc.indexOf("'./index.html'") !== -1 && swSrc.indexOf("'./perf.js'") !== -1 &&
+  swSrc.indexOf("'./ocr-worker.js'") !== -1 && swSrc.indexOf("'./libs/three/three.min.js'") !== -1 &&
+  swSrc.indexOf("'./libs/qr-scanner/jsQR.js'") !== -1);
+check('sw.js 业务接口永不缓存（/api/ /upload 跳过）', swSrc.indexOf('/api/') !== -1 && swSrc.indexOf('/upload') !== -1);
+check('sw.js 页面导航网络优先 + 离线回退缓存',
+  /req\.mode === 'navigate'[\s\S]{0,200}fetch\(req\)[\s\S]{0,400}caches\.match\(req, \{ ignoreSearch: true \}\)/.test(swSrc));
+check('sw.js 静态资源缓存优先 + 后台更新', swSrc.indexOf('cache.put(req, res.clone())') !== -1);
+check('sw.js 预缓存单资源失败不阻断安装（catch 容忍）', /cache\.add\([\s\S]{0,80}\.catch/.test(swSrc));
+check('sw.js 零依赖纯标准能力（无 require/fetch 依赖库）', swSrc.indexOf('self.addEventListener') !== -1 && !/\brequire\(/.test(swSrc));
+check('app.js 注册 SW（仅 HTTPS/localhost，失败静默降级）',
+  appJsSrc.indexOf("navigator.serviceWorker.register('./sw.js')") !== -1 &&
+  appJsSrc.indexOf("location.protocol === 'https:'") !== -1);
+
+const pwaPages = ['index.html', 'login.html', 'packages.html', 'food.html', 'food-detail.html', 'order.html',
+  'scan.html', 'map.html', 'settings.html', 'track.html', 'messages.html', 'profile.html',
+  'profile-edit.html', 'records.html', 'detail.html'];
+const missingPwaHead = pwaPages.filter(f => {
+  const h = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  return h.indexOf('href="./manifest.json"') === -1 ||
+    h.indexOf('name="theme-color"') === -1 || h.indexOf('apple-touch-icon') === -1;
+});
+check('15 个页面均接入 manifest/theme-color/apple-touch-icon（相对路径）', missingPwaHead.length === 0, missingPwaHead.join(', '));
+
+const recSrc = fs.readFileSync(path.join(ROOT, 'records.html'), 'utf8');
+check('取件记录列表接入分片渲染（日期头+记录卡展开）',
+  recSrc.indexOf('App.renderChunked(list, items') !== -1 && recSrc.indexOf('it.header') !== -1);
+check('WebGPU 探测仅采集适配器信息（perf.js probeWebGPU）',
+  perfSrc.indexOf('probeWebGPU') !== -1 && perfSrc.indexOf('requestAdapter') !== -1);
+check('地图页 WebGPU 实验开关仅 debug 模式可见', mapSrc.indexOf('if (Perf.isDebug()) initWebGPUExperiment()') !== -1);
+check('WebGPU 开关不强制切换渲染（仅预留计算通道）',
+  mapSrc.indexOf("typeof THREE.WebGPURenderer === 'function'") !== -1 && mapSrc.indexOf('M3.webgpu = info') !== -1);
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------
 Promise.all(asyncChecks || []).then(function () {

@@ -130,25 +130,79 @@ var Perf = (function () {
     try { return /(?:^|[?&])debug=1/.test(location.search); } catch (e) { return false; }
   }
 
+  // ---------- 6. WebGPU 实验探测 ----------
+  // 仅采集适配器信息并预留计算能力，不切换渲染路径（本地 three.min.js 为 UMD 版，
+  // 未内置 WebGPURenderer；后续升级 three.webgpu 模块时可用此信息直接接入）。
+  function probeWebGPU() {
+    return new Promise(function (resolve) {
+      if (caps.webgpuInfo) { resolve(caps.webgpuInfo); return; }
+      var done = function (info) { caps.webgpuInfo = info; resolve(info); };
+      try {
+        if (!navigator.gpu || !navigator.gpu.requestAdapter) {
+          done({ supported: false, reason: '浏览器未暴露 navigator.gpu' });
+          return;
+        }
+        navigator.gpu.requestAdapter().then(function (adapter) {
+          if (!adapter) { done({ supported: false, reason: '无可用 GPU 适配器' }); return; }
+          var info = { supported: true, vendor: '', architecture: '', features: [], maxTextureDim: null };
+          try {
+            if (adapter.info) {
+              info.vendor = adapter.info.vendor || '';
+              info.architecture = adapter.info.architecture || '';
+            }
+          } catch (e) { /* info 属性可选 */ }
+          try { info.features = Array.prototype.slice.call(adapter.features || []).slice(0, 6); } catch (e) {}
+          try { info.maxTextureDim = (adapter.limits && adapter.limits.maxTextureDimension2D) || null; } catch (e) {}
+          done(info);
+        }).catch(function (e) {
+          done({ supported: false, reason: (e && e.message) || '适配器请求失败' });
+        });
+      } catch (e) {
+        done({ supported: false, reason: (e && e.message) || '探测失败' });
+      }
+    });
+  }
+
   function mountDebugPanel() {
     if (!isDebug() || document.getElementById('perfDebug')) return;
     var el = document.createElement('div');
     el.id = 'perfDebug';
     el.setAttribute('style',
       'position:fixed;top:6px;left:6px;z-index:99999;background:rgba(0,0,0,.72);color:#4ade80;' +
-      'font:10px/1.55 monospace;padding:6px 9px;border-radius:8px;pointer-events:none;white-space:pre;');
+      'font:10px/1.55 monospace;padding:6px 9px;border-radius:8px;white-space:pre;');
     document.body.appendChild(el);
+    // WebGPU 探测入口（点击面板内「点按探测」）
+    el.addEventListener('click', function (ev) {
+      var t = ev.target;
+      if (t && t.getAttribute && t.getAttribute('data-action') === 'webgpu-probe') {
+        t.textContent = '探测中…';
+        probeWebGPU();
+      }
+    });
     setInterval(function () {
       var mem = 'n/a';
       try {
         if (performance.memory) mem = (performance.memory.usedJSHeapSize / 1048576).toFixed(1) + 'MB';
       } catch (e) {}
-      el.textContent =
+      var gpuRow;
+      if (caps.webgpuInfo === undefined) {
+        gpuRow = 'WebGPU ' + (caps.webgpu ? 1 : 0) +
+          (caps.webgpu ? ' · <span data-action="webgpu-probe" style="cursor:pointer;text-decoration:underline;">点按探测</span>' : '');
+      } else {
+        var wi = caps.webgpuInfo;
+        gpuRow = wi.supported
+          ? 'WebGPU 适配: ' + (wi.vendor || wi.architecture || '未知') +
+            (wi.maxTextureDim ? ' · 纹理上限 ' + wi.maxTextureDim : '') +
+            ' · 渲染仍走 WebGL（实验预留）'
+          : 'WebGPU 不可用（' + (wi.reason || '') + '）· 渲染走 WebGL';
+      }
+      el.innerHTML =
         'FPS ' + fps + ' / 上限 ' + tier().fpsCap +
         '\n档位 ' + currentTierKey + ' · ' + tier().name + (autoLevel !== currentTierKey ? '（已降档）' : '') +
         '\n模式 ' + userMode + ' / 设备评估 ' + autoLevel +
         '\nCPU ' + caps.cpuCores + ' 核 / 内存 ' + (caps.deviceMemory ? caps.deviceMemory + 'GB' : 'n/a') +
-        '\nWebGL ' + (caps.webgl ? 1 : 0) + ' / WebGL2 ' + (caps.webgl2 ? 1 : 0) + ' / WebGPU ' + (caps.webgpu ? 1 : 0) +
+        '\nWebGL ' + (caps.webgl ? 1 : 0) + ' / WebGL2 ' + (caps.webgl2 ? 1 : 0) +
+        '\n' + gpuRow +
         '\n摄像头 ' + (caps.camera ? 1 : 0) + ' / 条码 ' + (caps.barcodeDetector ? 1 : 0) + ' / 定位 ' + (caps.geolocation ? 1 : 0) +
         '\nDPR ' + (window.devicePixelRatio || 1).toFixed(2) + ' / JS内存 ' + mem;
     }, 1000);
@@ -169,6 +223,7 @@ var Perf = (function () {
     onChange: onChange,
     setMode: setMode,
     isDebug: isDebug,
+    probeWebGPU: probeWebGPU,
     TIERS: TIERS,
   };
 })();

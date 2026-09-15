@@ -491,3 +491,17 @@ var App = {
 document.addEventListener('DOMContentLoaded', function () {
   App.init();
 });
+
+// ---- PWA：Service Worker 注册（离线缓存 App 外壳与静态资源） ----
+// 仅在 HTTPS 或 localhost 下生效（SW 安全要求）；注册失败静默降级为在线模式
+(function () {
+  try {
+    var secure = location.protocol === 'https:' ||
+      location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if ('serviceWorker' in navigator && secure) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('./sw.js').catch(function () { /* 降级在线模式 */ });
+      });
+    }
+  } catch (e) { /* SW 不可用不影响 App 运行 */ }
+})();
