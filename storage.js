@@ -252,6 +252,7 @@ var Storage = {
       notifyPickup: true,    // 取件提醒
       notifyMessage: true,   // 消息通知
       notifySound: true,     // 声音提醒
+      perfMode: 'auto',      // 性能模式：auto（按设备自动）| saver（省电）| perf（高性能）
     };
     var saved = this._read(this.KEYS.settings, {});
     return Object.assign({}, defaults, saved);

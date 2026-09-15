@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -106,11 +106,12 @@
       animation: scanLine 2.5s ease-in-out infinite;
       top: 4px;
       border-radius: 2px;
+      will-change: transform;   /* GPU 合成层：动画不触发 Layout/Paint */
     }
     @keyframes scanLine {
-      0% { top: 4px; }
-      50% { top: calc(100% - 6px); }
-      100% { top: 4px; }
+      0% { transform: translateY(0); }
+      50% { transform: translateY(230px); }
+      100% { transform: translateY(0); }
     }
 
     .scan-engine-hint {
@@ -385,6 +386,7 @@
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
+  <script src="perf.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
   <script src="libs/qr-scanner/jsQR.js"></script>
@@ -405,18 +407,30 @@
       busy: false,             // 单帧解码进行中
       lastScanAt: 0,
       torchOn: false,
-      ocrWorker: null,         // Tesseract 本地 worker（懒加载）
+      scanInterval: 250,       // 二维码分析间隔（ms，按性能档位调整）
+      ocrInterval: 3200,       // OCR 分析间隔（ms，按性能档位调整）
+      ocrWorker: null,         // Tesseract 本地 worker（懒加载，独立线程运行）
       ocrReady: false,
       ocrLoading: false,
       ocrBusy: false,
       lastOcrAt: 0,
       lastOcrText: '',
+      ocrPipe: undefined,      // ocr-worker.js：预处理 Worker（二值化/放大不占主线程）
+      ocrPend: {},             // 待响应的预处理请求
+      ocrSeq: 0,
     };
 
     document.addEventListener('DOMContentLoaded', function () {
       SCAN.video = document.getElementById('scanVideo');
       SCAN.canvas = document.getElementById('scanCanvas');
       SCAN.ctx = SCAN.canvas.getContext('2d', { willReadFrequently: true });
+
+      // 性能档位：扫码 / OCR 分析频率按设备等级调整（perf.js），避免低配设备发热
+      try {
+        var tier = Perf.tier();
+        SCAN.scanInterval = tier.scanInterval;
+        SCAN.ocrInterval = tier.ocrInterval;
+      } catch (e) { /* perf.js 不可用时使用默认值 */ }
 
       // demo 模式：展示可体验的演示取件码，方便外部用户快速上手
       if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) {
@@ -523,15 +537,15 @@
 
     function detectFrame(ts) {
       if (!SCAN.scanning) return;
-      // 二维码：每 250ms 一帧
-      if (ts - SCAN.lastScanAt >= 250 && SCAN.video.readyState >= 2) {
+      // 二维码：按档位节流分析（约 200–350ms 一帧），不逐帧识别
+      if (ts - SCAN.lastScanAt >= SCAN.scanInterval && SCAN.video.readyState >= 2 && !SCAN.busy) {
         SCAN.lastScanAt = ts;
         detectOnce().then(function (text) {
-          if (text) onDecoded(text, 'qr');
+          if (text) onDecoded(text, 'qr');   // 识别成功 → onDecoded 内立即 pauseScan 停止分析
         });
       }
-      // OCR：每 3.2s 对扫描框区域跑一次（仅在没有二维码命中时）
-      if (ts - SCAN.lastOcrAt >= 3200 && SCAN.video.readyState >= 2 && !SCAN.busy) {
+      // OCR：按档位节流（3.2s / 5s，低配更省电），仅在没有二维码解码进行中时
+      if (ts - SCAN.lastOcrAt >= SCAN.ocrInterval && SCAN.video.readyState >= 2 && !SCAN.busy) {
         SCAN.lastOcrAt = ts;
         runOcrFrame();
       }
@@ -543,7 +557,10 @@
       SCAN.busy = true;
       try {
         if (SCAN.useNativeDetector && SCAN.detector) {
-          var codes = await SCAN.detector.detect(SCAN.video);
+          // 只截取扫描框区域送检，不处理整张摄像头画面
+          var region = cropScanFrame(480);
+          if (!region) return null;
+          var codes = await SCAN.detector.detect(region);
           if (codes && codes.length > 0 && codes[0].rawValue) return codes[0].rawValue;
           return null;
         }
@@ -555,20 +572,26 @@
       }
     }
 
-    // jsQR：截取扫描框映射到视频源的区域，缩放后送入本地识别库
-    function detectWithJsQR() {
-      if (typeof jsQR !== 'function') return null;
+    // 截取扫描框映射到视频源的区域，缩放到 maxSide 内（降低 CPU/GPU 压力）
+    function cropScanFrame(maxSide) {
       var v = SCAN.video;
       var vw = v.videoWidth, vh = v.videoHeight;
       if (!vw || !vh) return null;
       var r = computeScanRegion(vw, vh);
       if (r.w < 10 || r.h < 10) return null;
-      var maxSide = 480;
       var scale = Math.min(1, maxSide / Math.max(r.w, r.h));
       var c = SCAN.canvas;
       c.width = Math.max(1, Math.round(r.w * scale));
       c.height = Math.max(1, Math.round(r.h * scale));
       SCAN.ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+      return c;
+    }
+
+    // jsQR：在扫描框截取区域内做本地解码
+    function detectWithJsQR() {
+      if (typeof jsQR !== 'function') return null;
+      var c = cropScanFrame(480);
+      if (!c) return null;
       var img = SCAN.ctx.getImageData(0, 0, c.width, c.height);
       var result = jsQR(img.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
       return result && result.data ? result.data : null;
@@ -626,7 +649,7 @@
       }
     }
 
-    // 抓取扫描框区域（放大 2 倍 + 二值化增强，提高数字识别率）
+    // 抓取扫描框区域（仅 drawImage，重活交给 Worker / 识别交给 Tesseract 独立线程）
     function captureOcrCanvas() {
       var v = SCAN.video;
       var vw = v.videoWidth, vh = v.videoHeight;
@@ -634,20 +657,98 @@
       var r = computeScanRegion(vw, vh);
       if (r.w < 40 || r.h < 40) return null;
       var c = document.createElement('canvas');
-      c.width = r.w * 2;
-      c.height = r.h * 2;
+      c.width = r.w;
+      c.height = r.h;
       var ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
-      // 灰度 + 对比度增强
-      var img = ctx.getImageData(0, 0, c.width, c.height);
+      return c;
+    }
+
+    // ---------- 2.6 OCR 预处理 Worker（ocr-worker.js） ----------
+    // 流水线：Camera → 截取扫描区域 → ImageBitmap → Worker（灰度+二值化+放大）→ 回传
+    //         → Tesseract（内部独立线程）OCR → 提取取件码
+    // 主线程只做小图 drawImage，识别与预处理均不阻塞动画/点击。
+    // 降级：不支持 Worker / OffscreenCanvas / ImageBitmap 时回退主线程同步预处理。
+    function ensureOcrPipe() {
+      if (SCAN.ocrPipe === undefined) {
+        try { SCAN.ocrPipe = new Worker('ocr-worker.js'); } catch (e) { SCAN.ocrPipe = null; }
+        if (SCAN.ocrPipe) {
+          SCAN.ocrPend = {};
+          SCAN.ocrPipe.onmessage = function (ev) {
+            var m = ev.data || {};
+            var cb = SCAN.ocrPend[m.id];
+            if (!cb) return;
+            delete SCAN.ocrPend[m.id];
+            clearTimeout(cb.timer);
+            cb.resolve(m.type === 'binarized' ? m.bitmap : null);
+          };
+          SCAN.ocrPipe.onerror = function () {
+            // Worker 异常：终止并永久回退同步路径
+            try { SCAN.ocrPipe.terminate(); } catch (e) {}
+            SCAN.ocrPipe = null;
+            Object.keys(SCAN.ocrPend).forEach(function (k) {
+              clearTimeout(SCAN.ocrPend[k].timer);
+              SCAN.ocrPend[k].resolve(null);
+            });
+            SCAN.ocrPend = {};
+          };
+        }
+      }
+      return SCAN.ocrPipe;
+    }
+
+    function preprocessViaWorker(source, scale, threshold) {
+      return new Promise(function (resolve) {
+        var w = ensureOcrPipe();
+        if (!w || typeof createImageBitmap !== 'function' || typeof OffscreenCanvas === 'undefined') { resolve(null); return; }
+        var id = ++SCAN.ocrSeq;
+        var timer = setTimeout(function () {  // 3s 超时 → 回退同步
+          if (SCAN.ocrPend[id]) { SCAN.ocrPend[id].resolve(null); delete SCAN.ocrPend[id]; }
+        }, 3000);
+        SCAN.ocrPend[id] = { resolve: resolve, timer: timer };
+        createImageBitmap(source).then(function (bmp) {
+          if (!SCAN.ocrPipe) { if (bmp.close) bmp.close(); resolve(null); return; }
+          w.postMessage({ type: 'binarize', id: id, bitmap: bmp, scale: scale, threshold: threshold }, [bmp]);
+        }).catch(function () {
+          if (SCAN.ocrPend[id]) { clearTimeout(SCAN.ocrPend[id].timer); SCAN.ocrPend[id].resolve(null); delete SCAN.ocrPend[id]; }
+        });
+      });
+    }
+
+    // Worker 回传的 ImageBitmap → canvas（Tesseract 识别输入）
+    function bitmapToCanvas(bitmap) {
+      if (!bitmap) return null;
+      var c = document.createElement('canvas');
+      c.width = bitmap.width; c.height = bitmap.height;
+      c.getContext('2d').drawImage(bitmap, 0, 0);
+      if (bitmap.close) bitmap.close();
+      return c;
+    }
+
+    // 同步回退：放大 + 灰度 + 二值化（主线程，仅在 Worker 不可用时）
+    function binarizeCanvasSync(src, scale, threshold) {
+      var ow = Math.max(1, Math.round(src.width * scale));
+      var oh = Math.max(1, Math.round(src.height * scale));
+      var c = document.createElement('canvas');
+      c.width = ow; c.height = oh;
+      var ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(src, 0, 0, ow, oh);
+      var img = ctx.getImageData(0, 0, ow, oh);
       var d = img.data;
       for (var i = 0; i < d.length; i += 4) {
         var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        g = g < 128 ? 0 : 255;
+        g = g < threshold ? 0 : 255;
         d[i] = d[i + 1] = d[i + 2] = g;
       }
       ctx.putImageData(img, 0, 0);
       return c;
+    }
+
+    // 统一预处理入口：Worker 优先，失败回退同步
+    async function preprocessForOcr(source, scale, threshold) {
+      var bmp = await preprocessViaWorker(source, scale, threshold);
+      var c = bitmapToCanvas(bmp);
+      return c || binarizeCanvasSync(source, scale, threshold);
     }
 
     async function runOcrFrame() {
@@ -658,7 +759,8 @@
         if (!ok || !SCAN.scanning) return;
         var c = captureOcrCanvas();
         if (!c) return;
-        var result = await SCAN.ocrWorker.recognize(c);
+        var processed = await preprocessForOcr(c, 2, 128);   // 放大 2 倍 + 二值化增强
+        var result = await SCAN.ocrWorker.recognize(processed);
         var text = result && result.data && result.data.text ? result.data.text : '';
         if (text && text.replace(/\s/g, '').length >= 3) {
           onOcrText(text);
@@ -814,7 +916,7 @@
       });
     }
 
-    // 相册图片 OCR（本地 Tesseract，不上传）
+    // 相册图片 OCR（本地 Tesseract，不上传；预处理走 Worker）
     async function ocrImageFile(file) {
       var ok = await ensureOcrWorker();
       if (!ok) return null;
@@ -827,15 +929,8 @@
         c.height = Math.round(h * scale);
         var ctx = c.getContext('2d', { willReadFrequently: true });
         ctx.drawImage(src, 0, 0, c.width, c.height);
-        var img = ctx.getImageData(0, 0, c.width, c.height);
-        var d = img.data;
-        for (var i = 0; i < d.length; i += 4) {
-          var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-          g = g < 140 ? 0 : 255;
-          d[i] = d[i + 1] = d[i + 2] = g;
-        }
-        ctx.putImageData(img, 0, 0);
-        var result = await SCAN.ocrWorker.recognize(c);
+        var processed = await preprocessForOcr(c, 1, 140);   // 二值化增强（Worker 优先）
+        var result = await SCAN.ocrWorker.recognize(processed);
         return result && result.data && result.data.text ? result.data.text : null;
       } finally {
         if (src.close) src.close();

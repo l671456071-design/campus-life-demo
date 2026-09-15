@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -162,17 +162,13 @@
             listEl.innerHTML = App.emptyState('暂无快递', '没有符合条件的快递记录');
             return;
           }
-          var html = '';
-          res.data.forEach(function (pkg, i) {
-            html += renderPkgCard(pkg, i);
-          });
-          listEl.innerHTML = html;
+          // 大列表分片渲染（>50 条分帧追加，避免长任务与滚动掉帧）
+          App.renderChunked(listEl, res.data, renderPkgCard);
         }).catch(function () {
           isLoading = false;
           listEl.innerHTML = App.errorState('加载失败', '请检查网络后重试', 'loadPackages');
         });
       }
-
       // 搜索
       searchInput.addEventListener('input', function () {
         App.state.keyword = this.value.trim();

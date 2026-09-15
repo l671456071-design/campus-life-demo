@@ -412,6 +412,7 @@
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
+  <script src="perf.js"></script>
   <script src="api.js"></script>
   <script src="app.js"></script>
   <script src="libs/three/three.min.js"></script>
@@ -556,10 +557,12 @@
 
     function initThree() {
       M3.container = document.getElementById('mapContainer');
+      // 性能档位：DPR 上限 / 阴影 / 细节按设备等级（perf.js），避免手机 GPU 过热
+      M3.tier = Perf.tier();
       M3.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
-      M3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      M3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, M3.tier.dprCap));
       M3.renderer.setSize(M3.container.clientWidth, M3.container.clientHeight);
-      M3.renderer.shadowMap.enabled = true;
+      M3.renderer.shadowMap.enabled = M3.tier.shadows;
       M3.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       if (THREE.sRGBEncoding !== undefined) M3.renderer.outputEncoding = THREE.sRGBEncoding;
       M3.container.insertBefore(M3.renderer.domElement, M3.container.firstChild);
@@ -581,9 +584,10 @@
       M3.scene.add(hemi);
       var sun = new THREE.DirectionalLight(0xffffff, dark ? 0.55 : 0.85);
       sun.position.set(70, 100, 45);
-      sun.castShadow = true;
-      sun.shadow.mapSize.width = 1024;
-      sun.shadow.mapSize.height = 1024;
+      M3.sun = sun;
+      sun.castShadow = M3.tier.shadows;
+      sun.shadow.mapSize.width = M3.tier.shadowMapSize;
+      sun.shadow.mapSize.height = M3.tier.shadowMapSize;
       sun.shadow.camera.left = -85; sun.shadow.camera.right = 85;
       sun.shadow.camera.top = 85; sun.shadow.camera.bottom = -85;
       sun.shadow.camera.near = 10; sun.shadow.camera.far = 300;
@@ -603,10 +607,32 @@
 
       bindControls();
       window.addEventListener('resize', onResize);
+      // 档位变化（Governor 降档 / 用户切换模式）→ 动态应用渲染质量
+      Perf.onChange(function (key, tier, byGovernor) { applyPerfTier(tier, byGovernor); });
       animate();
 
       var loading = document.getElementById('mapLoading');
       if (loading) setTimeout(function () { loading.remove(); }, 250);
+    }
+
+    // 档位变化时动态调整：渲染分辨率 / 阴影 / 阴影贴图尺寸（无需重建场景）
+    function applyPerfTier(tier, byGovernor) {
+      M3.tier = tier;
+      try {
+        if (M3.renderer) {
+          M3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, tier.dprCap));
+          M3.renderer.shadowMap.enabled = tier.shadows;
+        }
+        if (M3.sun) {
+          M3.sun.castShadow = tier.shadows;
+          M3.sun.shadow.mapSize.width = tier.shadowMapSize;
+          M3.sun.shadow.mapSize.height = tier.shadowMapSize;
+          if (M3.sun.shadow.map) { M3.sun.shadow.map.dispose(); M3.sun.shadow.map = null; }
+        }
+        if (byGovernor && Perf.isDebug()) {
+          console.info('[Perf] 帧率不足，已自动降档 →', tier.name, 'DPR≤' + tier.dprCap, '阴影', tier.shadows);
+        }
+      } catch (e) { /* 降档失败不影响渲染 */ }
     }
 
     // ---------- 场景搭建 ----------
@@ -712,20 +738,46 @@
         });
       });
 
-      // 建筑
+      // 建筑（按颜色分组 InstancedMesh：几十栋楼 → 每色 1 个 draw call）
+      var unitBox = new THREE.BoxGeometry(1, 1, 1);
+      var groups = [];  // [{color, body: [Matrix4], band: [Matrix4]}]
+      function groupFor(color) {
+        for (var i = 0; i < groups.length; i++) { if (groups[i].color === color) return groups[i]; }
+        var g = { color: color, body: [], band: [] };
+        groups.push(g);
+        return g;
+      }
       BUILDINGS.forEach(function (b) {
-        var mesh = addBox(b[0], b[1], b[2], b[3], b[4], b[5]);
-        // 窗户纹理感：南立面贴一条浅色带
+        var g = groupFor(b[5]);
         var p = toWorld(b[0], b[1]);
-        var band = new THREE.Mesh(new THREE.BoxGeometry(b[2] * 0.88, b[4] * 0.55, 0.12), stdMat(new THREE.Color(b[5]).offsetHSL(0, 0, 0.12).getHex(), { roughness: 0.6 }));
-        band.position.set(p.x, b[4] * 0.5, p.z + b[3] / 2 + 0.05);
-        M3.scene.add(band);
+        var mtx = new THREE.Matrix4();
+        // 楼体
+        mtx.makeScale(b[2], b[4], b[3]);
+        mtx.setPosition(p.x, b[4] / 2, p.z);
+        g.body.push(mtx.clone());
+        // 南立面窗户感浅色带（中心保持在楼高一半）
+        var bandH = b[4] * 0.55;
+        mtx.makeScale(b[2] * 0.88, bandH, 0.12);
+        mtx.setPosition(p.x, b[4] * 0.5, p.z + b[3] / 2 + 0.05);
+        g.band.push(mtx.clone());
+        // 楼名标签（Canvas Sprite，保持独立）
         if (b[6]) {
           var label = makeLabel(b[6], { fontSize: 40, scale: 0.11 });
-          var lp = toWorld(b[0], b[1]);
-          label.position.set(lp.x, b[4] + 1.6, lp.z);
+          label.position.set(p.x, b[4] + 1.6, p.z);
           M3.scene.add(label);
         }
+      });
+      groups.forEach(function (g) {
+        var bodyMesh = new THREE.InstancedMesh(unitBox, stdMat(g.color), g.body.length);
+        g.body.forEach(function (m, i) { bodyMesh.setMatrixAt(i, m); });
+        bodyMesh.castShadow = true;
+        bodyMesh.receiveShadow = true;
+        M3.scene.add(bodyMesh);
+        // 立面带颜色 = 楼色提亮
+        var bandColor = new THREE.Color(g.color).offsetHSL(0, 0, 0.12).getHex();
+        var bandMesh = new THREE.InstancedMesh(unitBox, stdMat(bandColor, { roughness: 0.6 }), g.band.length);
+        g.band.forEach(function (m, i) { bandMesh.setMatrixAt(i, m); });
+        M3.scene.add(bandMesh);
       });
       // 图书馆顶冠
       var libP = toWorld(39, 44.5);
@@ -742,14 +794,16 @@
       gymRoof.castShadow = true;
       M3.scene.add(gymRoof);
 
-      // 树木（低面数：圆锥 + 圆柱，实例化）
+      // 树木（低面数：圆锥 + 圆柱，实例化；低档设备按 detail 抽稀数量）
+      var detailStep = M3.tier.detail >= 0.8 ? 1 : (M3.tier.detail >= 0.6 ? 2 : 3);
+      var trees = TREE_POS.filter(function (_, i) { return i % detailStep === 0; });
       var trunkGeo = new THREE.CylinderGeometry(0.16, 0.22, 1.1, 6);
       var crownGeo = new THREE.ConeGeometry(1.0, 2.2, 7);
-      var trunkMesh = new THREE.InstancedMesh(trunkGeo, stdMat(0x8A6B4F), TREE_POS.length);
-      var crownMesh = new THREE.InstancedMesh(crownGeo, stdMat(0x5FA35B), TREE_POS.length);
+      var trunkMesh = new THREE.InstancedMesh(trunkGeo, stdMat(0x8A6B4F), trees.length);
+      var crownMesh = new THREE.InstancedMesh(crownGeo, stdMat(0x5FA35B), trees.length);
       trunkMesh.castShadow = true; crownMesh.castShadow = true;
       var mtx = new THREE.Matrix4();
-      TREE_POS.forEach(function (t, i) {
+      trees.forEach(function (t, i) {
         var p = toWorld(t[0], t[1]);
         var s = 0.8 + ((i * 37) % 10) / 18;
         mtx.makeScale(s, s, s); mtx.setPosition(p.x, 0.55 * s, p.z);
@@ -760,12 +814,13 @@
       M3.scene.add(trunkMesh);
       M3.scene.add(crownMesh);
 
-      // 路灯（灯杆 + 发光灯头，实例化）
+      // 路灯（灯杆 + 发光灯头，实例化；低档同步抽稀）
+      var lamps = LIGHT_NODE_OFFSET.filter(function (_, i) { return i % detailStep === 0; });
       var poleGeo = new THREE.CylinderGeometry(0.09, 0.12, 3.4, 6);
       var lampGeo = new THREE.SphereGeometry(0.34, 10, 8);
-      var poleMesh = new THREE.InstancedMesh(poleGeo, stdMat(0x64748B), LIGHT_NODE_OFFSET.length);
-      var lampMesh = new THREE.InstancedMesh(lampGeo, stdMat(0xFFE9A8, { emissive: 0xFFD166, emissiveIntensity: 0.9 }), LIGHT_NODE_OFFSET.length);
-      LIGHT_NODE_OFFSET.forEach(function (l, i) {
+      var poleMesh = new THREE.InstancedMesh(poleGeo, stdMat(0x64748B), lamps.length);
+      var lampMesh = new THREE.InstancedMesh(lampGeo, stdMat(0xFFE9A8, { emissive: 0xFFD166, emissiveIntensity: 0.9 }), lamps.length);
+      lamps.forEach(function (l, i) {
         var n = CAMPUS_DATA.roads.nodes[l[0]];
         var p = toWorld(n.x + l[1], n.y + l[2]);
         mtx.identity(); mtx.setPosition(p.x, 1.7, p.z);
@@ -1434,8 +1489,19 @@
 
     // ---------- 渲染循环 ----------
     var lastUiTick = 0;
+    var lastFrameTime = 0;
+    var lowDetail = false;   // 低档设备：跳过次要动画，减少 GPU 负担
     function animate() {
       requestAnimationFrame(animate);
+      // 动态帧率：按档位 fpsCap 限帧（60 → 45 → 30），不强制高帧率
+      var now = (performance && performance.now) ? performance.now() : Date.now();
+      var fpsCap = (M3.tier && M3.tier.fpsCap) || 60;
+      if (now - lastFrameTime < 1000 / fpsCap - 2) return;
+      lastFrameTime = now;
+      // FPS Governor：采样真实帧率，连续掉帧自动降档
+      Perf.tick(now);
+      lowDetail = M3.tier.detail < 0.6;
+
       var t = M3.clock.getElapsedTime();
 
       // 相机
@@ -1449,7 +1515,7 @@
       // POI 呼吸动画
       M3.pins.forEach(function (pin, i) {
         pin.head.position.y = pin.baseY + Math.sin(t * 2 + i * 0.8) * 0.14;
-        pin.glow.scale.setScalar(1 + Math.sin(t * 2.4 + i) * 0.08);
+        if (!lowDetail) pin.glow.scale.setScalar(1 + Math.sin(t * 2.4 + i) * 0.08);
       });
       // 用户光圈脉冲
       if (M3.userRing) {
@@ -1463,8 +1529,10 @@
           var u = (t * 0.12 + i / 3) % 1;
           var pos = M3.routeGroup.curve.getPointAt(u);
           p.position.copy(pos);
-          var s = 0.7 + Math.sin(t * 6 + i * 2) * 0.25;
-          p.scale.setScalar(s);
+          if (!lowDetail) {
+            var s = 0.7 + Math.sin(t * 6 + i * 2) * 0.25;
+            p.scale.setScalar(s);
+          }
         });
       }
 

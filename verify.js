@@ -365,10 +365,12 @@ function loadEnv(opts) {
   run('mock.js');
   run('demo-data.js');
   run('storage.js');
+  run('perf.js');
   run('api-client.js');
   return { sandbox: sandbox, store: store,
     APP_CONFIG: vm.runInContext('APP_CONFIG', sandbox),
     Storage: vm.runInContext('Storage', sandbox),
+    Perf: vm.runInContext('Perf', sandbox),
     ApiClient: vm.runInContext('ApiClient', sandbox),
     DB: vm.runInContext('DB', sandbox),
     DEMO_DATA: vm.runInContext('DEMO_DATA', sandbox) };
@@ -448,13 +450,103 @@ check('全部页面脚本顺序：config.js → mock.js → demo-data.js → sto
 const gitignore = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
 check('.gitignore 排除 backend/data.json', gitignore.indexOf('backend/data.json') !== -1);
 const backendConfig = fs.readFileSync(path.join(ROOT, 'backend', 'config.js'), 'utf8');
-check('backend/config.js 无硬编码快递鸟凭证', backendConfig.indexOf('1936341') === -1 && backendConfig.indexOf('43faf991') === -1);
+check('backend/config.js 无硬编码快递鸟凭证', /KDNIAO_(EBUSINESS_ID|API_KEY):\s*process\.env/.test(backendConfig) && !/KDNIAO_(EBUSINESS_ID|API_KEY):\s*['"][A-Za-z0-9]{4,}/.test(backendConfig));
 check('后端快递鸟凭证改由环境变量注入', backendConfig.indexOf('process.env.KDNIAO_API_KEY') !== -1);
 const reportSrc = fs.readFileSync(path.join(ROOT, '本地化升级报告.html'), 'utf8');
-check('升级报告已脱敏 Tailscale 内网 IP', reportSrc.indexOf('100.86.207.111') === -1);
+check('升级报告已脱敏 Tailscale 内网 IP', reportSrc.indexOf('100.86.') === -1);
 const frontBundle = ['mock.js', 'demo-data.js', 'storage.js', 'api.js', 'api-client.js', 'app.js', 'config.js']
   .map(f => fs.readFileSync(path.join(ROOT, f), 'utf8')).join('\n');
 check('前端代码无 file:// / C:\\ 绝对路径', !/file:\/\/\/|[A-Za-z]:\\\\/.test(frontBundle));
+
+// ---------- 7. 硬件加速层 ----------
+console.log('\n[7] 硬件加速层（perf.js / ocr-worker.js / GPU 渲染 / 分片渲染）');
+const perfSrc = fs.readFileSync(path.join(ROOT, 'perf.js'), 'utf8');
+const mapSrc = fs.readFileSync(path.join(ROOT, 'map.html'), 'utf8');
+const scanSrc = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+const settingsSrc = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+const foodSrc = fs.readFileSync(path.join(ROOT, 'food.html'), 'utf8');
+const pkgSrc = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+const appJsSrc = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+
+// 7.1 能力检测：任何 API 缺失都不崩溃（沙箱 navigator 为空对象）
+check('perf.js 在无浏览器能力沙箱中加载不崩溃', typeof pub.Perf === 'object' && pub.Perf !== null);
+check('Perf 暴露完整 API（caps/tier/tick/onChange/setMode）',
+  typeof pub.Perf.tier === 'function' && typeof pub.Perf.tick === 'function' &&
+  typeof pub.Perf.onChange === 'function' && typeof pub.Perf.setMode === 'function' && !!pub.Perf.caps);
+check('能力检测逐项 try-catch（检测代码不含裸访问）',
+  (perfSrc.match(/try \{ caps\./g) || []).length >= 6);
+check('能力缺失时设备评估降为 low（沙箱无任何硬件信息）', pub.Perf.autoLevel === 'low');
+check('Debug 面板仅 ?debug=1 显示（生产环境隐藏）', perfSrc.indexOf('debug=1') !== -1 && /isDebug\(\) \|\| document\.getElementById\('perfDebug'\)/.test(perfSrc.replace(/\s+/g, ' ')));
+
+// 7.2 三档质量档位参数
+const T = pub.Perf.TIERS;
+check('三档性能等级（high/medium/low）齐全', !!T.high && !!T.medium && !!T.low);
+check('DPR 上限分级（high 2 / medium 1.5 / low 1）', T.high.dprCap === 2 && T.medium.dprCap === 1.5 && T.low.dprCap === 1);
+check('阴影分级（low 关闭阴影 + 512 阴影贴图）', T.high.shadows === true && T.low.shadows === false && T.low.shadowMapSize === 512);
+check('扫码频率分级（200/250/350ms，非逐帧识别）', T.high.scanInterval === 200 && T.medium.scanInterval === 250 && T.low.scanInterval === 350);
+check('OCR 频率分级（低配 5000ms）', T.high.ocrInterval === 3200 && T.low.ocrInterval === 5000);
+check('帧率上限分级（low 限 30fps）', T.high.fpsCap === 60 && T.low.fpsCap === 30);
+
+// 7.3 用户性能模式（自动 / 省电 / 高性能）
+check('storage.js 默认 perfMode 为 auto', pub.Storage.getSettings().perfMode === 'auto');
+check('省电模式强制 low 档', (pub.Perf.setMode('saver'), pub.Perf.tierKey()) === 'low');
+check('高性能模式强制 high 档', (pub.Perf.setMode('perf'), pub.Perf.tierKey()) === 'high');
+check('非法模式被忽略', (pub.Perf.setMode('hack'), pub.Perf.tierKey()) === 'high');
+check('自动模式回到设备评估档位', (pub.Perf.setMode('auto'), pub.Perf.tierKey()) === pub.Perf.autoLevel);
+check('settings.html 提供性能模式三选项', settingsSrc.indexOf('data-perf="auto"') !== -1 && settingsSrc.indexOf('data-perf="saver"') !== -1 && settingsSrc.indexOf('data-perf="perf"') !== -1);
+check('settings.html 切换时调用 Perf.setMode 并持久化', settingsSrc.indexOf('Perf.setMode(mode)') !== -1 && /setPerfMode[\s\S]{0,400}saveSettings/.test(settingsSrc));
+
+// 7.4 FPS Governor：连续掉帧自动降档 + onChange 通知
+let govEvents = [];
+pub.Perf.setMode('perf');                 // 回到 high 档
+pub.Perf.onChange(function (key, tier, byGov) { if (byGov) govEvents.push(key); });
+pub.Perf.tick(1000);                      // 初始化采样起点
+pub.Perf.tick(2500);                      // 1.5s 内 1 帧 → fps≈1，badSamples=1
+pub.Perf.tick(4000);                      // 再 1 帧 → badSamples=2 → 降档
+check('连续掉帧触发 Governor 自动降档', pub.Perf.tierKey() === 'medium', '当前档位 ' + pub.Perf.tierKey());
+check('Governor 降档通过 onChange 通知渲染层', govEvents.indexOf('medium') !== -1);
+
+// 7.5 3D 地图 GPU 集成（map.html）
+check('map.html 引入 perf.js 且位于 storage.js 之后', mapSrc.indexOf('src="perf.js"') > mapSrc.indexOf('src="storage.js"'));
+check('3D 地图按档位设置 DPR 上限', mapSrc.indexOf('M3.tier.dprCap') !== -1);
+check('3D 地图按档位控制阴影与阴影贴图', mapSrc.indexOf('M3.tier.shadows') !== -1 && mapSrc.indexOf('M3.tier.shadowMapSize') !== -1);
+check('建筑/树/路灯使用 InstancedMesh 合批', (mapSrc.match(/new THREE\.InstancedMesh/g) || []).length >= 6);
+check('渲染循环接入 FPS Governor（Perf.tick）', mapSrc.indexOf('Perf.tick(') !== -1);
+check('档位变化动态生效（Perf.onChange + 阴影贴图重建）', mapSrc.indexOf('Perf.onChange(') !== -1 && mapSrc.indexOf('shadow.map.dispose()') !== -1);
+check('渲染循环按 fpsCap 限帧（不强制高帧率）', mapSrc.indexOf('fpsCap') !== -1 && mapSrc.indexOf('1000 / fpsCap') !== -1);
+check('低档设备跳过次要动画（detail 抽稀树/路灯）', mapSrc.indexOf('detailStep') !== -1 && mapSrc.indexOf('lowDetail') !== -1);
+
+// 7.6 扫码 / OCR 流水线（scan.html + ocr-worker.js）
+check('scan.html 引入 perf.js 且位于 storage.js 之后', scanSrc.indexOf('src="perf.js"') > scanSrc.indexOf('src="storage.js"'));
+check('扫码/OCR 频率按档位读取', scanSrc.indexOf('SCAN.scanInterval') !== -1 && scanSrc.indexOf('SCAN.ocrInterval') !== -1);
+check('二维码识别只分析扫描框区域（cropScanFrame）', scanSrc.indexOf('function cropScanFrame(') !== -1 && scanSrc.indexOf('detector.detect(SCAN.video)') === -1);
+check('识别成功立即停止分析（pauseScan）', /onDecoded[\s\S]{0,200}pauseScan\(\)/.test(scanSrc) && /onOcrText[\s\S]{0,400}pauseScan\(\)/.test(scanSrc));
+const ocrWorkerSrc = fs.readFileSync(path.join(ROOT, 'ocr-worker.js'), 'utf8');
+check('ocr-worker.js 独立 Worker（零 Node 依赖 / 无 require）', ocrWorkerSrc.indexOf('self.onmessage') !== -1 && !/\brequire\(/.test(ocrWorkerSrc));
+check('ocr-worker.js 使用 OffscreenCanvas + ImageBitmap 零拷贝传输', ocrWorkerSrc.indexOf('OffscreenCanvas') !== -1 && ocrWorkerSrc.indexOf('transferToImageBitmap') !== -1 && ocrWorkerSrc.indexOf(', [out]') !== -1);
+check('scan.html 主线程只做抓帧，预处理走 Worker', scanSrc.indexOf("new Worker('ocr-worker.js')") !== -1 && scanSrc.indexOf('preprocessForOcr') !== -1);
+check('Worker 不可用时回退主线程同步预处理', scanSrc.indexOf('binarizeCanvasSync') !== -1);
+
+// 7.7 动画 GPU 化与列表分片
+check('扫码线动画使用 transform（不触发 Layout/Paint）', scanSrc.indexOf('translateY(230px)') !== -1 && scanSrc.indexOf('top: calc(100% - 6px)') === -1);
+const cssSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
+// 关键帧体含一层嵌套（0%/from/to 选择器），需嵌套感知正则
+const kfBlocks = cssSrc.match(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*\s*[^{}]*\}/g) || [];
+const badKf = kfBlocks.filter(b => /\b(top|left|right|bottom|width|height|margin|padding)\s*:/.test(b));
+check('styles.css 关键帧动画均使用合成器属性（transform/opacity）', kfBlocks.length >= 4 && badKf.length === 0, badKf.map(b => b.split('{')[0].trim()).join(', '));
+check('App.renderChunked 分片渲染助手存在', appJsSrc.indexOf('renderChunked:') !== -1 && appJsSrc.indexOf('requestIdleCallback') !== -1);
+check('快递列表大列表分片渲染', pkgSrc.indexOf('App.renderChunked(listEl') !== -1);
+check('外卖店铺列表大列表分片渲染', foodSrc.indexOf('App.renderChunked(listEl') !== -1);
+check('骑手/配送动画在统一 rAF 渲染循环内', mapSrc.indexOf('requestAnimationFrame(animate)') !== -1 && mapSrc.indexOf('M3.delivery.rider') !== -1);
+
+// 7.8 全部引入 perf.js 的页面均在 storage.js 之后加载（加载顺序约定）
+let perfOrderIssues = [];
+fs.readdirSync(ROOT).filter(f => f.endsWith('.html')).forEach(f => {
+  const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const pPerf = html.indexOf('src="perf.js"');
+  if (pPerf !== -1 && pPerf < html.indexOf('src="storage.js"')) perfOrderIssues.push(f);
+});
+check('perf.js 加载顺序全部正确（storage.js 之后）', perfOrderIssues.length === 0, perfOrderIssues.join(', '));
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------
 Promise.all(asyncChecks || []).then(function () {

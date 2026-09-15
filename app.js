@@ -172,6 +172,33 @@ var App = {
       '</div>';
   },
 
+  // ---- 分片渲染（列表性能）----
+  // ≤50 条一次性渲染；>50 条先渲染首屏，其余按 chunkSize 分帧追加，
+  // 避免一次性大 DOM 造成主线程长任务与滚动掉帧（配合 requestIdleCallback 降级 setTimeout）。
+  renderChunked: function (el, items, renderItem, chunkSize) {
+    if (!el) return;
+    var CHUNK = chunkSize || 30;
+    if (items.length <= 50) {
+      var html = '';
+      items.forEach(function (item, i) { html += renderItem(item, i); });
+      el.innerHTML = html;
+      return;
+    }
+    var idx = 0;
+    el.innerHTML = '';
+    function next() {
+      var end = Math.min(idx + CHUNK, items.length);
+      var html = '';
+      for (; idx < end; idx++) html += renderItem(items[idx], idx);
+      el.insertAdjacentHTML('beforeend', html);
+      if (idx < items.length) {
+        if (typeof requestIdleCallback === 'function') requestIdleCallback(next, { timeout: 200 });
+        else setTimeout(next, 16);
+      }
+    }
+    next();
+  },
+
   // ---- Package logo ----
   pkgLogo: function (pkg) {
     return '<div class="pkg-logo" style="background:' + pkg.logoColor + ';">' + pkg.shortName + '</div>';
