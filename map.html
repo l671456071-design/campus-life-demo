@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>校园地图 - 校园取件</title>
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* ===== 3D Map Page Styles ===== */
+    .map-page { padding: 0; }
+
+    .map-filters {
+      padding: 10px 16px 6px;
+      background: var(--color-bg);
+      position: relative;
+      z-index: 10;
+    }
+
+    .map-container {
+      position: relative;
+      width: 100%;
+      height: calc(100vh - var(--header-h) - 46px - var(--tab-bar-h) - 12px);
+      overflow: hidden;
+      background: #E8EDF2;
+      touch-action: none;
+    }
+    .map-container canvas { display: block; width: 100%; height: 100%; }
+
+    /* 3D 视角控制按钮组 */
+    .map-view-controls {
+      position: absolute;
+      right: 12px;
+      bottom: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 30;
+    }
+    .map-view-btn {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: var(--color-surface);
+      color: var(--color-text);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: var(--shadow-md);
+      border: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .map-view-btn:active { transform: scale(0.92); }
+    .map-view-btn svg { width: 20px; height: 20px; }
+
+    /* 加载中 */
+    .map-loading {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: var(--color-bg);
+      z-index: 40; gap: 12px;
+    }
+    .map-loading-text { font-size: 13px; color: var(--color-text-sub); }
+
+    /* Navigation bar (top) */
+    .map-nav-bar {
+      position: fixed;
+      top: calc(var(--header-h) + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(-120%);
+      width: calc(100% - 32px);
+      max-width: 398px;
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-lg);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .map-nav-bar.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .map-nav-bar svg { width: 20px; height: 20px; color: var(--color-primary); flex-shrink: 0; }
+    .map-nav-bar-text { flex: 1; font-size: 13px; font-weight: 500; color: var(--color-text); }
+    .map-nav-bar-close {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--color-text-hint);
+      flex-shrink: 0;
+    }
+    .map-nav-bar-close:active { background: var(--color-bg); }
+    .map-nav-bar-close svg { width: 16px; height: 16px; }
+
+    /* 配送模式顶部栏 */
+    .delivery-top-bar {
+      position: fixed;
+      top: calc(var(--header-h) + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 406px;
+      background: var(--color-surface);
+      border-radius: 14px;
+      padding: 12px 16px;
+      box-shadow: var(--shadow-xl);
+      z-index: 60;
+      display: none;
+    }
+    .delivery-top-bar.show { display: block; animation: fadeInUp 0.35s ease-out both; }
+    .delivery-top-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    }
+    .delivery-status-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: var(--radius-full);
+      font-size: 12px; font-weight: 700;
+    }
+    .delivery-eta { font-size: 15px; font-weight: 700; color: var(--color-text); }
+    .delivery-eta-sub { font-size: 12px; color: var(--color-text-sub); margin-top: 3px; display: flex; gap: 10px; }
+    .delivery-progress {
+      margin-top: 10px; height: 5px; border-radius: 3px;
+      background: var(--color-border); overflow: hidden;
+    }
+    .delivery-progress-bar { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #F59E0B, #F97316); width: 0%; transition: width 1s linear; }
+
+    /* 配送模式底部订单卡 */
+    .delivery-card {
+      position: fixed;
+      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 12px);
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 24px);
+      max-width: 406px;
+      background: var(--color-surface);
+      border-radius: 16px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-xl);
+      z-index: 60;
+      display: none;
+    }
+    .delivery-card.show { display: block; animation: fadeInUp 0.35s ease-out both; }
+    .delivery-route-line {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--color-text);
+      padding: 4px 0 8px;
+    }
+    .delivery-route-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .delivery-route-dash { flex: 1; border-top: 2px dashed var(--color-border); }
+    .delivery-route-name { font-weight: 600; }
+    .delivery-card-meta { font-size: 12px; color: var(--color-text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; }
+
+    /* Info card (bottom) */
+    .map-info-card {
+      position: fixed;
+      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 12px);
+      left: 50%;
+      transform: translateX(-50%) translateY(120%);
+      width: calc(100% - 24px);
+      max-width: 406px;
+      background: var(--color-surface);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow-xl);
+      z-index: 60;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+    }
+    .map-info-card.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .map-info-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .map-info-card-name-wrap { flex: 1; min-width: 0; }
+    .map-info-card-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .map-info-card-type {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 600;
+    }
+    .map-info-card-close {
+      width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--color-text-hint);
+      flex-shrink: 0; margin-left: 8px;
+    }
+    .map-info-card-close:active { background: var(--color-bg); }
+    .map-info-card-close svg { width: 18px; height: 18px; }
+
+    .map-info-card-body { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+    .map-info-row {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: var(--color-text-sub);
+    }
+    .map-info-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--color-text-hint); }
+    .map-info-row .info-value { color: var(--color-text); font-weight: 500; }
+    .map-info-row .info-badge {
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+      padding: 1px 8px; border-radius: var(--radius-full);
+      font-size: 11px; font-weight: 600;
+    }
+    .biz-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-left: 6px; }
+    .biz-status--open { color: var(--color-accent); }
+    .biz-status--closed { color: var(--color-warning); }
+    .biz-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+    /* Default hint */
+    .map-hint {
+      position: fixed;
+      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 20px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--color-surface);
+      padding: 10px 20px;
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-md);
+      font-size: 13px;
+      color: var(--color-text-sub);
+      display: flex; align-items: center; gap: 6px;
+      z-index: 55; white-space: nowrap;
+      animation: fadeIn 0.4s 0.5s both;
+    }
+    .map-hint svg { width: 16px; height: 16px; color: var(--color-text-hint); }
+    .map-hint.hidden { display: none; }
+
+    /* Map load error */
+    .map-load-error {
+      height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px 24px; text-align: center;
+      background: var(--color-bg);
+    }
+    .map-load-error-icon {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: var(--color-warning-light); color: #B45309;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px;
+    }
+    .map-load-error-icon svg { width: 36px; height: 36px; }
+    .map-load-error-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .map-load-error-desc { font-size: 13px; color: var(--color-text-sub); line-height: 1.7; }
+  </style>
+</head>
+<body data-page="map">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="header-back-btn" onclick="goBack()" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+      <div class="header-title" id="pageTitle">校园地图</div>
+      <div class="header-right">
+        <button class="header-back-btn" onclick="locateMe()" aria-label="定位" style="color:var(--color-primary);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M12 2v4"/><path d="M12 18v4"/><path d="M2 12h4"/><path d="M18 12h4"/></svg>
+        </button>
+      </div>
+    </header>
+    <main class="app-content map-page">
+      <!-- Filter chips（配送模式下隐藏） -->
+      <div class="map-filters anim-fade-in-up stagger-1" id="mapFilters">
+        <div class="filter-chips">
+          <button class="chip active" data-filter="all" onclick="setFilter('all', this)">全部</button>
+          <button class="chip" data-filter="station" onclick="setFilter('station', this)">驿站</button>
+          <button class="chip" data-filter="locker" onclick="setFilter('locker', this)">快递柜</button>
+        </div>
+      </div>
+
+      <!-- 3D 地图容器（Three.js 本地渲染） -->
+      <div class="map-container anim-fade-in-up stagger-2" id="mapContainer">
+        <div class="map-loading" id="mapLoading">
+          <div class="spinner"></div>
+          <div class="map-loading-text">正在加载 3D 校园…</div>
+        </div>
+        <div class="map-view-controls" id="viewControls">
+          <button class="map-view-btn" onclick="resetView()" aria-label="重置视角">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 3"/><path d="M12 22l-3-3"/><path d="M2 12l3-3"/><path d="M22 12l-3 3"/><circle cx="12" cy="12" r="4"/><path d="M12 2v4"/><path d="M12 18v4"/></svg>
+          </button>
+          <button class="map-view-btn" onclick="zoomView(-1)" aria-label="放大">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+          <button class="map-view-btn" onclick="zoomView(1)" aria-label="缩小">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Default hint -->
+      <div class="map-hint" id="mapHint">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        点击 3D 场景中的取件点标记查看信息 · 拖动旋转 / 双指缩放
+      </div>
+
+      <!-- Navigation info bar -->
+      <div class="map-nav-bar" id="navBar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+        <div class="map-nav-bar-text">距目的地 <span id="navDistance">--</span> · 步行约<span id="navWalkTime">--</span></div>
+        <button class="map-nav-bar-close" onclick="closeNavigation()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- 配送模式：顶部状态栏 -->
+      <div class="delivery-top-bar" id="deliveryTopBar">
+        <div class="delivery-top-row">
+          <span class="delivery-status-chip" id="deliveryStatusChip">配送中</span>
+          <span class="delivery-eta" id="deliveryEta">--</span>
+        </div>
+        <div class="delivery-eta-sub">
+          <span id="deliveryDistance">--</span>
+          <span id="deliveryOrderId">--</span>
+        </div>
+        <div class="delivery-progress"><div class="delivery-progress-bar" id="deliveryProgressBar"></div></div>
+      </div>
+
+      <!-- 配送模式：底部订单卡 -->
+      <div class="delivery-card" id="deliveryCard">
+        <div class="delivery-route-line">
+          <span class="delivery-route-dot" id="deliveryShopDot" style="background:#F59E0B;"></span>
+          <span class="delivery-route-name" id="deliveryShopName">--</span>
+          <span class="delivery-route-dash"></span>
+          <span class="delivery-route-dot" style="background:#2563EB;"></span>
+          <span class="delivery-route-name" id="deliveryDestName">--</span>
+        </div>
+        <div class="delivery-card-meta">
+          <span id="deliveryItems">--</span>
+          <span id="deliveryTotal">--</span>
+        </div>
+        <button class="btn btn-primary btn-block" onclick="goOrderDetail()">查看订单</button>
+      </div>
+
+      <!-- Bottom info card -->
+      <div class="map-info-card" id="infoCard">
+        <div class="map-info-card-header">
+          <div class="map-info-card-name-wrap">
+            <div class="map-info-card-name" id="cardName">取件点名称</div>
+            <span class="map-info-card-type" id="cardType">驿站</span>
+          </div>
+          <button class="map-info-card-close" onclick="clearSelection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="map-info-card-body">
+          <div class="map-info-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span class="info-value" id="cardAddress">地址</span>
+          </div>
+          <div class="map-info-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><circle cx="12" cy="12" r="10"/></svg>
+            <span>距离 <span class="info-value" id="cardDistance">--</span></span>
+            <span style="color:var(--color-border);">|</span>
+            <span>步行 <span class="info-value" id="cardWalkTime">--</span></span>
+          </div>
+          <div class="map-info-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>营业时间 <span class="info-value" id="cardHours">--</span><span class="biz-status" id="cardBizStatus"></span></span>
+          </div>
+          <div class="map-info-row" id="cardPendingRow" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            <span>待取快递 <span class="info-badge" id="cardPendingBadge">0件</span></span>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" onclick="startNavigation()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+          前往这里
+        </button>
+      </div>
+    </main>
+    <!-- 底部导航：首页 / 快递 / 扫码 / 外卖 / 我的 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script src="libs/three/three.min.js"></script>
+  <script>
+    // ================================================================
+    // 本地化 3D 校园地图（Three.js 本地库，无任何 CDN / 在线地图 API）
+    // - 场景：低面数建筑 / 道路 / 草地 / 树木 / 路灯 / 阴影
+    // - 视角：默认 45° 俯视，支持拖动旋转 / 双指或滚轮缩放（带角度约束）
+    // - 定位：navigator.geolocation，失败时使用默认位置
+    // - 路线：本地 Dijkstra 最短路径 + 发光管线动画
+    // - 配送模式：?mode=delivery&orderId=xxx 展示店铺 / 骑手 / 配送路线
+    // ================================================================
+
+    var CAMPUS_DATA = {
+      meta: { name: '湄洲湾职业技术学院（涵江校区）', metersPerUnit: 8, walkSpeedMetersPerMin: 80 },
+      geoBounds: { north: 25.4660, south: 25.4570, west: 119.0980, east: 119.1060 },
+      defaultLocation: { x: 47, y: 39, label: '图书馆北侧（默认位置）' },
+      pois: [
+        { id: 'PP01', name: '菜鸟驿站（楷苑）', short: '楷苑驿站', type: 'station', x: 60.5, y: 33.5, address: '楷苑南侧一层', businessHours: '08:00 - 20:00', color: '#2563EB', accessNode: 'c3' },
+        { id: 'PP02', name: '菜鸟驿站（南门）', short: '南门驿站', type: 'station', x: 58, y: 91.5, address: '南门入口广场东侧', businessHours: '08:00 - 22:00', color: '#2563EB', accessNode: 'p1' },
+        { id: 'PP03', name: '智能快递柜（兰苑）', short: '兰苑快递柜', type: 'locker', x: 47, y: 24, address: '兰苑3号楼一层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
+        { id: 'PP04', name: '智能快递柜（菊苑）', short: '菊苑快递柜', type: 'locker', x: 29.5, y: 19.5, address: '菊苑2号楼一层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
+        { id: 'PP05', name: '京东快递（梅苑）', short: '京东快递', type: 'station', x: 69.5, y: 13, address: '梅苑1号楼一层', businessHours: '09:00 - 21:00', color: '#DC2626', accessNode: 'd1' },
+        { id: 'PP06', name: '顺丰速运（信息楼）', short: '顺丰速运', type: 'station', x: 74.5, y: 61, address: '信息楼一层大厅', businessHours: '09:00 - 18:00', color: '#1E40AF', accessNode: 'e2' }
+      ],
+      roads: {
+        nodes: {
+          s1: { x: 50, y: 100, label: '南门' }, p1: { x: 50, y: 88 },
+          w1: { x: 24, y: 88 }, e1: { x: 72, y: 88 },
+          c2: { x: 50, y: 52 }, w2: { x: 24, y: 52 }, e2: { x: 72, y: 52 },
+          c3: { x: 50, y: 36 }, w3: { x: 24, y: 36 }, e3: { x: 72, y: 36 },
+          w4: { x: 6, y: 36, label: '西门' }, e4: { x: 96, y: 36, label: '东门' },
+          d1: { x: 50, y: 18 }, d2: { x: 50, y: 6, label: '宿舍区北' }
+        },
+        edges: [['s1','p1'],['p1','w1'],['p1','e1'],['p1','c2'],['c2','w2'],['c2','e2'],['c2','c3'],['w1','w2'],['e1','e2'],['w2','w3'],['e2','e3'],['w3','c3'],['c3','e3'],['w3','w4'],['e3','e4'],['c3','d1'],['d1','d2']]
+      }
+    };
+
+    // 建筑布局（与原 2D 卫星底图一致）：[cx, cy, w, d, h, color, label]
+    var BUILDINGS = [
+      // 六苑宿舍（每苑两栋）
+      [20.5, 10.3, 13, 2.6, 3.2, 0xC3CDDA, '竹苑'], [20.5, 13.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      [38.5, 10.3, 13, 2.6, 3.2, 0xC3CDDA, '松苑'], [38.5, 13.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      [60.5, 10.3, 13, 2.6, 3.2, 0xC3CDDA, '梅苑'], [60.5, 13.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      [20.5, 22.3, 13, 2.6, 3.2, 0xC3CDDA, '菊苑'], [20.5, 25.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      [38.5, 22.3, 13, 2.6, 3.2, 0xC3CDDA, '兰苑'], [38.5, 25.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      [60.5, 22.3, 13, 2.6, 3.2, 0xC3CDDA, '楷苑'], [60.5, 25.7, 13, 2.6, 3.6, 0xB7C3D2, null],
+      // 中心区
+      [40, 32.8, 12, 3.2, 2.4, 0xD9C4A8, '食堂'],
+      [39, 44.5, 12, 8, 5.4, 0x9FB4CC, '图书馆'],
+      [59, 45, 10, 6, 3.8, 0xC3CDDA, '行政楼'],
+      // 东侧教学楼
+      [85, 13, 14, 6, 4.2, 0xC3CDDA, '医学楼'],
+      [85, 24, 14, 6, 4.2, 0xC3CDDA, '工商楼'],
+      [85, 41.5, 14, 6, 4.2, 0xC3CDDA, '化工楼'],
+      [85, 58, 14, 6, 4.2, 0xC3CDDA, '机电楼'],
+      [85, 69, 14, 6, 4.6, 0xA8B9CE, '信息楼'],
+      [85, 80, 14, 6, 4.2, 0xC3CDDA, '实训楼'],
+      // 西侧运动区
+      [15, 82, 14, 8, 4.6, 0xAEBFD4, '体育馆'],
+    ];
+    // 道路矩形：[cx, cy, w, d]
+    var ROAD_RECTS = [
+      [50, 52, 3.4, 96],   // 中轴大道（南北）
+      [51, 36, 90, 3.4],   // 横一路（东西）
+      [60, 52, 72, 3.4],   // 横二路
+      [60, 88, 72, 3.4],   // 横三路
+      [24, 62, 3.4, 52],   // 西环路
+      [72, 62, 3.4, 52],   // 东环路
+      [50, 21, 2.8, 30],   // 宿舍区支路
+    ];
+    // 绿化带矩形
+    var GRASS_RECTS = [
+      [50, 2, 100, 4.5], [2.5, 48, 5, 95], [95.5, 4.5, 9, 9],
+      [61.5, 69.5, 13, 27], [50, 93, 16, 6],
+    ];
+    var TREE_POS = [
+      [44,7],[56,7],[44,30],[56,30],[44,48],[45,60],[55,58],[45,78],[55,78],
+      [66,44],[34,44],[30,52],[70,52],[66,70],[20,32],[34,38],[46,66],[54,66],
+      [62,24],[76,32],[76,46],[24,58],[24,78],[12,70],[86,30],[86,47],[18,50],
+      [50,82],[42,82],[58,82],[28,66],[72,64],[27,55],[63,90],[33,90]
+    ];
+    var LIGHT_NODE_OFFSET = [
+      ['s1',1.9,0],['p1',-1.9,1.9],['w1',0,1.9],['e1',0,1.9],['c2',1.9,1.9],['w2',0,1.9],
+      ['e2',0,1.9],['c3',-1.9,1.9],['w3',0,1.9],['e3',0,1.9],['w4',1.9,0],['e4',-1.9,0],
+      ['d1',-1.9,1.9],['d2',1.9,0]
+    ];
+
+    // ---------- URL 参数 ----------
+    var URL_PARAMS = new URLSearchParams(location.search);
+    var DELIVERY_MODE = URL_PARAMS.get('mode') === 'delivery';
+    var DELIVERY_ORDER_ID = URL_PARAMS.get('orderId') || '';
+    var INIT_POI_ID = URL_PARAMS.get('poi') || '';
+
+    var MAP = {
+      data: CAMPUS_DATA,
+      points: [],
+      currentLoc: { x: CAMPUS_DATA.defaultLocation.x, y: CAMPUS_DATA.defaultLocation.y },
+      selectedPointId: null,
+      isNavigating: false,
+      currentFilter: 'all',
+      deliveryOrder: null,
+    };
+
+    // ---------- Three.js 基础 ----------
+    var M3 = {
+      renderer: null, scene: null, camera: null, clock: null,
+      container: null, raycaster: null,
+      cam: { target: null, radius: 135, theta: 0, phi: Math.PI / 4, minR: 70, maxR: 240, minPhi: 0.35, maxPhi: 1.30, targetGoal: null },
+      pins: [], hitTargets: [],
+      routeGroup: null, routeCurve: null, routePulses: [],
+      userMarker: null, userRing: null,
+      delivery: { rider: null, routePoints: null, cum: null, total: 0, order: null },
+      pinsAnim: [],
+    };
+
+    function toWorld(x, y) { return { x: x - 50, z: y - 50 }; }
+    function toMap(wx, wz) { return { x: wx + 50, y: wz + 50 }; }
+
+    function isDarkTheme() {
+      return document.documentElement.getAttribute('data-theme') === 'dark';
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof THREE === 'undefined') { showMapLoadError('3D 引擎加载失败，请刷新页面重试'); return; }
+      try { initThree(); } catch (e) { showMapLoadError('WebGL 初始化失败：' + (e && e.message)); }
+    });
+
+    function showMapLoadError(msg) {
+      var loading = document.getElementById('mapLoading');
+      if (loading) loading.remove();
+      var c = document.getElementById('mapContainer');
+      c.innerHTML =
+        '<div class="map-load-error">' +
+          '<div class="map-load-error-icon">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+          '</div>' +
+          '<div class="map-load-error-title">3D 地图初始化异常</div>' +
+          '<div class="map-load-error-desc">' + (msg || '地图渲染失败，请刷新页面重试') + '</div>' +
+        '</div>';
+    }
+
+    function initThree() {
+      M3.container = document.getElementById('mapContainer');
+      M3.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      M3.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      M3.renderer.setSize(M3.container.clientWidth, M3.container.clientHeight);
+      M3.renderer.shadowMap.enabled = true;
+      M3.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      if (THREE.sRGBEncoding !== undefined) M3.renderer.outputEncoding = THREE.sRGBEncoding;
+      M3.container.insertBefore(M3.renderer.domElement, M3.container.firstChild);
+
+      M3.scene = new THREE.Scene();
+      var dark = isDarkTheme();
+      var bg = dark ? 0x0B1220 : 0xDfE7EF;
+      M3.scene.background = new THREE.Color(bg);
+      M3.scene.fog = new THREE.Fog(bg, 180, 430);
+
+      M3.camera = new THREE.PerspectiveCamera(50, M3.container.clientWidth / M3.container.clientHeight, 0.1, 600);
+      M3.cam.target = new THREE.Vector3(0, 0, 6);
+      M3.cam.targetGoal = M3.cam.target.clone();
+      M3.clock = new THREE.Clock();
+      M3.raycaster = new THREE.Raycaster();
+
+      // 光照：半球光 + 平行光（阴影）
+      var hemi = new THREE.HemisphereLight(dark ? 0x33415e : 0xdfeaf5, 0x8fa678, dark ? 0.85 : 1.0);
+      M3.scene.add(hemi);
+      var sun = new THREE.DirectionalLight(0xffffff, dark ? 0.55 : 0.85);
+      sun.position.set(70, 100, 45);
+      sun.castShadow = true;
+      sun.shadow.mapSize.width = 1024;
+      sun.shadow.mapSize.height = 1024;
+      sun.shadow.camera.left = -85; sun.shadow.camera.right = 85;
+      sun.shadow.camera.top = 85; sun.shadow.camera.bottom = -85;
+      sun.shadow.camera.near = 10; sun.shadow.camera.far = 300;
+      sun.shadow.bias = -0.0008;
+      M3.scene.add(sun);
+
+      buildEnvironment();
+      buildPois();
+      buildUserMarker();
+
+      if (DELIVERY_MODE) {
+        initDeliveryMode();
+      } else {
+        initGeolocation();
+        if (INIT_POI_ID) setTimeout(function () { selectPOI(INIT_POI_ID); }, 400);
+      }
+
+      bindControls();
+      window.addEventListener('resize', onResize);
+      animate();
+
+      var loading = document.getElementById('mapLoading');
+      if (loading) setTimeout(function () { loading.remove(); }, 250);
+    }
+
+    // ---------- 场景搭建 ----------
+    function stdMat(color, opts) {
+      opts = opts || {};
+      var m = new THREE.MeshStandardMaterial({ color: color, roughness: opts.roughness !== undefined ? opts.roughness : 0.85, metalness: 0.05 });
+      if (opts.emissive) { m.emissive = new THREE.Color(opts.emissive); m.emissiveIntensity = opts.emissiveIntensity || 0.6; }
+      if (opts.transparent) m.transparent = true;
+      if (opts.opacity !== undefined) m.opacity = opts.opacity;
+      return m;
+    }
+
+    function addBox(cx, cy, w, d, h, color, opts) {
+      opts = opts || {};
+      var p = toWorld(cx, cy);
+      var geo = new THREE.BoxGeometry(w, h, d);
+      var side = stdMat(color, opts);
+      var topColor = new THREE.Color(color);
+      topColor.offsetHSL(0, 0, 0.07);
+      var top = stdMat(topColor.getHex(), opts);
+      var mesh = new THREE.Mesh(geo, [side, side, top, side, side, side]);
+      mesh.position.set(p.x, (opts.baseY || 0) + h / 2, p.z);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      M3.scene.add(mesh);
+      return mesh;
+    }
+
+    function addFlatRect(cx, cy, w, d, color, y, opts) {
+      var p = toWorld(cx, cy);
+      var geo = new THREE.PlaneGeometry(w, d);
+      var mesh = new THREE.Mesh(geo, stdMat(color, opts));
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.set(p.x, y, p.z);
+      mesh.receiveShadow = true;
+      M3.scene.add(mesh);
+      return mesh;
+    }
+
+    function buildEnvironment() {
+      // 大地面（草地）
+      var ground = new THREE.Mesh(new THREE.PlaneGeometry(320, 320), stdMat(0xA3C79B, { roughness: 1 }));
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -0.12;
+      ground.receiveShadow = true;
+      M3.scene.add(ground);
+      // 校区底板
+      addFlatRect(50, 50, 106, 106, 0xE6EBF1, -0.02, { roughness: 1 });
+      // 校区边界（围墙感）
+      var wallMat = stdMat(0xC6CFDA);
+      [[50, -2.9, 106, 0.5], [50, 102.9, 106, 0.5], [-2.9, 50, 0.5, 106], [102.9, 50, 0.5, 106]].forEach(function (r) {
+        var p = toWorld(r[0], r[1]);
+        var m = new THREE.Mesh(new THREE.BoxGeometry(r[2], 0.7, r[3]), wallMat);
+        m.position.set(p.x, 0.35, p.z);
+        M3.scene.add(m);
+      });
+
+      // 人工湖（椭圆）
+      var lake = new THREE.Mesh(new THREE.CircleGeometry(1, 36), stdMat(0x9CC5E0, { roughness: 0.35 }));
+      lake.rotation.x = -Math.PI / 2;
+      var lw = toWorld(32.5, 61.5);
+      lake.scale.set(11.5, 9, 1);
+      lake.position.set(lw.x, 0.04, lw.z);
+      M3.scene.add(lake);
+      var lakeRing = new THREE.Mesh(new THREE.RingGeometry(0.94, 1, 36), stdMat(0xC5DCE9, { roughness: 0.9 }));
+      lakeRing.rotation.x = -Math.PI / 2;
+      lakeRing.scale.set(11.8, 9.3, 1);
+      lakeRing.position.set(lw.x, 0.035, lw.z);
+      M3.scene.add(lakeRing);
+
+      // 田径场
+      var track = new THREE.Mesh(new THREE.CircleGeometry(1, 40), stdMat(0xD9C29E, { roughness: 1 }));
+      track.rotation.x = -Math.PI / 2;
+      var tp = toWorld(13, 62);
+      track.scale.set(9.8, 12.3, 1);
+      track.position.set(tp.x, 0.03, tp.z);
+      M3.scene.add(track);
+      var field = new THREE.Mesh(new THREE.CircleGeometry(1, 36), stdMat(0x86BB7C, { roughness: 1 }));
+      field.rotation.x = -Math.PI / 2;
+      field.scale.set(6.2, 9.0, 1);
+      field.position.set(tp.x, 0.045, tp.z);
+      M3.scene.add(field);
+
+      // 篮球场 ×4
+      [[10.5, 40.3], [16.5, 40.3], [10.5, 44.8], [16.5, 44.8]].forEach(function (c) {
+        addFlatRect(c[0], c[1], 4.8, 3.4, 0x7FA8D4, 0.03, { roughness: 0.9 });
+      });
+
+      // 绿化带
+      GRASS_RECTS.forEach(function (r) { addFlatRect(r[0], r[1], r[2], r[3], 0x9BC48F, 0.015, { roughness: 1 }); });
+
+      // 道路
+      ROAD_RECTS.forEach(function (r) {
+        addFlatRect(r[0], r[1], r[2], r[3], 0xF2F5F8, 0.05, { roughness: 1 });
+        // 路缘描边
+        var edgeMat = stdMat(0xD3DBE4);
+        var p = toWorld(r[0], r[1]);
+        [[0, r[3] / 2], [0, -r[3] / 2]].forEach(function (o) {
+          if (r[3] > r[2]) { var m = new THREE.Mesh(new THREE.BoxGeometry(r[2] + 0.3, 0.1, 0.25), edgeMat); m.position.set(p.x, 0.08, p.z + o[1]); M3.scene.add(m); }
+        });
+        [[r[2] / 2, 0], [-r[2] / 2, 0]].forEach(function (o) {
+          if (r[2] >= r[3]) { var m2 = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.1, r[3] + 0.3), edgeMat); m2.position.set(p.x + o[0], 0.08, p.z); M3.scene.add(m2); }
+        });
+      });
+
+      // 建筑
+      BUILDINGS.forEach(function (b) {
+        var mesh = addBox(b[0], b[1], b[2], b[3], b[4], b[5]);
+        // 窗户纹理感：南立面贴一条浅色带
+        var p = toWorld(b[0], b[1]);
+        var band = new THREE.Mesh(new THREE.BoxGeometry(b[2] * 0.88, b[4] * 0.55, 0.12), stdMat(new THREE.Color(b[5]).offsetHSL(0, 0, 0.12).getHex(), { roughness: 0.6 }));
+        band.position.set(p.x, b[4] * 0.5, p.z + b[3] / 2 + 0.05);
+        M3.scene.add(band);
+        if (b[6]) {
+          var label = makeLabel(b[6], { fontSize: 40, scale: 0.11 });
+          var lp = toWorld(b[0], b[1]);
+          label.position.set(lp.x, b[4] + 1.6, lp.z);
+          M3.scene.add(label);
+        }
+      });
+      // 图书馆顶冠
+      var libP = toWorld(39, 44.5);
+      var crown = new THREE.Mesh(new THREE.BoxGeometry(6.4, 1.2, 4.4), stdMat(0xD7E3F0, { roughness: 0.5 }));
+      crown.position.set(libP.x, 5.4 + 0.6, libP.z);
+      crown.castShadow = true;
+      M3.scene.add(crown);
+      // 体育馆屋顶
+      var gymP = toWorld(15, 82);
+      var gymRoof = new THREE.Mesh(new THREE.CylinderGeometry(7.4, 7.4, 1.1, 18, 1, false, 0, Math.PI), stdMat(0x8FA6C4, { roughness: 0.6 }));
+      gymRoof.rotation.z = Math.PI / 2;
+      gymRoof.rotation.y = Math.PI / 2;
+      gymRoof.position.set(gymP.x, 4.6 + 0.5, gymP.z);
+      gymRoof.castShadow = true;
+      M3.scene.add(gymRoof);
+
+      // 树木（低面数：圆锥 + 圆柱，实例化）
+      var trunkGeo = new THREE.CylinderGeometry(0.16, 0.22, 1.1, 6);
+      var crownGeo = new THREE.ConeGeometry(1.0, 2.2, 7);
+      var trunkMesh = new THREE.InstancedMesh(trunkGeo, stdMat(0x8A6B4F), TREE_POS.length);
+      var crownMesh = new THREE.InstancedMesh(crownGeo, stdMat(0x5FA35B), TREE_POS.length);
+      trunkMesh.castShadow = true; crownMesh.castShadow = true;
+      var mtx = new THREE.Matrix4();
+      TREE_POS.forEach(function (t, i) {
+        var p = toWorld(t[0], t[1]);
+        var s = 0.8 + ((i * 37) % 10) / 18;
+        mtx.makeScale(s, s, s); mtx.setPosition(p.x, 0.55 * s, p.z);
+        trunkMesh.setMatrixAt(i, mtx);
+        mtx.makeScale(s, s, s); mtx.setPosition(p.x, (1.1 + 1.0) * s, p.z);
+        crownMesh.setMatrixAt(i, mtx);
+      });
+      M3.scene.add(trunkMesh);
+      M3.scene.add(crownMesh);
+
+      // 路灯（灯杆 + 发光灯头，实例化）
+      var poleGeo = new THREE.CylinderGeometry(0.09, 0.12, 3.4, 6);
+      var lampGeo = new THREE.SphereGeometry(0.34, 10, 8);
+      var poleMesh = new THREE.InstancedMesh(poleGeo, stdMat(0x64748B), LIGHT_NODE_OFFSET.length);
+      var lampMesh = new THREE.InstancedMesh(lampGeo, stdMat(0xFFE9A8, { emissive: 0xFFD166, emissiveIntensity: 0.9 }), LIGHT_NODE_OFFSET.length);
+      LIGHT_NODE_OFFSET.forEach(function (l, i) {
+        var n = CAMPUS_DATA.roads.nodes[l[0]];
+        var p = toWorld(n.x + l[1], n.y + l[2]);
+        mtx.identity(); mtx.setPosition(p.x, 1.7, p.z);
+        poleMesh.setMatrixAt(i, mtx);
+        mtx.setPosition(p.x, 3.55, p.z);
+        lampMesh.setMatrixAt(i, mtx);
+      });
+      M3.scene.add(poleMesh);
+      M3.scene.add(lampMesh);
+
+      // 指北针（北侧）
+      var np = toWorld(50, 1.2);
+      var northCone = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.2, 10), stdMat(0xEF4444, { emissive: 0xEF4444, emissiveIntensity: 0.4 }));
+      northCone.position.set(np.x, 1.3, np.z);
+      M3.scene.add(northCone);
+      var nLabel = makeLabel('N', { fontSize: 48, scale: 0.09, bgColor: 'rgba(239,68,68,0.95)', color: '#fff' });
+      nLabel.position.set(np.x, 3.0, np.z);
+      M3.scene.add(nLabel);
+    }
+
+    // 文字标签（Canvas 纹理 Sprite）
+    function makeLabel(text, opts) {
+      opts = opts || {};
+      var fontSize = opts.fontSize || 40;
+      var font = '600 ' + fontSize + 'px "PingFang SC","Microsoft YaHei",sans-serif';
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      ctx.font = font;
+      var tw = Math.ceil(ctx.measureText(text).width);
+      var padX = fontSize * 0.5, padY = fontSize * 0.34;
+      canvas.width = tw + padX * 2;
+      canvas.height = Math.ceil(fontSize + padY * 2);
+      ctx = canvas.getContext('2d');
+      ctx.font = font;
+      if (opts.bgColor) {
+        ctx.fillStyle = opts.bgColor;
+        var r = canvas.height / 2;
+        ctx.beginPath();
+        ctx.moveTo(r, 0);
+        ctx.arcTo(canvas.width, 0, canvas.width, canvas.height, r);
+        ctx.arcTo(canvas.width, canvas.height, 0, canvas.height, r);
+        ctx.arcTo(0, canvas.height, 0, 0, r);
+        ctx.arcTo(0, 0, canvas.width, 0, r);
+        ctx.fill();
+      }
+      ctx.fillStyle = opts.color || '#334155';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, canvas.width / 2, canvas.height / 2 + fontSize * 0.05);
+      var tex = new THREE.CanvasTexture(canvas);
+      tex.minFilter = THREE.LinearFilter;
+      var mat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+      var sprite = new THREE.Sprite(mat);
+      var scale = opts.scale || 0.12;
+      sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
+      return sprite;
+    }
+
+    // ---------- POI 标记 ----------
+    function buildPois() {
+      var points = Storage.getPickupPoints();
+      MAP.points = CAMPUS_DATA.pois.map(function (poi) {
+        var live = null;
+        for (var i = 0; i < points.length; i++) if (points[i].id === poi.id) live = points[i];
+        var o = {};
+        for (var k in poi) o[k] = poi[k];
+        if (live) o.pendingCount = live.pendingCount || 0;
+        return o;
+      });
+
+      MAP.points.forEach(function (poi) {
+        var color = new THREE.Color(poi.color);
+        var g = new THREE.Group();
+        var p = toWorld(poi.x, poi.y);
+        g.position.set(p.x, 0, p.z);
+
+        // 地面光圈
+        var glow = new THREE.Mesh(new THREE.CircleGeometry(2.0, 24), new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.22 }));
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.y = 0.07;
+        g.add(glow);
+        // 杆
+        var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 3.4, 8), stdMat(0xF8FAFC, { roughness: 0.5 }));
+        pole.position.y = 1.7;
+        pole.castShadow = true;
+        g.add(pole);
+        // 头部球
+        var head = new THREE.Mesh(new THREE.SphereGeometry(0.78, 14, 12), stdMat(poi.color, { emissive: poi.color, emissiveIntensity: 0.55, roughness: 0.4 }));
+        head.position.y = 3.7;
+        g.add(head);
+        // 类型图标牌
+        var icon = makeLabel(poi.type === 'locker' ? '柜' : '驿', { fontSize: 44, scale: 0.075, bgColor: 'rgba(255,255,255,0.95)', color: poi.color });
+        icon.position.y = 3.7;
+        g.add(icon);
+        // 名称标签
+        var label = makeLabel(poi.short || poi.name, { fontSize: 34, scale: 0.10, bgColor: 'rgba(255,255,255,0.94)', color: '#1E293B' });
+        label.position.y = 5.1;
+        g.add(label);
+        // 待取数量角标
+        var badge = null;
+        if (poi.pendingCount > 0) {
+          badge = makeLabel(String(poi.pendingCount), { fontSize: 40, scale: 0.075, bgColor: 'rgba(239,68,68,0.96)', color: '#fff' });
+          badge.position.set(1.15, 4.35, 0);
+          g.add(badge);
+        }
+        // 拾取热区
+        var hit = new THREE.Mesh(new THREE.SphereGeometry(2.6, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+        hit.position.y = 3.2;
+        hit.userData = { poiId: poi.id };
+        g.add(hit);
+        M3.hitTargets.push(hit);
+
+        M3.scene.add(g);
+        M3.pins.push({ poi: poi, group: g, head: head, glow: glow, baseY: 3.7, badge: badge });
+      });
+    }
+
+    function buildUserMarker() {
+      var p = toWorld(MAP.currentLoc.x, MAP.currentLoc.y);
+      var g = new THREE.Group();
+      g.position.set(p.x, 0, p.z);
+      // 光圈（脉冲动画）
+      M3.userRing = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.15, 32), new THREE.MeshBasicMaterial({ color: 0x2563EB, transparent: true, opacity: 0.65, side: THREE.DoubleSide }));
+      M3.userRing.rotation.x = -Math.PI / 2;
+      M3.userRing.position.y = 0.09;
+      g.add(M3.userRing);
+      // 底盘
+      var disc = new THREE.Mesh(new THREE.CircleGeometry(1.0, 24), new THREE.MeshBasicMaterial({ color: 0x2563EB, transparent: true, opacity: 0.3 }));
+      disc.rotation.x = -Math.PI / 2;
+      disc.position.y = 0.08;
+      g.add(disc);
+      // 定位针
+      var pin = new THREE.Group();
+      var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 1.6, 8), stdMat(0xFFFFFF, { roughness: 0.4 }));
+      pole.position.y = 0.8;
+      pin.add(pole);
+      var head = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 12), stdMat(0x2563EB, { emissive: 0x2563EB, emissiveIntensity: 0.7, roughness: 0.3 }));
+      head.position.y = 1.75;
+      pin.add(head);
+      var inner = new THREE.Mesh(new THREE.SphereGeometry(0.22, 10, 8), stdMat(0xFFFFFF, { emissive: 0xFFFFFF, emissiveIntensity: 0.5 }));
+      inner.position.y = 1.75;
+      pin.add(inner);
+      g.add(pin);
+      var label = makeLabel('我的位置', { fontSize: 34, scale: 0.10, bgColor: 'rgba(37,99,235,0.95)', color: '#fff' });
+      label.position.y = 2.9;
+      g.add(label);
+      M3.userLabel = label;
+      // 热区
+      var hit = new THREE.Mesh(new THREE.SphereGeometry(2.2, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.y = 1.6;
+      hit.userData = { userMarker: true };
+      g.add(hit);
+      M3.hitTargets.push(hit);
+      M3.userMarker = g;
+      M3.scene.add(g);
+    }
+
+    // ---------- 交互控制（拖动旋转 / 缩放 / 点击拾取） ----------
+    function bindControls() {
+      var el = M3.renderer.domElement;
+      var pointers = new Map();
+      var startInfo = null;
+      var pinchDist = 0;
+
+      function eventPos(e) { var r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+
+      el.addEventListener('pointerdown', function (e) {
+        el.setPointerCapture(e.pointerId);
+        pointers.set(e.pointerId, eventPos(e));
+        if (pointers.size === 1) {
+          startInfo = { x: e.clientX, y: e.clientY, t: Date.now(), moved: 0 };
+        } else if (pointers.size === 2) {
+          var pts = Array.from(pointers.values());
+          pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+        }
+      });
+      el.addEventListener('pointermove', function (e) {
+        if (!pointers.has(e.pointerId)) return;
+        var prev = pointers.get(e.pointerId);
+        var cur = eventPos(e);
+        pointers.set(e.pointerId, cur);
+        if (pointers.size === 1 && startInfo) {
+          var dx = cur.x - prev.x, dy = cur.y - prev.y;
+          startInfo.moved += Math.abs(dx) + Math.abs(dy);
+          M3.cam.theta -= dx * 0.0055;
+          M3.cam.phi = clamp(M3.cam.phi - dy * 0.0045, M3.cam.minPhi, M3.cam.maxPhi);
+        } else if (pointers.size === 2) {
+          var pts = Array.from(pointers.values());
+          var d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+          if (pinchDist > 0 && d > 0) {
+            M3.cam.radius = clamp(M3.cam.radius * pinchDist / d, M3.cam.minR, M3.cam.maxR);
+          }
+          pinchDist = d;
+          if (startInfo) startInfo.moved = 99;
+        }
+      });
+      function endPointer(e) {
+        if (pointers.has(e.pointerId)) pointers.delete(e.pointerId);
+        if (pointers.size < 2) pinchDist = 0;
+        if (startInfo && pointers.size === 0) {
+          var dt = Date.now() - startInfo.t;
+          if (startInfo.moved < 8 && dt < 400) handleTap(e);
+          startInfo = null;
+        }
+      }
+      el.addEventListener('pointerup', endPointer);
+      el.addEventListener('pointercancel', endPointer);
+      el.addEventListener('wheel', function (e) {
+        e.preventDefault();
+        M3.cam.radius = clamp(M3.cam.radius * (1 + e.deltaY * 0.0012), M3.cam.minR, M3.cam.maxR);
+      }, { passive: false });
+    }
+
+    function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+    function handleTap(e) {
+      var r = M3.renderer.domElement.getBoundingClientRect();
+      var ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+      M3.raycaster.setFromCamera(ndc, M3.camera);
+      var hits = M3.raycaster.intersectObjects(M3.hitTargets, false);
+      if (hits.length) {
+        var ud = hits[0].object.userData;
+        if (ud.poiId) { selectPOI(ud.poiId); return; }
+        if (ud.userMarker) { App.toast('当前位置：' + (MAP.currentLoc.label || '校园内')); }
+      } else if (MAP.selectedPointId && !DELIVERY_MODE) {
+        clearSelection();
+      }
+    }
+
+    function resetView() {
+      M3.cam.theta = 0;
+      M3.cam.phi = Math.PI / 4;
+      M3.cam.radius = 135;
+      M3.cam.targetGoal.set(0, 0, DELIVERY_MODE ? 0 : 6);
+    }
+
+    function zoomView(dir) {
+      M3.cam.radius = clamp(M3.cam.radius * (1 + dir * 0.18), M3.cam.minR, M3.cam.maxR);
+    }
+
+    // ---------- 拾取点选择 / 信息卡 ----------
+    function setFilter(filter, btn) {
+      MAP.currentFilter = filter;
+      document.querySelectorAll('.map-filters .chip').forEach(function (c) { c.classList.remove('active'); });
+      if (btn) btn.classList.add('active');
+      M3.pins.forEach(function (pin) {
+        pin.group.visible = filter === 'all' || pin.poi.type === filter;
+      });
+    }
+
+    function refreshPoiCounts() {
+      var points = Storage.getPickupPoints();
+      M3.pins.forEach(function (pin) {
+        for (var i = 0; i < points.length; i++) {
+          if (points[i].id === pin.poi.id) {
+            pin.poi.pendingCount = points[i].pendingCount || 0;
+            if (pin.badge) {
+              pin.badge.visible = pin.poi.pendingCount > 0;
+            }
+          }
+        }
+      });
+    }
+
+    function selectPOI(id) {
+      var pin = null;
+      M3.pins.forEach(function (p) { if (p.poi.id === id) pin = p; });
+      if (!pin) return;
+      MAP.selectedPointId = id;
+      M3.pins.forEach(function (p) { p.group.scale.set(1, 1, 1); });
+      pin.group.scale.set(1.3, 1.3, 1.3);
+      refreshPoiCounts();
+
+      var poi = pin.poi;
+      document.getElementById('cardName').textContent = poi.name;
+      var typeEl = document.getElementById('cardType');
+      typeEl.textContent = poi.type === 'locker' ? '快递柜' : '驿站';
+      typeEl.style.background = poi.color + '22';
+      typeEl.style.color = poi.color;
+      document.getElementById('cardAddress').textContent = poi.address;
+      document.getElementById('cardHours').textContent = poi.businessHours;
+      document.getElementById('cardBizStatus').innerHTML = isOpenNow(poi) ? '<span class="biz-status-dot"></span>营业中' : '<span class="biz-status-dot"></span>已打烊';
+      document.getElementById('cardBizStatus').className = 'biz-status ' + (isOpenNow(poi) ? 'biz-status--open' : 'biz-status--closed');
+
+      var dist = distanceTo(MAP.currentLoc, { x: poi.x, y: poi.y });
+      document.getElementById('cardDistance').textContent = formatDistance(dist);
+      document.getElementById('cardWalkTime').textContent = formatWalk(dist);
+
+      var pendingRow = document.getElementById('cardPendingRow');
+      var badge = document.getElementById('cardPendingBadge');
+      if (poi.pendingCount > 0) { pendingRow.style.display = 'flex'; badge.textContent = poi.pendingCount + ' 件'; }
+      else pendingRow.style.display = 'none';
+
+      document.getElementById('infoCard').classList.add('show');
+      document.getElementById('mapHint').classList.add('hidden');
+    }
+
+    function clearSelection() {
+      MAP.selectedPointId = null;
+      M3.pins.forEach(function (p) { p.group.scale.set(1, 1, 1); });
+      document.getElementById('infoCard').classList.remove('show');
+      if (!MAP.isNavigating) document.getElementById('mapHint').classList.remove('hidden');
+    }
+
+    function isOpenNow(poi) {
+      if (poi.businessHours === '24小时') return true;
+      var m = /(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})/.exec(poi.businessHours || '');
+      if (!m) return true;
+      var now = new Date();
+      var cur = now.getHours() * 60 + now.getMinutes();
+      var a = (+m[1]) * 60 + (+m[2]), b = (+m[3]) * 60 + (+m[4]);
+      return cur >= a && cur <= b;
+    }
+
+    // ---------- 路线规划（本地 Dijkstra + 最近点接入道路网） ----------
+    function dist2(a, b) { var dx = a.x - b.x, dy = a.y - b.y; return dx * dx + dy * dy; }
+
+    function nearestOnRoads(pos) {
+      var best = null;
+      CAMPUS_DATA.roads.edges.forEach(function (edge) {
+        var a = CAMPUS_DATA.roads.nodes[edge[0]];
+        var b = CAMPUS_DATA.roads.nodes[edge[1]];
+        var abx = b.x - a.x, aby = b.y - a.y;
+        var len2 = abx * abx + aby * aby;
+        var t = len2 ? clamp(((pos.x - a.x) * abx + (pos.y - a.y) * aby) / len2, 0, 1) : 0;
+        var px = a.x + abx * t, py = a.y + aby * t;
+        var d = dist2(pos, { x: px, y: py });
+        if (!best || d < best.d) best = { d: d, x: px, y: py, edge: edge, t: t };
+      });
+      return best;
+    }
+
+    function computeRoutePoints(fromPos, toPos) {
+      var nodes = {};
+      for (var k in CAMPUS_DATA.roads.nodes) nodes[k] = { x: CAMPUS_DATA.roads.nodes[k].x, y: CAMPUS_DATA.roads.nodes[k].y };
+      var edges = CAMPUS_DATA.roads.edges.map(function (e) { return [e[0], e[1]]; });
+
+      function addAccess(pos, id) {
+        var acc = nearestOnRoads(pos);
+        nodes[id] = { x: acc.x, y: acc.y };
+        edges.push([id, acc.edge[0]]);
+        edges.push([id, acc.edge[1]]);
+        return id;
+      }
+      var startId = addAccess(fromPos, '__S__');
+      var endId = addAccess(toPos, '__T__');
+
+      // Dijkstra
+      var dist = {}, prev = {}, visited = {};
+      for (var nk in nodes) { dist[nk] = Infinity; visited[nk] = false; }
+      dist[startId] = 0;
+      function nd(a, b) { return Math.sqrt(dist2(nodes[a], nodes[b])); }
+      for (var iter = 0; iter < Object.keys(nodes).length; iter++) {
+        var u = null, ud = Infinity;
+        for (var k2 in nodes) { if (!visited[k2] && dist[k2] < ud) { ud = dist[k2]; u = k2; } }
+        if (u === null || u === endId) break;
+        visited[u] = true;
+        edges.forEach(function (e) {
+          if (e[0] === u || e[1] === u) {
+            var v = e[0] === u ? e[1] : e[0];
+            var w = nd(u, v);
+            if (dist[u] + w < dist[v]) { dist[v] = dist[u] + w; prev[v] = u; }
+          }
+        });
+      }
+      if (dist[endId] === Infinity) return [fromPos, toPos];
+
+      var chain = [];
+      var cur = endId;
+      while (cur) { chain.unshift(cur); cur = prev[cur]; }
+      var pts = [fromPos];
+      chain.forEach(function (id) { pts.push({ x: nodes[id].x, y: nodes[id].y }); });
+      pts.push(toPos);
+      // 去重复点
+      var out = [pts[0]];
+      for (var i = 1; i < pts.length; i++) {
+        if (Math.abs(pts[i].x - out[out.length - 1].x) > 0.01 || Math.abs(pts[i].y - out[out.length - 1].y) > 0.01) out.push(pts[i]);
+      }
+      return out;
+    }
+
+    function polylineLength(pts) {
+      var len = 0;
+      for (var i = 1; i < pts.length; i++) len += Math.sqrt(dist2(pts[i - 1], pts[i]));
+      return len;
+    }
+
+    function buildRouteMesh(pts, colorHex, radius) {
+      var vecs = pts.map(function (p) { var w = toWorld(p.x, p.y); return new THREE.Vector3(w.x, 0.55, w.z); });
+      var curve = new THREE.CatmullRomCurve3(vecs, false, 'catmullrom', 0.02);
+      var tube = new THREE.Mesh(
+        new THREE.TubeGeometry(curve, Math.max(32, vecs.length * 6), radius || 0.42, 8, false),
+        stdMat(colorHex, { emissive: colorHex, emissiveIntensity: 0.85, roughness: 0.4 })
+      );
+      var group = new THREE.Group();
+      group.add(tube);
+      // 流光脉冲球
+      var pulses = [];
+      for (var i = 0; i < 3; i++) {
+        var pulse = new THREE.Mesh(new THREE.SphereGeometry(radius ? radius * 0.9 : 0.38, 10, 8), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
+        group.add(pulse);
+        pulses.push(pulse);
+      }
+      M3.scene.add(group);
+      return { group: group, curve: curve, pulses: pulses };
+    }
+
+    function removeRoute() {
+      if (M3.routeGroup) { M3.scene.remove(M3.routeGroup.group); M3.routeGroup = null; }
+    }
+
+    function startNavigation() {
+      if (!MAP.selectedPointId) return;
+      var poi = null;
+      M3.pins.forEach(function (p) { if (p.poi.id === MAP.selectedPointId) poi = p.poi; });
+      if (!poi) return;
+      removeRoute();
+      var pts = computeRoutePoints(MAP.currentLoc, { x: poi.x, y: poi.y });
+      M3.routeGroup = buildRouteMesh(pts, 0x2563EB, 0.42);
+      MAP.isNavigating = true;
+      var dist = polylineLength(pts) * CAMPUS_DATA.meta.metersPerUnit;
+      document.getElementById('navDistance').textContent = formatDistance(dist);
+      document.getElementById('navWalkTime').textContent = formatWalk(dist);
+      document.getElementById('navBar').classList.add('show');
+      document.getElementById('infoCard').classList.remove('show');
+    }
+
+    function closeNavigation() {
+      removeRoute();
+      MAP.isNavigating = false;
+      document.getElementById('navBar').classList.remove('show');
+      document.getElementById('mapHint').classList.remove('hidden');
+    }
+
+    // ---------- 定位 ----------
+    function initGeolocation() {
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        applyGeolocation(pos.coords.latitude, pos.coords.longitude, true);
+      }, function () {
+        // 失败：保持默认位置
+      }, { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 });
+    }
+
+    function locateMe() {
+      if (!navigator.geolocation) { App.toast('当前浏览器不支持定位'); return; }
+      App.toast('正在定位…', 1200);
+      navigator.geolocation.getCurrentPosition(function (pos) {
+        applyGeolocation(pos.coords.latitude, pos.coords.longitude, false);
+      }, function () {
+        App.toast('定位失败，使用默认位置');
+        moveCameraTo(MAP.currentLoc);
+      }, { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 });
+    }
+
+    function applyGeolocation(lat, lng, silent) {
+      var b = CAMPUS_DATA.geoBounds;
+      var x = ((lng - b.west) / (b.east - b.west)) * 100;
+      var y = ((b.north - lat) / (b.north - b.south)) * 100;
+      if (x < -8 || x > 108 || y < -8 || y > 108) {
+        if (!silent) App.toast('定位不在校园范围内，已使用默认位置');
+        return;
+      }
+      MAP.currentLoc = { x: clamp(x, 1, 99), y: clamp(y, 1, 99), label: 'GPS 定位' };
+      var p = toWorld(MAP.currentLoc.x, MAP.currentLoc.y);
+      M3.userMarker.position.set(p.x, 0, p.z);
+      moveCameraTo(MAP.currentLoc);
+      if (!silent) App.toastSuccess('已定位到当前位置');
+    }
+
+    function moveCameraTo(loc) {
+      var p = toWorld(loc.x, loc.y);
+      M3.cam.targetGoal.set(p.x, 0, p.z);
+    }
+
+    // ---------- 配送模式 ----------
+    function dormHomePosition() {
+      var user = Storage.getUser();
+      var text = (user.campus || '') + (user.dormitory || '') + (user.address || '');
+      var dorms = { '竹苑': [20.5, 29.2], '松苑': [38.5, 29.2], '梅苑': [60.5, 29.2], '菊苑': [20.5, 17.6], '兰苑': [38.5, 29.2], '楷苑': [60.5, 17.6] };
+      for (var name in dorms) {
+        if (text.indexOf(name) !== -1) return { x: dorms[name][0], y: dorms[name][1], label: name };
+      }
+      return { x: 38.5, y: 29.2, label: '兰苑' };
+    }
+
+    function initDeliveryMode() {
+      Storage.syncOrderStatuses();
+      var order = Storage.getOrder(DELIVERY_ORDER_ID);
+      if (!order) {
+        App.showModal({ title: '订单不存在', icon: 'warning', desc: '未找到该外卖订单，可能已被清除', confirmText: '返回', onConfirm: function () { location.href = 'food.html'; } });
+        return;
+      }
+      MAP.deliveryOrder = order;
+
+      document.getElementById('pageTitle').textContent = '配送地图';
+      document.getElementById('mapFilters').style.display = 'none';
+      document.getElementById('mapHint').classList.add('hidden');
+      document.getElementById('viewControls').style.display = 'none';
+
+      var home = dormHomePosition();
+      var shop = { x: order.x || 50, y: order.y || 50 };
+
+      // 店铺标记
+      var shopColor = order.restaurantColor || '#F59E0B';
+      var sp = toWorld(shop.x, shop.y);
+      var shopPin = new THREE.Group();
+      shopPin.position.set(sp.x, 0, sp.z);
+      var sPole = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.16, 3.4, 8), stdMat(0xF8FAFC));
+      sPole.position.y = 1.7; sPole.castShadow = true;
+      shopPin.add(sPole);
+      var sHead = new THREE.Mesh(new THREE.SphereGeometry(0.82, 14, 12), stdMat(shopColor, { emissive: shopColor, emissiveIntensity: 0.55 }));
+      sHead.position.y = 3.8;
+      shopPin.add(sHead);
+      var sIcon = makeLabel(order.restaurantEmoji || '🍽️', { fontSize: 46, scale: 0.07 });
+      sIcon.position.y = 3.8;
+      shopPin.add(sIcon);
+      var sLabel = makeLabel(order.restaurantName || '店铺', { fontSize: 34, scale: 0.105, bgColor: 'rgba(245,158,11,0.95)', color: '#fff' });
+      sLabel.position.y = 5.2;
+      shopPin.add(sLabel);
+      var sGlow = new THREE.Mesh(new THREE.CircleGeometry(2.0, 24), new THREE.MeshBasicMaterial({ color: shopColor, transparent: true, opacity: 0.25 }));
+      sGlow.rotation.x = -Math.PI / 2; sGlow.position.y = 0.07;
+      shopPin.add(sGlow);
+      M3.scene.add(shopPin);
+
+      // 用户家标记改标签
+      if (M3.userLabel) M3.userLabel.visible = false;
+      var homeLabel = makeLabel('收货地址', { fontSize: 34, scale: 0.105, bgColor: 'rgba(37,99,235,0.95)', color: '#fff' });
+      var hw = toWorld(home.x, home.y);
+      homeLabel.position.set(hw.x, 3.0, hw.z);
+      M3.scene.add(homeLabel);
+      M3.userMarker.position.set(hw.x, 0, hw.z);
+
+      // 骑手
+      M3.delivery.rider = buildRider();
+      M3.scene.add(M3.delivery.rider);
+
+      // 配送路线（店铺 → 家）
+      var pts = computeRoutePoints(shop, home);
+      M3.delivery.routePoints = pts;
+      M3.delivery.total = polylineLength(pts);
+      M3.delivery.cum = [0];
+      for (var i = 1; i < pts.length; i++) M3.delivery.cum.push(M3.delivery.cum[i - 1] + Math.sqrt(dist2(pts[i - 1], pts[i])));
+      var route = buildRouteMesh(pts, 0xF59E0B, 0.4);
+      M3.deliveryRoute = route;
+      M3.routeGroup = { group: route.group, curve: route.curve, pulses: route.pulses };
+
+      // 相机聚焦路线中点
+      var mid = pts[Math.floor(pts.length / 2)];
+      var mp = toWorld(mid.x, mid.y);
+      M3.cam.targetGoal.set(mp.x, 0, mp.z);
+      M3.cam.radius = 105;
+
+      // UI
+      document.getElementById('deliveryShopDot').style.background = shopColor;
+      document.getElementById('deliveryShopName').textContent = (order.restaurantEmoji || '') + ' ' + (order.restaurantName || '');
+      document.getElementById('deliveryDestName').textContent = (order.address && order.address.text ? order.address.text : '宿舍区').slice(0, 14);
+      document.getElementById('deliveryItems').textContent = '共 ' + (order.itemCount || 0) + ' 件商品';
+      document.getElementById('deliveryTotal').textContent = '合计 ¥' + (order.total || 0).toFixed(2);
+      document.getElementById('deliveryOrderId').textContent = '订单号 ' + order.id;
+      document.getElementById('deliveryDistance').textContent = '配送距离 ' + Math.round(M3.delivery.total * CAMPUS_DATA.meta.metersPerUnit) + 'm';
+      document.getElementById('deliveryTopBar').classList.add('show');
+      document.getElementById('deliveryCard').classList.add('show');
+      updateDeliveryUi();
+    }
+
+    function buildRider() {
+      var g = new THREE.Group();
+      // 电动车
+      var bike = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.3, 1.5), stdMat(0x334155, { roughness: 0.5 }));
+      bike.position.y = 0.42;
+      g.add(bike);
+      var wheelGeo = new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10);
+      var w1 = new THREE.Mesh(wheelGeo, stdMat(0x1E293B)); w1.rotation.z = Math.PI / 2; w1.position.set(0, 0.3, 0.62);
+      var w2 = new THREE.Mesh(wheelGeo, stdMat(0x1E293B)); w2.rotation.z = Math.PI / 2; w2.position.set(0, 0.3, -0.62);
+      g.add(w1); g.add(w2);
+      // 骑手
+      var body = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.75, 0.32), stdMat(0xF59E0B, { emissive: 0xF59E0B, emissiveIntensity: 0.25 }));
+      body.position.y = 1.15;
+      g.add(body);
+      var head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 10, 8), stdMat(0xFCD9B6));
+      head.position.y = 1.75;
+      g.add(head);
+      var helmet = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8, 0, Math.PI * 2, 0, Math.PI / 2), stdMat(0xF97316));
+      helmet.position.y = 1.8;
+      g.add(helmet);
+      // 保温箱
+      var box = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.5, 0.5), stdMat(0xFF7A1A, { roughness: 0.6 }));
+      box.position.set(0, 0.95, -0.75);
+      g.add(box);
+      g.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+      return g;
+    }
+
+    function riderPointAt(progress) {
+      var pts = M3.delivery.routePoints, cum = M3.delivery.cum;
+      if (!pts || !cum) return null;
+      var target = progress * cum[cum.length - 1];
+      for (var i = 1; i < cum.length; i++) {
+        if (cum[i] >= target) {
+          var seg = cum[i] - cum[i - 1] || 1;
+          var t = (target - cum[i - 1]) / seg;
+          var x = pts[i - 1].x + (pts[i].x - pts[i - 1].x) * t;
+          var y = pts[i - 1].y + (pts[i].y - pts[i - 1].y) * t;
+          var nx = pts[i].x - pts[i - 1].x, ny = pts[i].y - pts[i - 1].y;
+          return { x: x, y: y, heading: Math.atan2(ny, nx) };
+        }
+      }
+      var last = pts[pts.length - 1];
+      return { x: last.x, y: last.y, heading: 0 };
+    }
+
+    function updateDeliveryUi() {
+      var order = MAP.deliveryOrder;
+      if (!order) return;
+      Storage.syncOrderStatuses();
+      var fresh = Storage.getOrder(order.id);
+      if (fresh) MAP.deliveryOrder = order = fresh;
+
+      var chip = document.getElementById('deliveryStatusChip');
+      var eta = document.getElementById('deliveryEta');
+      var bar = document.getElementById('deliveryProgressBar');
+      var statusText = Storage.ORDER_STATUS[order.status] || order.status;
+      var statusColor = { unpaid: ['#FEF3C7', '#B45309'], preparing: ['#DBEAFE', '#1D4ED8'], delivering: ['#FFEDD5', '#C2410C'], completed: ['#D1FAE5', '#059669'] }[order.status] || ['#F1F5F9', '#64748B'];
+      chip.textContent = statusText;
+      chip.style.background = statusColor[0];
+      chip.style.color = statusColor[1];
+
+      var progress = Storage.getDeliveryProgress(order);
+      if (order.status === 'unpaid') { eta.textContent = '待支付'; bar.style.width = '0%'; }
+      else if (order.status === 'preparing') { eta.textContent = '商家备餐中'; bar.style.width = '6%'; }
+      else if (order.status === 'delivering') {
+        var remaining = Math.max(0, Storage.FOOD_TIMINGS.deliveringMs - (Date.now() - order.deliveringAt));
+        var min = Math.max(1, Math.ceil(remaining / 60000));
+        eta.textContent = remaining < 60000 ? '即将送达' : '预计送达 ' + min + ' 分钟';
+        bar.style.width = Math.round(progress * 100) + '%';
+      } else {
+        eta.textContent = '已送达 🎉';
+        bar.style.width = '100%';
+        chip.textContent = '已完成';
+      }
+    }
+
+    function goOrderDetail() {
+      if (MAP.deliveryOrder) location.href = 'order.html?id=' + MAP.deliveryOrder.id;
+    }
+
+    function goBack() {
+      if (history.length > 1) history.back();
+      else location.href = 'index.html';
+    }
+
+    // ---------- 格式化 ----------
+    function formatDistance(meters) {
+      if (meters >= 1000) return (meters / 1000).toFixed(1) + ' km';
+      return Math.round(meters) + ' m';
+    }
+    function formatWalk(meters) {
+      var min = Math.max(1, Math.round(meters / CAMPUS_DATA.meta.walkSpeedMetersPerMin));
+      return min + ' 分钟';
+    }
+    function distanceTo(a, b) {
+      var pts = computeRoutePoints(a, b);
+      return polylineLength(pts) * CAMPUS_DATA.meta.metersPerUnit;
+    }
+
+    // ---------- 渲染循环 ----------
+    var lastUiTick = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      var t = M3.clock.getElapsedTime();
+
+      // 相机
+      M3.cam.target.lerp(M3.cam.targetGoal, 0.06);
+      var cx = M3.cam.target.x + M3.cam.radius * Math.sin(M3.cam.phi) * Math.sin(M3.cam.theta);
+      var cy = M3.cam.target.y + M3.cam.radius * Math.cos(M3.cam.phi);
+      var cz = M3.cam.target.z + M3.cam.radius * Math.sin(M3.cam.phi) * Math.cos(M3.cam.theta);
+      M3.camera.position.set(cx, cy, cz);
+      M3.camera.lookAt(M3.cam.target);
+
+      // POI 呼吸动画
+      M3.pins.forEach(function (pin, i) {
+        pin.head.position.y = pin.baseY + Math.sin(t * 2 + i * 0.8) * 0.14;
+        pin.glow.scale.setScalar(1 + Math.sin(t * 2.4 + i) * 0.08);
+      });
+      // 用户光圈脉冲
+      if (M3.userRing) {
+        var pulse = (t % 1.8) / 1.8;
+        M3.userRing.scale.setScalar(1 + pulse * 1.6);
+        M3.userRing.material.opacity = 0.65 * (1 - pulse);
+      }
+      // 路线流光
+      if (M3.routeGroup && M3.routeGroup.pulses) {
+        M3.routeGroup.pulses.forEach(function (p, i) {
+          var u = (t * 0.12 + i / 3) % 1;
+          var pos = M3.routeGroup.curve.getPointAt(u);
+          p.position.copy(pos);
+          var s = 0.7 + Math.sin(t * 6 + i * 2) * 0.25;
+          p.scale.setScalar(s);
+        });
+      }
+
+      // 配送骑手
+      if (M3.delivery.rider && MAP.deliveryOrder) {
+        if (t - lastUiTick > 1) {
+          lastUiTick = t;
+          Storage.syncOrderStatuses();
+          var fresh = Storage.getOrder(MAP.deliveryOrder.id);
+          if (fresh) MAP.deliveryOrder = fresh;
+          updateDeliveryUi();
+        }
+        var order = MAP.deliveryOrder;
+        var progress = Storage.getDeliveryProgress(order);
+        if (order.status === 'preparing' || order.status === 'unpaid') progress = 0;
+        var rp = riderPointAt(progress);
+        if (rp) {
+          var w = toWorld(rp.x, rp.y);
+          M3.delivery.rider.position.set(w.x, 0, w.z);
+          // 朝向：地图 x → world x，地图 y → world z
+          M3.delivery.rider.rotation.y = -rp.heading;
+          M3.delivery.rider.visible = true;
+        }
+      }
+
+      M3.renderer.render(M3.scene, M3.camera);
+    }
+
+    function onResize() {
+      if (!M3.renderer) return;
+      var w = M3.container.clientWidth, h = M3.container.clientHeight;
+      M3.renderer.setSize(w, h);
+      M3.camera.aspect = w / h;
+      M3.camera.updateProjectionMatrix();
+    }
+  </script>
+</body>
+</html>

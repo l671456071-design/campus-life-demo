@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>店铺详情 - 校园外卖</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* ===== Food Detail Page Styles ===== */
+    .shop-hero {
+      display: flex;
+      gap: 14px;
+      padding: 16px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .shop-hero .logo {
+      width: 72px; height: 72px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 38px; line-height: 1; flex-shrink: 0;
+    }
+    .shop-hero .info { flex: 1; min-width: 0; }
+    .shop-hero .name-row { display: flex; align-items: center; gap: 6px; }
+    .shop-hero .name { font-size: 17px; font-weight: 700; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-open-badge {
+      font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: var(--radius-full);
+      background: var(--color-success-light); color: var(--color-accent-hover); flex-shrink: 0;
+    }
+    .shop-open-badge.closed { background: var(--color-bg); color: var(--color-text-hint); }
+    .shop-hero .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px; font-size: 12px; color: var(--color-text-sub); }
+    .shop-hero .stats .rating { color: #F59E0B; font-weight: 700; }
+    .shop-hero .notice {
+      margin-top: 8px; font-size: 12px; color: var(--color-primary);
+      background: var(--color-primary-lighter); border-radius: var(--radius-sm);
+      padding: 5px 10px; display: flex; align-items: center; gap: 5px;
+    }
+    .shop-hero .notice svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .shop-closed-banner {
+      margin-top: 12px; padding: 10px 14px; border-radius: var(--radius-md);
+      background: var(--color-warning-light); color: #B45309;
+      font-size: 13px; display: flex; align-items: center; gap: 8px;
+    }
+    .shop-closed-banner svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    .menu-title {
+      display: flex; align-items: center; gap: 6px;
+      margin: 18px 4px 10px;
+      font-size: 15px; font-weight: 700; color: var(--color-text);
+    }
+    .menu-title::before {
+      content: ''; display: block; width: 4px; height: 16px;
+      border-radius: 2px; background: var(--color-warning);
+    }
+
+    /* 菜品卡片 */
+    .food-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .food-pic {
+      width: 58px; height: 58px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 30px; line-height: 1; flex-shrink: 0;
+      background: var(--color-surface-alt);
+    }
+    .food-body { flex: 1; min-width: 0; }
+    .food-name { font-size: 14px; font-weight: 600; color: var(--color-text); }
+    .food-desc { font-size: 12px; color: var(--color-text-sub); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .food-meta { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
+    .food-price { font-size: 16px; font-weight: 800; color: #E4423A; }
+    .food-price::before { content: '¥'; font-size: 11px; font-weight: 700; }
+    .food-sales { font-size: 11px; color: var(--color-text-hint); }
+
+    /* 数量步进器 */
+    .stepper { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .step-btn {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: none; transition: transform 0.12s;
+      font-weight: 700;
+    }
+    .step-btn:active { transform: scale(0.85); }
+    .step-btn svg { width: 14px; height: 14px; }
+    .step-minus { background: var(--color-surface-alt); color: var(--color-text-sub); border: 1.5px solid var(--color-border) !important; }
+    .step-plus { background: var(--color-warning); color: #fff; box-shadow: 0 2px 8px rgba(245,158,11,0.35); }
+    .step-num { min-width: 16px; text-align: center; font-size: 14px; font-weight: 700; color: var(--color-text); font-family: var(--font-mono); }
+
+    /* 底部购物车栏 */
+    .cart-bar {
+      position: fixed; left: 12px; right: 12px;
+      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom, 0px) + 10px);
+      height: 52px;
+      background: var(--color-text);
+      border-radius: var(--radius-full);
+      display: flex; align-items: center;
+      padding: 0 6px 0 10px;
+      gap: 10px;
+      z-index: 90;
+      box-shadow: var(--shadow-xl);
+      transform: translateY(120%);
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .cart-bar.show { transform: translateY(0); }
+    .cart-icon {
+      position: relative; width: 40px; height: 40px; border-radius: 50%;
+      background: var(--color-warning); color: #fff;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .cart-icon svg { width: 20px; height: 20px; }
+    .cart-count {
+      position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px;
+      border-radius: 9px; background: var(--color-danger); color: #fff;
+      font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+      padding: 0 4px; border: 1.5px solid var(--color-text);
+    }
+    .cart-bar .sum { flex: 1; min-width: 0; color: #fff; }
+    .cart-bar .sum .total { font-size: 17px; font-weight: 800; font-family: var(--font-mono); }
+    .cart-bar .sum .total::before { content: '¥'; font-size: 12px; }
+    .cart-bar .sum .detail { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 1px; }
+    .cart-bar .go-checkout {
+      height: 40px; padding: 0 22px; border: none; border-radius: var(--radius-full);
+      background: var(--color-warning); color: #fff;
+      font-size: 14px; font-weight: 700; flex-shrink: 0;
+      transition: transform 0.12s, opacity 0.2s;
+    }
+    .cart-bar .go-checkout:active { transform: scale(0.95); }
+    .cart-bar .go-checkout:disabled { opacity: 0.4; }
+  </style>
+</head>
+<body data-page="food">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="food.html" class="header-back-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </a>
+      </div>
+      <div class="header-title" id="headerTitle">店铺详情</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div class="px-4" style="padding-top:12px;">
+        <!-- 店铺信息 -->
+        <div id="shopBox"></div>
+
+        <!-- 菜品列表 -->
+        <div class="menu-title anim-fade-in-up">菜单（<span id="menuCount">0</span>）</div>
+        <div id="foodList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:90px;"></div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- 底部购物车结算栏 -->
+  <div class="cart-bar" id="cartBar">
+    <div class="cart-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      <span class="cart-count" id="cartCount">0</span>
+    </div>
+    <div class="sum">
+      <div class="total" id="cartTotal">0</div>
+      <div class="detail" id="cartDetail">未选购商品</div>
+    </div>
+    <button class="go-checkout" id="goCheckout" onclick="goCheckout()">去结算</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var shopId = params.get('id') || '';
+      var shop = null;
+      var foodMap = {}; // foodId -> qty（仅本店）
+
+      function money(n) {
+        var v = Math.round(n * 100) / 100;
+        return v % 1 === 0 ? String(v) : v.toFixed(v * 10 % 1 === 0 ? 1 : 2);
+      }
+
+      function renderShop() {
+        var r = shop;
+        if (!r) {
+          document.getElementById('shopBox').innerHTML = App.emptyState('店铺不存在', '该店铺可能已下线');
+          return;
+        }
+        document.getElementById('headerTitle').textContent = r.name;
+        document.title = r.name + ' - 校园外卖';
+        var openBadge = r.isOpen
+          ? '<span class="shop-open-badge">营业中</span>'
+          : '<span class="shop-open-badge closed">休息中</span>';
+        var feeText = r.deliveryFee === 0 ? '免配送费' : '配送 ¥' + money(r.deliveryFee);
+        var promoText = r.promo ? ('满' + money(r.promo.full) + '减' + money(r.promo.cut)) : '';
+        document.getElementById('shopBox').innerHTML =
+          '<div class="shop-hero anim-fade-in-up">' +
+            '<div class="logo" style="background:' + (r.color || '#FEF3C7') + '22;">' + (r.emoji || '🍽️') + '</div>' +
+            '<div class="info">' +
+              '<div class="name-row"><span class="name">' + r.name + '</span>' + openBadge + '</div>' +
+              '<div class="stats">' +
+                '<span class="rating">★ ' + r.rating + '</span>' +
+                '<span>月售 ' + r.monthlySales + '</span>' +
+                '<span>约 ' + r.deliveryTime + ' 分钟</span>' +
+                '<span>' + feeText + '</span>' +
+                '<span>¥' + money(r.minOrder) + ' 起送</span>' +
+              '</div>' +
+              (r.notice ? '<div class="notice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-7-7 18-2-8-9-3z"/></svg>' + r.notice + (promoText ? ' · ' + promoText : '') + '</div>' : '') +
+            '</div>' +
+          '</div>' +
+          (!r.isOpen
+            ? '<div class="shop-closed-banner anim-fade-in-up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>店铺休息中，可先浏览菜单，营业后即可下单</div>'
+            : '');
+      }
+
+      function renderMenu() {
+        var list = Storage.getFoods(shopId);
+        document.getElementById('menuCount').textContent = list.length;
+        if (!list.length) {
+          document.getElementById('foodList').innerHTML = App.emptyState('暂无菜品', '该店铺还没有上架菜品');
+          return;
+        }
+        var html = '';
+        list.forEach(function (f, i) {
+          var stagger = i < 6 ? ' stagger-' + (i + 1) : '';
+          var qty = foodMap[f.id] || 0;
+          html += '<div class="food-card anim-fade-in-up' + stagger + '">' +
+            '<div class="food-pic">' + (f.emoji || '🍽️') + '</div>' +
+            '<div class="food-body">' +
+              '<div class="food-name">' + f.name + '</div>' +
+              (f.desc ? '<div class="food-desc">' + f.desc + '</div>' : '') +
+              '<div class="food-meta"><span class="food-price">' + money(f.price) + '</span><span class="food-sales">月售 ' + f.sales + '</span></div>' +
+            '</div>' +
+            '<div class="stepper">' +
+              (qty > 0 ? '<button class="step-btn step-minus" onclick="changeQty(\'' + f.id + '\',' + (qty - 1) + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"/></svg></button>' : '') +
+              (qty > 0 ? '<span class="step-num">' + qty + '</span>' : '') +
+              '<button class="step-btn step-plus" onclick="addToCart(\'' + f.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>' +
+            '</div>' +
+          '</div>';
+        });
+        document.getElementById('foodList').innerHTML = html;
+      }
+
+      function syncLocalQty() {
+        foodMap = {};
+        var cart = Storage.getCart();
+        if (cart.restaurantId === shopId) {
+          cart.items.forEach(function (it) { foodMap[it.foodId] = it.qty; });
+        }
+      }
+
+      function renderCartBar() {
+        var summary = Storage.getCartSummary();
+        var mine = summary.restaurant && summary.restaurant.id === shopId;
+        var bar = document.getElementById('cartBar');
+        if (!mine || !summary.itemCount) {
+          bar.classList.remove('show');
+          return;
+        }
+        bar.classList.add('show');
+        document.getElementById('cartCount').textContent = summary.itemCount;
+        document.getElementById('cartTotal').textContent = money(summary.subtotal - summary.discount);
+        var bits = [];
+        bits.push('共 ' + summary.itemCount + ' 件');
+        if (summary.deliveryFee) bits.push('配送 ¥' + money(summary.deliveryFee));
+        else bits.push('免配送费');
+        if (summary.discount) bits.push('已优惠 ¥' + money(summary.discount));
+        if (!summary.reachMin) bits.push('差 ¥' + money(summary.minOrder - summary.subtotal) + ' 起送');
+        document.getElementById('cartDetail').textContent = bits.join(' · ');
+        document.getElementById('goCheckout').disabled = !summary.reachMin;
+        document.getElementById('goCheckout').textContent = summary.reachMin ? '去结算' : '还差 ¥' + money(summary.minOrder - summary.subtotal);
+      }
+
+      // ---- 加入购物车 ----
+      window.addToCart = function (foodId) {
+        if (!shop || !shop.isOpen) {
+          App.toast('店铺休息中，暂不接单');
+          return;
+        }
+        var food = Storage.getFood(foodId);
+        if (!food) return;
+        API.addToCart(foodId, 1).then(function (res) {
+          if (!res.data.success) { App.toast(res.data.message || '加入失败'); return; }
+          if (res.data.replaced) {
+            App.toast('已清空之前店铺的购物车');
+          }
+          syncLocalQty();
+          renderMenu();
+          renderCartBar();
+        });
+      };
+
+      // ---- 减少数量 ----
+      window.changeQty = function (foodId, qty) {
+        API.setCartQty(foodId, qty).then(function () {
+          syncLocalQty();
+          renderMenu();
+          renderCartBar();
+        });
+      };
+
+      // ---- 去结算 ----
+      window.goCheckout = function () {
+        var summary = Storage.getCartSummary();
+        if (!summary.itemCount) { App.toast('购物车是空的'); return; }
+        if (!summary.reachMin) { App.toast('差 ¥' + money(summary.minOrder - summary.subtotal) + ' 起送'); return; }
+        location.href = 'order.html?checkout=1';
+      };
+
+      // ---- 初始化 ----
+      shop = Storage.getRestaurant(shopId);
+      renderShop();
+      syncLocalQty();
+      renderMenu();
+      renderCartBar();
+    })();
+  </script>
+</body>
+</html>

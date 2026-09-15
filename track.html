@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>查快递 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .track-search-card {
+      padding: 16px;
+    }
+    .track-input-group {
+      display: flex;
+      gap: 10px;
+      align-items: stretch;
+    }
+    .track-input {
+      flex: 1;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+      background: var(--color-surface-alt);
+      transition: border-color 0.2s;
+      font-family: var(--font-mono);
+      min-width: 0;
+    }
+    .track-input:focus {
+      border-color: var(--color-primary);
+      background: var(--color-surface);
+    }
+    .track-input::placeholder {
+      color: var(--color-text-hint);
+      font-family: var(--font-body);
+    }
+    .track-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .track-btn:active { transform: scale(0.97); }
+    .track-btn:disabled {
+      background: var(--color-text-disabled);
+      cursor: not-allowed;
+    }
+    .shipper-select-wrap {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .shipper-select-label {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      white-space: nowrap;
+    }
+    .shipper-select {
+      flex: 1;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 14px;
+      background: var(--color-surface-alt);
+      outline: none;
+      color: var(--color-text);
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+    }
+    .shipper-select:focus {
+      border-color: var(--color-primary);
+    }
+    .track-result {
+      margin-top: 16px;
+      display: none;
+    }
+    .track-result.show { display: block; }
+    .track-result-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px;
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-light);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 12px;
+    }
+    .track-result-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 800;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .track-result-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .track-result-company {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .track-result-no {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      font-family: var(--font-mono);
+      margin-top: 2px;
+    }
+    .track-status-badge {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-full);
+      flex-shrink: 0;
+    }
+    .tracking-timeline {
+      background: var(--color-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-light);
+      box-shadow: var(--shadow-sm);
+      padding: 16px 0;
+    }
+    .tracking-timeline-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--color-text);
+      padding: 0 16px 12px;
+      border-bottom: 1px solid var(--color-border-light);
+      margin-bottom: 12px;
+    }
+    .tracking-item {
+      display: flex;
+      gap: 12px;
+      padding: 0 16px 16px;
+      position: relative;
+    }
+    .tracking-item:last-child { padding-bottom: 0; }
+    .tracking-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--color-border);
+      flex-shrink: 0;
+      margin-top: 4px;
+      position: relative;
+      z-index: 1;
+    }
+    .tracking-item:first-child .tracking-dot {
+      background: var(--color-primary);
+      box-shadow: 0 0 0 4px var(--color-primary-light);
+    }
+    .tracking-item:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      left: 21px;
+      top: 14px;
+      bottom: 0;
+      width: 2px;
+      background: var(--color-border-light);
+    }
+    .tracking-content { flex: 1; min-width: 0; }
+    .tracking-desc {
+      font-size: 14px;
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+    .tracking-time {
+      font-size: 12px;
+      color: var(--color-text-hint);
+      margin-top: 2px;
+    }
+    .track-empty {
+      text-align: center;
+      padding: 60px 24px;
+      color: var(--color-text-hint);
+    }
+    .track-empty svg {
+      margin: 0 auto 12px;
+      opacity: 0.4;
+    }
+    .track-error {
+      padding: 14px 16px;
+      background: var(--color-danger-light);
+      border-radius: var(--radius-sm);
+      color: var(--color-danger);
+      font-size: 14px;
+      line-height: 1.6;
+      display: none;
+    }
+    .track-error.show { display: block; }
+    .track-loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--color-text-sub);
+      font-size: 14px;
+      display: none;
+    }
+    .track-loading.show { display: block; }
+    .track-loading-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--color-border);
+      border-top-color: var(--color-primary);
+      border-radius: 50%;
+      margin: 0 auto 12px;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .recent-search {
+      margin-top: 16px;
+    }
+    .recent-search-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-sub);
+      margin-bottom: 8px;
+    }
+    .recent-search-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .recent-tag {
+      padding: 6px 12px;
+      background: var(--color-surface-alt);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--color-text-sub);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .recent-tag:active {
+      border-color: var(--color-primary);
+    }
+  </style>
+</head>
+<body data-page="track">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">查快递</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <div style="padding:16px;">
+        <div class="card track-search-card anim-fade-in-up">
+          <div class="track-input-group">
+            <input type="text" class="track-input" id="trackingNoInput" placeholder="输入快递单号" inputmode="numeric">
+            <button class="track-btn" id="trackBtn" onclick="TrackPage.query()">查询</button>
+          </div>
+          <div class="shipper-select-wrap">
+            <span class="shipper-select-label">快递公司</span>
+            <select class="shipper-select" id="shipperSelect">
+              <option value="">自动识别</option>
+            </select>
+          </div>
+
+          <div class="track-error" id="trackError"></div>
+          <div class="track-loading" id="trackLoading">
+            <div class="track-loading-spinner"></div>
+            正在查询物流信息...
+          </div>
+
+          <div class="recent-search" id="recentSearch" style="display:none;">
+            <div class="recent-search-title">最近查询</div>
+            <div class="recent-search-tags" id="recentTags"></div>
+          </div>
+        </div>
+
+        <div class="track-result" id="trackResult"></div>
+
+        <div class="track-empty" id="trackEmpty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <div>输入快递单号查询物流信息</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    var TrackPage = {
+      RECENT_KEY: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo ? 'demo_' : '') + 'campus_recent_tracks',
+
+      init: function () {
+        ApiClient.requireAuth().then(function (user) {
+          if (!user) return;
+
+          // 填充快递公司下拉
+          var sel = document.getElementById('shipperSelect');
+          ApiClient.SHIPPERS.forEach(function (s) {
+            var opt = document.createElement('option');
+            opt.value = s.code;
+            opt.textContent = s.name;
+            sel.appendChild(opt);
+          });
+
+          // 回车键查询
+          document.getElementById('trackingNoInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') TrackPage.query();
+          });
+
+          // 渲染最近查询
+          TrackPage.renderRecent();
+        });
+      },
+
+      query: function () {
+        var trackingNo = document.getElementById('trackingNoInput').value.trim();
+        var shipperCode = document.getElementById('shipperSelect').value;
+
+        if (!trackingNo) {
+          App.toast('请输入快递单号');
+          return;
+        }
+
+        document.getElementById('trackError').classList.remove('show');
+        document.getElementById('trackLoading').classList.add('show');
+        document.getElementById('trackResult').classList.remove('show');
+        document.getElementById('trackEmpty').style.display = 'none';
+
+        var btn = document.getElementById('trackBtn');
+        btn.disabled = true;
+        btn.textContent = '查询中';
+
+        ApiClient.trackPackage(trackingNo, shipperCode).then(function (res) {
+          btn.disabled = false;
+          btn.textContent = '查询';
+          document.getElementById('trackLoading').classList.remove('show');
+
+          if (res.code === 0 && res.data) {
+            TrackPage.renderResult(res.data);
+            TrackPage.saveRecent(trackingNo);
+          } else {
+            var errEl = document.getElementById('trackError');
+            errEl.textContent = res.message || '查询失败';
+            errEl.classList.add('show');
+            document.getElementById('trackEmpty').style.display = 'block';
+          }
+        }).catch(function () {
+          btn.disabled = false;
+          btn.textContent = '查询';
+          document.getElementById('trackLoading').classList.remove('show');
+          App.toast('网络错误');
+        });
+      },
+
+      renderResult: function (pkg) {
+        var statusMap = {
+          'pending': { text: '待取件', color: '#2563EB', bg: '#DBEAFE' },
+          'transporting': { text: '运输中', color: '#F59E0B', bg: '#FEF3C7' },
+          'picked': { text: '已签收', color: '#10B981', bg: '#D1FAE5' },
+          'expired': { text: '已退回', color: '#EF4444', bg: '#FEE2E2' },
+        };
+        var st = statusMap[pkg.status] || statusMap['transporting'];
+
+        var html = '<div class="track-result-header">' +
+          '<div class="track-result-logo" style="background:' + (pkg.logoColor || '#64748B') + ';">' +
+            (pkg.shortName || '?') +
+          '</div>' +
+          '<div class="track-result-info">' +
+            '<div class="track-result-company">' + (pkg.company || '未知快递') + '</div>' +
+            '<div class="track-result-no">' + pkg.trackingNo + '</div>' +
+          '</div>' +
+          '<span class="track-status-badge" style="color:' + st.color + ';background:' + st.bg + ';">' + st.text + '</span>' +
+        '</div>';
+
+        if (pkg.tracking && pkg.tracking.length > 0) {
+          html += '<div class="tracking-timeline">' +
+            '<div class="tracking-timeline-title">物流轨迹</div>';
+          pkg.tracking.forEach(function (t, i) {
+            html += '<div class="tracking-item">' +
+              '<div class="tracking-dot"></div>' +
+              '<div class="tracking-content">' +
+                '<div class="tracking-desc">' + (t.description || '') + '</div>' +
+                '<div class="tracking-time">' + (t.timestamp || '') + '</div>' +
+              '</div>' +
+            '</div>';
+          });
+          html += '</div>';
+        } else {
+          html += '<div style="text-align:center;padding:32px;color:var(--color-text-hint);font-size:14px;">暂无物流轨迹信息</div>';
+        }
+
+        var el = document.getElementById('trackResult');
+        el.innerHTML = html;
+        el.classList.add('show');
+      },
+
+      saveRecent: function (trackingNo) {
+        var list = JSON.parse(localStorage.getItem(TrackPage.RECENT_KEY) || '[]');
+        list = list.filter(function (n) { return n !== trackingNo; });
+        list.unshift(trackingNo);
+        list = list.slice(0, 8);
+        localStorage.setItem(TrackPage.RECENT_KEY, JSON.stringify(list));
+        TrackPage.renderRecent();
+      },
+
+      renderRecent: function () {
+        var list = JSON.parse(localStorage.getItem(TrackPage.RECENT_KEY) || '[]');
+        if (list.length === 0) {
+          document.getElementById('recentSearch').style.display = 'none';
+          return;
+        }
+        var html = '';
+        list.forEach(function (n) {
+          html += '<span class="recent-tag" onclick="TrackPage.searchRecent(\'' + n + '\')">' + n + '</span>';
+        });
+        document.getElementById('recentTags').innerHTML = html;
+        document.getElementById('recentSearch').style.display = 'block';
+      },
+
+      searchRecent: function (trackingNo) {
+        document.getElementById('trackingNoInput').value = trackingNo;
+        TrackPage.query();
+      },
+    };
+
+    TrackPage.init();
+  </script>
+</body>
+</html>

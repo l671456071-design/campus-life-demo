@@ -1,0 +1,198 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>全部快递 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+</head>
+<body data-page="packages">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left"></div>
+      <div class="header-title">全部快递</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div class="px-4" style="padding-top:12px;">
+        <!-- 搜索栏 -->
+        <div class="search-bar anim-fade-in-up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索快递公司/单号/取件点">
+        </div>
+
+        <!-- 筛选 chips -->
+        <div class="filter-chips anim-fade-in-up stagger-1" id="filterChips" style="margin-top:12px;"></div>
+
+        <!-- 快递列表 -->
+        <div id="pkgList" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;"></div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var mainContent = document.getElementById('mainContent');
+      var listEl = document.getElementById('pkgList');
+      var searchInput = document.getElementById('searchInput');
+      var searchTimer = null;
+      var isLoading = false;
+
+      // 登录检查 + 从 API 加载真实快递数据
+      if (ApiClient.isLoggedIn()) {
+        ApiClient.getPackages().then(function (res) {
+          if (res.code === 0 && res.data && res.data.length > 0) {
+            var localList = Storage.getPackages();
+            res.data.forEach(function (apiPkg) {
+              var existing = localList.find(function (p) { return p.trackingNo === apiPkg.trackingNo; });
+              if (existing) {
+                Storage.updatePackage(existing.id, {
+                  status: apiPkg.status,
+                  company: apiPkg.company || existing.company,
+                  pickupCode: apiPkg.pickupCode || existing.pickupCode,
+                  pickupPoint: apiPkg.pickupPoint || existing.pickupPoint,
+                  sender: apiPkg.sender || existing.sender,
+                });
+              } else {
+                var newPkg = Object.assign({}, apiPkg);
+                newPkg.id = apiPkg.id;
+                localList.unshift(newPkg);
+                Storage._write(Storage.KEYS.packages, localList);
+              }
+            });
+            renderList();
+          }
+        });
+      }
+
+      // 渲染筛选 chips
+      function renderChips() {
+        var html = '';
+        DB.packageTypes.forEach(function (t) {
+          var active = App.state.filter === t.key ? ' active' : '';
+          html += '<button class="chip' + active + '" data-filter="' + t.key + '">' + t.label + '</button>';
+        });
+        document.getElementById('filterChips').innerHTML = html;
+        document.querySelectorAll('.chip[data-filter]').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            App.state.filter = this.dataset.filter;
+            document.querySelectorAll('.chip[data-filter]').forEach(function (c) { c.classList.remove('active'); });
+            this.classList.add('active');
+            loadPackages();
+          });
+        });
+      }
+
+      function renderPkgCard(pkg, index) {
+        var stagger = index < 6 ? ' stagger-' + (index + 1) : '';
+        var html = '<div class="pkg-card card--clickable anim-fade-in-up' + stagger + '" onclick="location.href=\'detail.html?id=' + pkg.id + '\'">' +
+          '<div class="pkg-card-header">' +
+            '<div class="pkg-company">' + App.pkgLogo(pkg) + '<span class="pkg-company-name">' + pkg.company + '</span>' + App.platformBadge(pkg.sender) + '</div>' +
+            '<span class="status-badge ' + App.statusClass(pkg.status) + '">' + App.statusLabel(pkg.status) + '</span>' +
+          '</div>' +
+          '<div class="pkg-info">' +
+            '<div class="pkg-info-item"><span class="pkg-info-label">物流单号</span><span class="pkg-info-value truncate" style="max-width:130px;">' + pkg.trackingNo + '</span></div>' +
+            '<div class="pkg-info-item"><span class="pkg-info-label">取件点</span><span class="pkg-info-value truncate" style="max-width:120px;">' + pkg.pickupPoint + '</span></div>' +
+          '</div>';
+        if (pkg.pickupCode) {
+          html += '<div style="margin-top:12px;display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--color-primary-lighter);border-radius:var(--radius-sm);">' +
+            '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>' +
+            '<span style="font-size:12px;color:var(--color-text-sub);">取件码</span>' +
+            '<span style="font-size:14px;font-weight:700;color:var(--color-primary);font-family:var(--font-mono);margin-left:auto;">' + pkg.pickupCode + '</span>' +
+          '</div>';
+        }
+        if (pkg.status === 'incoming' && pkg.estimatedTime) {
+          html += '<div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-primary);">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+            '<span>' + pkg.estimatedTime + '</span>' +
+          '</div>';
+        }
+        if (pkg.status === 'pending' && pkg.expiresIn) {
+          html += '<div style="margin-top:10px;display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-warning);">' +
+            '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
+            '<span>剩余 ' + pkg.expiresIn + '</span>' +
+          '</div>';
+        }
+        html += '</div>';
+        return html;
+      }
+
+      function loadPackages() {
+        if (isLoading) return;
+        isLoading = true;
+        listEl.innerHTML = App.skeletonList(4);
+
+        API.fetchPackages({ status: App.state.filter, keyword: App.state.keyword }).then(function (res) {
+          isLoading = false;
+          if (!res.data || res.data.length === 0) {
+            listEl.innerHTML = App.emptyState('暂无快递', '没有符合条件的快递记录');
+            return;
+          }
+          var html = '';
+          res.data.forEach(function (pkg, i) {
+            html += renderPkgCard(pkg, i);
+          });
+          listEl.innerHTML = html;
+        }).catch(function () {
+          isLoading = false;
+          listEl.innerHTML = App.errorState('加载失败', '请检查网络后重试', 'loadPackages');
+        });
+      }
+
+      // 搜索
+      searchInput.addEventListener('input', function () {
+        App.state.keyword = this.value.trim();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          loadPackages();
+        }, 300);
+      });
+
+      // 下拉刷新
+      function refresh() {
+        App.state.keyword = searchInput.value.trim();
+        loadPackages();
+        return Promise.resolve();
+      }
+
+      renderChips();
+      loadPackages();
+      App.initPullToRefresh(mainContent, refresh);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>消息中心 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .msg-content {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      transition: -webkit-line-clamp 0.2s;
+    }
+    .msg-content.expanded {
+      -webkit-line-clamp: 99;
+      overflow: visible;
+    }
+    .read-all-btn {
+      font-size: 13px;
+      color: var(--color-primary);
+      font-weight: 500;
+      padding: 4px 8px;
+      transition: opacity 0.15s;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+    .read-all-btn:active { opacity: 0.6; }
+    .unread-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--color-danger);
+      flex-shrink: 0;
+    }
+    .msg-card {
+      transition: transform 0.15s;
+    }
+    .msg-card:active { transform: scale(0.98); }
+  </style>
+</head>
+<body data-page="messages">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">消息中心</div>
+      <div class="header-right">
+        <button class="read-all-btn" id="readAllBtn" onclick="markAllRead()">全部已读</button>
+      </div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div style="padding: 16px;">
+        <!-- 消息分类 tab -->
+        <div class="filter-chips" style="margin-bottom: 16px;">
+          <button class="chip active" data-filter="all" onclick="filterMessages('all')">全部</button>
+          <button class="chip" data-filter="pickup" onclick="filterMessages('pickup')">取件通知</button>
+          <button class="chip" data-filter="system" onclick="filterMessages('system')">系统通知</button>
+        </div>
+
+        <!-- 消息列表 -->
+        <div id="msgList"></div>
+      </div>
+    </main>
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    var allMessages = [];
+    var currentFilter = 'all';
+    var expandedIds = {};
+
+    function messageIconSvg(icon) {
+      var icons = {
+        package: '<path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>',
+        alert: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>',
+        check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
+        bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>'
+      };
+      return icons[icon] || icons.bell;
+    }
+
+    function initMessagesPage() {
+      var list = document.getElementById('msgList');
+      list.innerHTML = App.skeletonList(3);
+
+      App.initPullToRefresh(document.getElementById('mainContent'), loadMessages);
+
+      loadMessages();
+    }
+
+    async function loadMessages() {
+      var res = await API.fetchMessages();
+      if (res.code === 0) {
+        allMessages = res.data;
+        renderMessages();
+      }
+    }
+
+    function renderMessages() {
+      var filtered = allMessages;
+      if (currentFilter === 'pickup') {
+        filtered = allMessages.filter(function (m) {
+          return m.type === 'pickup' || m.type === 'warning';
+        });
+      } else if (currentFilter === 'system') {
+        filtered = allMessages.filter(function (m) {
+          return m.type === 'system' || m.type === 'promo';
+        });
+      }
+
+      var list = document.getElementById('msgList');
+
+      if (filtered.length === 0) {
+        list.innerHTML = App.emptyState('暂无消息', '有新的快递到达时会在这里通知你');
+        return;
+      }
+
+      var html = '';
+      filtered.forEach(function (m, i) {
+        html += renderMessageCard(m, i);
+      });
+
+      list.innerHTML = html;
+    }
+
+    function renderMessageCard(m, index) {
+      var delay = Math.min(index * 0.05, 0.25);
+      var isExpanded = expandedIds[m.id] ? ' expanded' : '';
+      var dotHtml = m.read ? '' : '<span class="unread-dot"></span>';
+
+      return '<div class="card card--clickable msg-card anim-fade-in-up" style="margin-bottom:12px; padding:16px; animation-delay:' + delay + 's;" onclick="toggleMessage(\'' + m.id + '\')">' +
+        '<div style="display:flex; align-items:flex-start; gap:12px;">' +
+          '<div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:' + m.color + ';">' +
+            '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + messageIconSvg(m.icon) + '</svg>' +
+          '</div>' +
+          '<div style="flex:1; min-width:0;">' +
+            '<div style="display:flex; align-items:center; gap:6px;">' +
+              '<span class="font-semibold" style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + m.title + '</span>' +
+              dotHtml +
+            '</div>' +
+            '<div class="msg-content text-sub text-sm' + isExpanded + '" style="margin-top:4px;">' + m.content + '</div>' +
+            '<div class="text-hint text-sm" style="margin-top:4px;">' + m.time + '</div>' +
+          '</div>' +
+          '<div style="flex-shrink:0; color:var(--color-text-hint); padding-top:2px;">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function toggleMessage(id) {
+      var card = document.querySelector('[onclick*="' + id + '"]');
+      if (!card) return;
+      var content = card.querySelector('.msg-content');
+      if (!content) return;
+
+      var isExpanded = content.classList.contains('expanded');
+      if (isExpanded) {
+        content.classList.remove('expanded');
+        expandedIds[id] = false;
+      } else {
+        content.classList.add('expanded');
+        expandedIds[id] = true;
+      }
+
+      var msg = allMessages.find(function (m) { return m.id === id; });
+      if (msg && !msg.read) {
+        // 已读状态写入 localStorage，刷新/重开后仍然保持
+        API.markMessageRead(id);
+        msg.read = true;
+        var dot = card.querySelector('.unread-dot');
+        if (dot) dot.remove();
+      }
+    }
+
+    function filterMessages(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.chip').forEach(function (chip) {
+        if (chip.dataset.filter === filter) {
+          chip.classList.add('active');
+        } else {
+          chip.classList.remove('active');
+        }
+      });
+      renderMessages();
+    }
+
+    function markAllRead() {
+      // 全部已读写入 localStorage，刷新/重开后仍然保持
+      API.markAllMessagesRead();
+      allMessages.forEach(function (m) {
+        m.read = true;
+      });
+      renderMessages();
+      App.toastSuccess('已全部标记为已读');
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initMessagesPage();
+    });
+  </script>
+</body>
+</html>

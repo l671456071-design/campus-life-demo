@@ -1,0 +1,289 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>登录 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: linear-gradient(180deg, #EFF6FF 0%, #F1F5F9 40%, #F1F5F9 100%);
+    }
+    .login-logo {
+      width: 80px;
+      height: 80px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(37,99,235,0.25);
+      animation: logoPulse 2s ease-in-out infinite;
+    }
+    @keyframes logoPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .login-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+    .login-subtitle {
+      font-size: 14px;
+      color: var(--color-text-sub);
+      margin-bottom: 36px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--color-border-light);
+    }
+    .login-field {
+      margin-bottom: 16px;
+    }
+    .login-field-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text-sub);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .login-input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border: 1.5px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--color-surface-alt);
+      transition: border-color 0.2s;
+    }
+    .login-input-wrap:focus-within {
+      border-color: var(--color-primary);
+      background: var(--color-surface);
+    }
+    .login-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      padding: 12px 14px;
+      font-size: 16px;
+      background: transparent;
+      color: var(--color-text);
+      font-family: var(--font-body);
+      min-width: 0;
+    }
+    .login-input::placeholder {
+      color: var(--color-text-hint);
+    }
+    .send-code-btn {
+      border: none;
+      background: transparent;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-primary);
+      white-space: nowrap;
+      cursor: pointer;
+      border-left: 1px solid var(--color-border);
+      transition: opacity 0.2s;
+    }
+    .send-code-btn:disabled {
+      color: var(--color-text-hint);
+      cursor: not-allowed;
+    }
+    .login-submit {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--color-primary);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s, transform 0.15s;
+    }
+    .login-submit:active {
+      transform: scale(0.98);
+    }
+    .login-submit:disabled {
+      background: var(--color-text-disabled);
+      cursor: not-allowed;
+    }
+    .login-terms {
+      text-align: center;
+      font-size: 12px;
+      color: var(--color-text-hint);
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+    .login-dev-hint {
+      margin-top: 20px;
+      padding: 10px 14px;
+      background: var(--color-warning-light);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: #B45309;
+      line-height: 1.6;
+      display: none;
+    }
+  </style>
+</head>
+<body data-page="login">
+  <div class="login-page">
+    <div class="login-logo anim-fade-in-up">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="1" y="3" width="15" height="13" rx="2"/>
+        <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/>
+        <circle cx="5.5" cy="18.5" r="2.5"/>
+        <circle cx="18.5" cy="18.5" r="2.5"/>
+      </svg>
+    </div>
+    <div class="login-title anim-fade-in-up stagger-1">校园取件</div>
+    <div class="login-subtitle anim-fade-in-up stagger-2">手机号登录 · 快速查件</div>
+
+    <div class="login-card anim-fade-in-up stagger-3">
+      <div class="login-field">
+        <label class="login-field-label">手机号</label>
+        <div class="login-input-wrap">
+          <input type="tel" class="login-input" id="phoneInput" placeholder="请输入手机号" maxlength="11" inputmode="numeric">
+        </div>
+      </div>
+
+      <div class="login-field">
+        <label class="login-field-label">验证码</label>
+        <div class="login-input-wrap">
+          <input type="text" class="login-input" id="codeInput" placeholder="请输入验证码" maxlength="6" inputmode="numeric">
+          <button class="send-code-btn" id="sendCodeBtn" onclick="LoginPage.sendCode()">获取验证码</button>
+        </div>
+      </div>
+
+      <button class="login-submit" id="loginBtn" onclick="LoginPage.login()">登录</button>
+
+      <div class="login-terms">登录即代表同意《用户协议》和《隐私政策》</div>
+
+      <div class="login-dev-hint" id="devHint">
+        开发模式：验证码会打印在后端控制台<br>
+        请在终端查看
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="api-client.js"></script>
+  <script>
+    var LoginPage = {
+      countdown: 0,
+      timer: null,
+
+      sendCode: function () {
+        var phone = document.getElementById('phoneInput').value.trim();
+        if (!phone) {
+          App.toast('请输入手机号');
+          return;
+        }
+        if (!/^1[3-9]\d{9}$/.test(phone)) {
+          App.toast('手机号格式不正确');
+          return;
+        }
+
+        var btn = document.getElementById('sendCodeBtn');
+        btn.disabled = true;
+
+        ApiClient.sendCode(phone).then(function (res) {
+          if (res.code === 0) {
+            App.toastSuccess('验证码已发送');
+            document.getElementById('devHint').style.display = 'block';
+            LoginPage.startCountdown();
+          } else {
+            App.toast(res.message || '发送失败');
+            btn.disabled = false;
+            btn.textContent = '获取验证码';
+          }
+        });
+      },
+
+      startCountdown: function () {
+        LoginPage.countdown = 60;
+        var btn = document.getElementById('sendCodeBtn');
+        btn.disabled = true;
+
+        LoginPage.timer = setInterval(function () {
+          LoginPage.countdown--;
+          if (LoginPage.countdown <= 0) {
+            clearInterval(LoginPage.timer);
+            btn.disabled = false;
+            btn.textContent = '获取验证码';
+          } else {
+            btn.textContent = LoginPage.countdown + 's';
+          }
+        }, 1000);
+      },
+
+      login: function () {
+        var phone = document.getElementById('phoneInput').value.trim();
+        var code = document.getElementById('codeInput').value.trim();
+
+        if (!phone) { App.toast('请输入手机号'); return; }
+        if (!code) { App.toast('请输入验证码'); return; }
+        if (!/^1[3-9]\d{9}$/.test(phone)) { App.toast('手机号格式不正确'); return; }
+
+        var btn = document.getElementById('loginBtn');
+        btn.disabled = true;
+        btn.textContent = '登录中...';
+
+        ApiClient.login(phone, code).then(function (res) {
+          btn.disabled = false;
+          btn.textContent = '登录';
+
+          if (res.code === 0) {
+            App.toastSuccess('登录成功');
+            setTimeout(function () {
+              window.location.href = 'index.html';
+            }, 500);
+          } else {
+            App.toast(res.message || '登录失败');
+          }
+        }).catch(function () {
+          btn.disabled = false;
+          btn.textContent = '登录';
+          App.toast('网络错误，请确认后端服务已启动');
+        });
+      },
+
+      init: function () {
+        // 已登录直接跳首页
+        if (ApiClient.isLoggedIn()) {
+          window.location.href = 'index.html';
+          return;
+        }
+
+        // 回车键提交
+        document.getElementById('codeInput').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') LoginPage.login();
+        });
+      },
+    };
+
+    LoginPage.init();
+  </script>
+  <script src="app.js"></script>
+</body>
+</html>

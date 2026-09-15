@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>校园外卖 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* ===== Food Page Styles ===== */
+    .food-loc {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 12px 20px 4px;
+      font-size: 13px;
+      color: var(--color-text-sub);
+    }
+    .food-loc svg { width: 15px; height: 15px; color: var(--color-primary); flex-shrink: 0; }
+    .food-loc strong { color: var(--color-text); font-weight: 600; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* 进行中订单条 */
+    .food-active-order {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 10px 16px 0;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      background: linear-gradient(90deg, var(--color-warning-light), var(--color-orange-light));
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .food-active-order:active { transform: scale(0.98); }
+    .food-active-order .ao-emoji { font-size: 24px; line-height: 1; flex-shrink: 0; }
+    .food-active-order .ao-body { flex: 1; min-width: 0; }
+    .food-active-order .ao-title { font-size: 13px; font-weight: 600; color: var(--color-text); }
+    .food-active-order .ao-sub { font-size: 12px; color: var(--color-text-sub); margin-top: 2px; }
+    .food-active-order .ao-go {
+      flex-shrink: 0; display: flex; align-items: center; gap: 2px;
+      font-size: 12px; font-weight: 600; color: #B45309;
+    }
+    .food-active-order .ao-go svg { width: 14px; height: 14px; }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 18px 4px 10px;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--color-text);
+    }
+    .section-title .more {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--color-text-sub);
+      text-decoration: none;
+    }
+    .section-title .more svg { width: 13px; height: 13px; }
+
+    /* 店铺卡片 */
+    .shop-card {
+      display: flex;
+      gap: 12px;
+      padding: 14px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.15s;
+      position: relative;
+    }
+    .shop-card:active { transform: scale(0.98); }
+    .shop-card--closed { opacity: 0.55; }
+    .shop-logo {
+      width: 62px; height: 62px;
+      border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 32px; line-height: 1;
+      flex-shrink: 0;
+    }
+    .shop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .shop-head { display: flex; align-items: center; gap: 6px; }
+    .shop-name { font-size: 15px; font-weight: 700; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-open-badge {
+      font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: var(--radius-full);
+      background: var(--color-success-light); color: var(--color-accent-hover); flex-shrink: 0;
+    }
+    .shop-open-badge.closed { background: var(--color-bg); color: var(--color-text-hint); }
+    .shop-stats { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 12px; color: var(--color-text-sub); flex-wrap: wrap; }
+    .shop-rating { color: #F59E0B; font-weight: 700; }
+    .shop-notice { font-size: 12px; color: var(--color-text-hint); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .shop-promos { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+    .shop-promo {
+      display: inline-flex; align-items: center;
+      font-size: 11px; font-weight: 600; color: #E4423A;
+      border: 1px solid #FFD7D4; border-radius: 4px;
+      padding: 1px 6px; background: #FFF7F6;
+    }
+    [data-theme="dark"] .shop-promo { background: #3B1D1A; border-color: #7C2D26; color: #FCA5A5; }
+    .shop-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+    .shop-tag { font-size: 11px; color: var(--color-primary); background: var(--color-primary-lighter); border-radius: 4px; padding: 1px 6px; }
+  </style>
+</head>
+<body data-page="food">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left"></div>
+      <div class="header-title">校园外卖</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div class="px-4" style="padding-top:8px;">
+        <!-- 当前位置 -->
+        <div class="food-loc anim-fade-in-up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span>当前位置</span><strong id="locText">涵江校区</strong>
+          <span style="margin-left:auto;">切换校园 ›</span>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar anim-fade-in-up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索店铺 / 菜品">
+        </div>
+
+        <!-- 分类导航 -->
+        <div class="filter-chips anim-fade-in-up stagger-1" id="catChips" style="margin-top:12px;"></div>
+
+        <!-- 进行中订单 -->
+        <div id="activeOrderBox"></div>
+
+        <!-- 推荐店铺 -->
+        <div class="section-title anim-fade-in-up">
+          <span id="listTitle">推荐店铺</span>
+          <a href="order.html" class="more">我的订单
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </div>
+
+        <!-- 店铺列表 -->
+        <div id="shopList" style="margin-top:4px;display:flex;flex-direction:column;gap:12px;margin-bottom:20px;"></div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var mainContent = document.getElementById('mainContent');
+      var listEl = document.getElementById('shopList');
+      var searchInput = document.getElementById('searchInput');
+      var catChipsEl = document.getElementById('catChips');
+      var activeOrderBox = document.getElementById('activeOrderBox');
+      var searchTimer = null;
+      var isLoading = false;
+      var state = { category: 'all', keyword: '' };
+
+      function money(n) {
+        var v = Math.round(n * 100) / 100;
+        return v % 1 === 0 ? String(v) : v.toFixed(v * 10 % 1 === 0 ? 1 : 2);
+      }
+
+      // ---- 分类导航 ----
+      function renderChips() {
+        var cats = (typeof DB !== 'undefined' && DB.foodCategories) ? DB.foodCategories : [{ key: 'all', label: '全部' }];
+        var html = '';
+        cats.forEach(function (c) {
+          var active = state.category === c.key ? ' active' : '';
+          html += '<button class="chip' + active + '" data-cat="' + c.key + '">' + c.label + '</button>';
+        });
+        catChipsEl.innerHTML = html;
+        catChipsEl.querySelectorAll('.chip[data-cat]').forEach(function (chip) {
+          chip.addEventListener('click', function () {
+            state.category = this.dataset.cat;
+            catChipsEl.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+            this.classList.add('active');
+            loadShops();
+          });
+        });
+      }
+
+      // ---- 进行中订单提示条 ----
+      function renderActiveOrder() {
+        var orders = Storage.syncOrderStatuses();
+        var active = null;
+        for (var i = 0; i < orders.length; i++) {
+          if (orders[i].status === 'unpaid' || orders[i].status === 'preparing' || orders[i].status === 'delivering') {
+            active = orders[i]; break;
+          }
+        }
+        if (!active) { activeOrderBox.innerHTML = ''; return; }
+        var statusText = Storage.ORDER_STATUS[active.status] || active.status;
+        var sub = '';
+        if (active.status === 'unpaid') sub = '合计 ¥' + money(active.total) + ' · 待支付';
+        else if (active.status === 'preparing') sub = '商家正在备餐 · 约 ' + active.etaMinutes + ' 分钟送达';
+        else sub = '骑手配送中 · 预计 ' + active.etaMinutes + ' 分钟送达';
+        var goTarget = active.status === 'delivering'
+          ? 'location.href=\'map.html?mode=delivery&orderId=' + active.id + '\''
+          : 'location.href=\'order.html\'';
+        activeOrderBox.innerHTML =
+          '<div class="food-active-order anim-fade-in-up" onclick="' + goTarget + '">' +
+            '<span class="ao-emoji">' + (active.restaurantEmoji || '🛵') + '</span>' +
+            '<div class="ao-body">' +
+              '<div class="ao-title">' + active.restaurantName + ' · ' + statusText + '</div>' +
+              '<div class="ao-sub">' + sub + '</div>' +
+            '</div>' +
+            '<span class="ao-go">' + (active.status === 'delivering' ? '查看配送位置' : '查看订单') +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>' +
+          '</div>';
+      }
+
+      // ---- 店铺卡片 ----
+      function shopCard(r, index) {
+        var stagger = index < 6 ? ' stagger-' + (index + 1) : '';
+        var closed = r.isOpen ? '' : ' shop-card--closed';
+        var openBadge = r.isOpen
+          ? '<span class="shop-open-badge">营业中</span>'
+          : '<span class="shop-open-badge closed">休息中</span>';
+        var feeText = r.deliveryFee === 0 ? '免配送费' : '配送 ¥' + money(r.deliveryFee);
+        var promos = '';
+        if (r.promo) {
+          promos += '<span class="shop-promo">满' + money(r.promo.full) + '减' + money(r.promo.cut) + '</span>';
+        }
+        (r.tags || []).forEach(function (t) {
+          if (t !== '满' + money(r.promo ? r.promo.full : 0) + '减' + money(r.promo ? r.promo.cut : 0)) promos += '<span class="shop-promo">' + t + '</span>';
+        });
+        return '<div class="shop-card anim-fade-in-up' + stagger + closed + '" onclick="location.href=\'food-detail.html?id=' + r.id + '\'">' +
+          '<div class="shop-logo" style="background:' + (r.color || '#FEF3C7') + '22;">' + (r.emoji || '🍽️') + '</div>' +
+          '<div class="shop-body">' +
+            '<div class="shop-head"><span class="shop-name">' + r.name + '</span>' + openBadge + '</div>' +
+            '<div class="shop-stats">' +
+              '<span class="shop-rating">★ ' + r.rating + '</span>' +
+              '<span>月售 ' + r.monthlySales + '</span>' +
+              '<span>约 ' + r.deliveryTime + ' 分钟</span>' +
+              '<span>' + feeText + '</span>' +
+              '<span>¥' + money(r.minOrder) + ' 起送</span>' +
+            '</div>' +
+            (r.notice ? '<div class="shop-notice">' + r.notice + '</div>' : '') +
+            (promos ? '<div class="shop-promos">' + promos + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      }
+
+      function loadShops() {
+        if (isLoading) return;
+        isLoading = true;
+        listEl.innerHTML = App.skeletonList(4);
+
+        API.fetchRestaurants({ category: state.category, keyword: state.keyword }).then(function (res) {
+          isLoading = false;
+          renderActiveOrder();
+          var list = res.data || [];
+          document.getElementById('listTitle').textContent = state.keyword ? '搜索结果' : (state.category === 'all' ? '推荐店铺' : '店铺列表');
+          if (!list.length) {
+            listEl.innerHTML = App.emptyState('暂无店铺', '没有符合条件的店铺，换个关键词试试');
+            return;
+          }
+          var html = '';
+          list.forEach(function (r, i) { html += shopCard(r, i); });
+          listEl.innerHTML = html;
+        }).catch(function () {
+          isLoading = false;
+          listEl.innerHTML = App.errorState('加载失败', '请稍后重试', 'loadShops');
+        });
+      }
+
+      window.loadShops = loadShops;
+
+      searchInput.addEventListener('input', function () {
+        state.keyword = this.value.trim();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadShops, 300);
+      });
+
+      function refresh() {
+        state.keyword = searchInput.value.trim();
+        loadShops();
+        return Promise.resolve();
+      }
+
+      // 位置：取用户资料中的校区
+      try {
+        var user = Storage.getUser();
+        var campus = (user.campus || '涵江校区').split('·')[0].trim() || '涵江校区';
+        document.getElementById('locText').textContent = campus;
+      } catch (e) {}
+
+      renderChips();
+      loadShops();
+      App.initPullToRefresh(mainContent, refresh);
+    })();
+  </script>
+</body>
+</html>

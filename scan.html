@@ -1,0 +1,978 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>扫码取件 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* ===== Scan Page Styles ===== */
+    .scan-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px 8px;
+    }
+    .scan-tool-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(30, 41, 59, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--color-text);
+      transition: background 0.2s, color 0.2s, transform 0.15s;
+      border: none;
+    }
+    .scan-tool-btn:active { background: rgba(30, 41, 59, 0.18); transform: scale(0.92); }
+    .scan-tool-btn svg { width: 22px; height: 22px; }
+    .scan-tool-btn.active { color: #F59E0B; background: var(--color-warning-light); }
+
+    .scan-area {
+      background: #1E293B;
+      border-radius: 16px;
+      min-height: 50vh;
+      margin: 0 16px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .scan-area::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 50% 45%, rgba(37,99,235,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .scan-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #1E293B;
+    }
+
+    .scan-tip {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 24px;
+      padding: 0 24px;
+      line-height: 1.5;
+      position: relative;
+      z-index: 2;
+    }
+
+    .scan-frame {
+      width: 240px;
+      height: 240px;
+      position: relative;
+      z-index: 2;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.25s;
+    }
+
+    /* OCR 识别成功：绿色识别框 */
+    .scan-frame--success .scan-corner { border-color: #10B981; box-shadow: 0 0 10px rgba(16,185,129,0.8); }
+    .scan-frame--success { transform: scale(1.05); }
+    .scan-frame--success .scan-line { background: #fff; box-shadow: 0 0 12px #10B981; }
+
+    .scan-corner {
+      position: absolute;
+      width: 28px;
+      height: 28px;
+      border: 2px solid #fff;
+    }
+    .scan-corner--tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
+    .scan-corner--tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
+    .scan-corner--bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
+    .scan-corner--br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+
+    .scan-line {
+      position: absolute;
+      left: 4px;
+      right: 4px;
+      height: 2px;
+      background: #10B981;
+      box-shadow: 0 0 8px #10B981, 0 0 16px rgba(16, 185, 129, 0.5);
+      animation: scanLine 2.5s ease-in-out infinite;
+      top: 4px;
+      border-radius: 2px;
+    }
+    @keyframes scanLine {
+      0% { top: 4px; }
+      50% { top: calc(100% - 6px); }
+      100% { top: 4px; }
+    }
+
+    .scan-engine-hint {
+      position: absolute;
+      bottom: 10px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.35);
+      z-index: 2;
+    }
+
+    .scan-bottom {
+      padding: 24px 16px 16px;
+      text-align: center;
+    }
+    .manual-link {
+      color: var(--color-primary);
+      font-size: 14px;
+      text-decoration: underline;
+      padding: 10px 12px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .manual-link:active { opacity: 0.6; }
+    .manual-link svg { width: 16px; height: 16px; }
+
+    /* Permission Denied View */
+    .permission-denied {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      padding: 40px 24px;
+      text-align: center;
+    }
+    .permission-denied-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--color-danger-light);
+      color: var(--color-danger);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .permission-denied-icon svg { width: 40px; height: 40px; }
+    .permission-denied-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 8px;
+    }
+    .permission-denied-desc {
+      font-size: 14px;
+      color: var(--color-text-sub);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .permission-denied-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Success Overlay */
+    .success-overlay {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(135deg, #10B981, #059669);
+      z-index: 500;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+    .success-overlay.show {
+      display: flex;
+      animation: fadeIn 0.3s;
+    }
+    .success-overlay-icon {
+      width: 80px;
+      height: 80px;
+      color: #fff;
+      margin-bottom: 20px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: popIn 0.5s 0.15s both;
+    }
+    .success-overlay-icon svg { width: 44px; height: 44px; }
+    .success-overlay-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 20px;
+      animation: fadeInUp 0.4s 0.3s both;
+    }
+    .success-overlay-info {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+      width: 100%;
+      max-width: 300px;
+      animation: fadeInUp 0.4s 0.45s both;
+    }
+    .success-overlay-info-row {
+      display: flex;
+      justify-content: space-between;
+      color: #fff;
+      font-size: 14px;
+      padding: 5px 0;
+    }
+    .success-overlay-info-label { opacity: 0.8; }
+    .success-overlay-info-value { font-weight: 600; }
+    .success-overlay-btn {
+      background: #fff;
+      color: #059669;
+      padding: 14px 48px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+      animation: fadeInUp 0.4s 0.6s both;
+    }
+    .success-overlay-btn:active { transform: scale(0.96); }
+
+    /* Manual Input */
+    .manual-input-field {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1.5px solid var(--color-border);
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: var(--font-mono);
+      text-align: center;
+      letter-spacing: 1px;
+      outline: none;
+      transition: border-color 0.2s;
+      background: var(--color-surface-alt);
+      color: var(--color-text);
+      box-sizing: border-box;
+    }
+    .manual-input-field:focus { border-color: var(--color-primary); background: var(--color-surface); }
+    .manual-input-field::placeholder { color: var(--color-text-hint); font-family: var(--font-body); letter-spacing: 0; font-size: 14px; }
+    .manual-input-hint {
+      font-size: 12px;
+      color: var(--color-text-hint);
+      text-align: center;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body data-page="scan">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left"></div>
+      <div class="header-title">扫码取件</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content">
+      <!-- Scan View：真实摄像头扫码 -->
+      <div id="scanView" class="hidden">
+        <div class="scan-toolbar anim-fade-in-up stagger-1">
+          <button class="scan-tool-btn" id="flashBtn" onclick="toggleFlash()" aria-label="闪光灯">
+            <svg id="flashIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </button>
+          <button class="scan-tool-btn" onclick="openAlbum()" aria-label="相册识别">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          </button>
+        </div>
+
+        <div class="scan-area anim-fade-in-up stagger-2">
+          <video id="scanVideo" class="scan-video" autoplay muted playsinline></video>
+          <div class="scan-tip" id="scanTip">正在启动摄像头…</div>
+          <div class="scan-frame" id="scanFrame">
+            <div class="scan-corner scan-corner--tl"></div>
+            <div class="scan-corner scan-corner--tr"></div>
+            <div class="scan-corner scan-corner--bl"></div>
+            <div class="scan-corner scan-corner--br"></div>
+            <div class="scan-line"></div>
+          </div>
+          <div class="scan-engine-hint" id="engineHint"></div>
+        </div>
+
+        <div class="scan-bottom anim-fade-in-up stagger-3">
+          <a href="javascript:void(0)" class="manual-link" onclick="showManualInput()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+            手动输入取件码
+          </a>
+        </div>
+      </div>
+
+      <!-- Permission Denied View -->
+      <div id="deniedView" class="hidden">
+        <div class="permission-denied anim-fade-in-up">
+          <div class="permission-denied-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 4.5a2.5 2.5 0 0 1 5 0v3"/><path d="M18 8H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2z"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+          </div>
+          <div class="permission-denied-title">需要相机权限才能扫码取件</div>
+          <div class="permission-denied-desc" id="deniedDesc">请在浏览器权限弹窗中允许访问相机，<br>或在系统设置中开启相机权限</div>
+          <div class="permission-denied-actions">
+            <button class="btn btn-primary btn-lg" onclick="retryCamera()">重新尝试</button>
+            <button class="btn btn-outline" onclick="goToSettings()">如何开启权限</button>
+            <a href="javascript:void(0)" class="manual-link" onclick="showManualInput()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+              手动输入取件码
+            </a>
+          </div>
+        </div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- Success Overlay -->
+  <div class="success-overlay" id="successOverlay">
+    <div class="success-overlay-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="success-overlay-title">取件成功</div>
+    <div class="success-overlay-info">
+      <div class="success-overlay-info-row"><span class="success-overlay-info-label">快递公司</span><span class="success-overlay-info-value" id="successCompany"></span></div>
+      <div class="success-overlay-info-row"><span class="success-overlay-info-label">运单号</span><span class="success-overlay-info-value" id="successTracking"></span></div>
+      <div class="success-overlay-info-row"><span class="success-overlay-info-label">取件码</span><span class="success-overlay-info-value" id="successCode"></span></div>
+      <div class="success-overlay-info-row"><span class="success-overlay-info-label">取件点</span><span class="success-overlay-info-value" id="successPoint"></span></div>
+    </div>
+    <button class="success-overlay-btn" onclick="location.href='index.html'">完成</button>
+  </div>
+
+  <!-- 隐藏元素：jsQR 解码画布 / 相册选择 -->
+  <canvas id="scanCanvas" style="display:none;"></canvas>
+  <input type="file" id="albumInput" accept="image/*" style="display:none;" onchange="handleAlbumChange(this)">
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script src="libs/qr-scanner/jsQR.js"></script>
+  <script src="libs/tesseract/tesseract.min.js"></script>
+  <script>
+    // ================= 真实本地摄像头扫码 + OCR 取件码识别 =================
+    // 权限：navigator.mediaDevices.getUserMedia（需要 localhost / https 环境）
+    // 二维码：优先浏览器原生 BarcodeDetector，回退本地 libs/qr-scanner/jsQR.js
+    // OCR：本地 libs/tesseract/（Tesseract.js），仅识别扫描框内数字，不上传任何图片
+    var SCAN = {
+      stream: null,
+      video: null,
+      canvas: null,
+      ctx: null,
+      detector: null,          // BarcodeDetector 实例
+      useNativeDetector: false,
+      scanning: false,         // 识别循环是否运行
+      busy: false,             // 单帧解码进行中
+      lastScanAt: 0,
+      torchOn: false,
+      ocrWorker: null,         // Tesseract 本地 worker（懒加载）
+      ocrReady: false,
+      ocrLoading: false,
+      ocrBusy: false,
+      lastOcrAt: 0,
+      lastOcrText: '',
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      SCAN.video = document.getElementById('scanVideo');
+      SCAN.canvas = document.getElementById('scanCanvas');
+      SCAN.ctx = SCAN.canvas.getContext('2d', { willReadFrequently: true });
+
+      // demo 模式：展示可体验的演示取件码，方便外部用户快速上手
+      if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) {
+        try {
+          var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending' && p.pickupCode; });
+          var codes = pending.slice(0, 3).map(function (p) { return p.pickupCode; });
+          if (codes.length) {
+            var tip = document.createElement('div');
+            tip.style.cssText = 'margin-top:10px;font-size:12px;color:var(--color-text-sub);line-height:1.8;';
+            tip.innerHTML = '演示提示：点「手动输入取件码」，输入 <b style="color:var(--color-primary);">' +
+              codes.join('</b> / <b style="color:var(--color-primary);">') + '</b> 即可体验完整取件流程';
+            var bottom = document.querySelector('.scan-bottom');
+            if (bottom) bottom.appendChild(tip);
+          }
+        } catch (e) { /* Storage 不可用时忽略 */ }
+      }
+
+      startCamera();
+    });
+
+    // ---------- 1. 摄像头 ----------
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showDeniedView(deniedHintText('当前浏览器不支持摄像头调用'));
+        return;
+      }
+      document.getElementById('scanTip').textContent = '正在启动摄像头…';
+      try {
+        SCAN.stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+      } catch (err) {
+        var reason = (err && err.name === 'NotFoundError') ? '未检测到可用摄像头设备' : null;
+        showDeniedView(deniedHintText(reason));
+        return;
+      }
+      SCAN.video.srcObject = SCAN.stream;
+      try { await SCAN.video.play(); } catch (e) { /* autoplay 由 muted+playsinline 保证 */ }
+      showScanView();
+      document.getElementById('scanTip').textContent = '将取件码对准扫描框，支持二维码与面单数字';
+      initDetector();
+      startDetectLoop();
+    }
+
+    function retryCamera() {
+      stopCamera();
+      startCamera();
+    }
+
+    function stopCamera() {
+      pauseScan();
+      if (SCAN.stream) {
+        SCAN.stream.getTracks().forEach(function (t) { t.stop(); });
+        SCAN.stream = null;
+      }
+      SCAN.video.srcObject = null;
+      SCAN.torchOn = false;
+      var btn = document.getElementById('flashBtn');
+      if (btn) btn.classList.remove('active');
+    }
+
+    // ---------- 2. 二维码识别引擎 ----------
+    function initDetector() {
+      if ('BarcodeDetector' in window) {
+        try {
+          SCAN.detector = new BarcodeDetector({ formats: ['qr_code'] });
+          SCAN.useNativeDetector = true;
+          updateEngineHint();
+          return;
+        } catch (e) { /* 初始化失败则回退 */ }
+      }
+      SCAN.useNativeDetector = false;
+      updateEngineHint();
+    }
+
+    function updateEngineHint() {
+      var qrPart = SCAN.useNativeDetector ? 'BarcodeDetector' : (typeof jsQR === 'function' ? '本地 jsQR' : '二维码不可用');
+      var el = document.getElementById('engineHint');
+      if (typeof Tesseract === 'undefined') {
+        // 浏览器不支持本地 OCR：明确提示手动输入
+        el.textContent = '当前浏览器暂不支持自动识别，请手动输入取件码';
+        el.style.fontSize = '12px';
+        el.style.color = 'rgba(255,255,255,0.78)';
+        el.style.padding = '0 16px';
+        el.style.lineHeight = '1.5';
+      } else {
+        var ocrPart = '本地 Tesseract OCR';
+        el.textContent = '识别引擎：' + qrPart + ' + ' + ocrPart + '（完全离线）';
+      }
+    }
+
+    function startDetectLoop() {
+      SCAN.scanning = true;
+      requestAnimationFrame(detectFrame);
+    }
+
+    function pauseScan() { SCAN.scanning = false; }
+
+    function resumeScan() {
+      if (!SCAN.stream) { retryCamera(); return; }
+      startDetectLoop();
+    }
+
+    function detectFrame(ts) {
+      if (!SCAN.scanning) return;
+      // 二维码：每 250ms 一帧
+      if (ts - SCAN.lastScanAt >= 250 && SCAN.video.readyState >= 2) {
+        SCAN.lastScanAt = ts;
+        detectOnce().then(function (text) {
+          if (text) onDecoded(text, 'qr');
+        });
+      }
+      // OCR：每 3.2s 对扫描框区域跑一次（仅在没有二维码命中时）
+      if (ts - SCAN.lastOcrAt >= 3200 && SCAN.video.readyState >= 2 && !SCAN.busy) {
+        SCAN.lastOcrAt = ts;
+        runOcrFrame();
+      }
+      requestAnimationFrame(detectFrame);
+    }
+
+    async function detectOnce() {
+      if (SCAN.busy) return null;
+      SCAN.busy = true;
+      try {
+        if (SCAN.useNativeDetector && SCAN.detector) {
+          var codes = await SCAN.detector.detect(SCAN.video);
+          if (codes && codes.length > 0 && codes[0].rawValue) return codes[0].rawValue;
+          return null;
+        }
+        return detectWithJsQR();
+      } catch (e) {
+        return null;
+      } finally {
+        SCAN.busy = false;
+      }
+    }
+
+    // jsQR：截取扫描框映射到视频源的区域，缩放后送入本地识别库
+    function detectWithJsQR() {
+      if (typeof jsQR !== 'function') return null;
+      var v = SCAN.video;
+      var vw = v.videoWidth, vh = v.videoHeight;
+      if (!vw || !vh) return null;
+      var r = computeScanRegion(vw, vh);
+      if (r.w < 10 || r.h < 10) return null;
+      var maxSide = 480;
+      var scale = Math.min(1, maxSide / Math.max(r.w, r.h));
+      var c = SCAN.canvas;
+      c.width = Math.max(1, Math.round(r.w * scale));
+      c.height = Math.max(1, Math.round(r.h * scale));
+      SCAN.ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+      var img = SCAN.ctx.getImageData(0, 0, c.width, c.height);
+      var result = jsQR(img.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+      return result && result.data ? result.data : null;
+    }
+
+    // 屏幕上的扫描框（object-fit: cover 显示）→ 视频源像素坐标
+    function computeScanRegion(vw, vh) {
+      var v = SCAN.video;
+      var vr = v.getBoundingClientRect();
+      var fr = document.getElementById('scanFrame').getBoundingClientRect();
+      var scale = Math.max(vr.width / vw, vr.height / vh);
+      var dispW = vw * scale, dispH = vh * scale;
+      var offX = (dispW - vr.width) / 2, offY = (dispH - vr.height) / 2;
+      var pad = fr.width * 0.5;
+      var sx = (fr.left - vr.left - pad + offX) / scale;
+      var sy = (fr.top - vr.top - pad + offY) / scale;
+      var sw = (fr.width + pad * 2) / scale;
+      var sh = (fr.height + pad * 2) / scale;
+      sx = Math.max(0, Math.min(vw - 2, sx));
+      sy = Math.max(0, Math.min(vh - 2, sy));
+      return { x: sx, y: sy, w: Math.min(sw, vw - sx), h: Math.min(sh, vh - sy) };
+    }
+
+    // ---------- 2.5 本地 OCR 引擎（Tesseract.js，文件全部在 libs/tesseract/） ----------
+    // 仅识别扫描框区域，限制字符集为数字/字母/短横线，降低误识别与耗时
+    async function ensureOcrWorker() {
+      if (SCAN.ocrReady) return true;
+      if (typeof Tesseract === 'undefined') return false;
+      if (SCAN.ocrLoading) return false;
+      SCAN.ocrLoading = true;
+      document.getElementById('scanTip').textContent = '正在启动本地 OCR 引擎…';
+      try {
+        var worker = Tesseract.createWorker({
+          workerPath: 'libs/tesseract/worker.min.js',
+          corePath: 'libs/tesseract/core',
+          langPath: 'libs/tesseract/lang',
+          logger: function () {},
+        });
+        await worker.load();
+        await worker.loadLanguage('eng');
+        await worker.initialize('eng');
+        // 限定识别范围：数字、大写字母、短横线、冒号（取件码字符集）
+        await worker.setParameters({
+          tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-: ',
+          tessedit_pageseg_mode: '6',
+        });
+        SCAN.ocrWorker = worker;
+        SCAN.ocrReady = true;
+        document.getElementById('scanTip').textContent = '将取件码对准扫描框，支持二维码与面单数字';
+        return true;
+      } catch (e) {
+        SCAN.ocrLoading = false;
+        document.getElementById('scanTip').textContent = '当前浏览器暂不支持自动识别，请手动输入取件码';
+        return false;
+      }
+    }
+
+    // 抓取扫描框区域（放大 2 倍 + 二值化增强，提高数字识别率）
+    function captureOcrCanvas() {
+      var v = SCAN.video;
+      var vw = v.videoWidth, vh = v.videoHeight;
+      if (!vw || !vh) return null;
+      var r = computeScanRegion(vw, vh);
+      if (r.w < 40 || r.h < 40) return null;
+      var c = document.createElement('canvas');
+      c.width = r.w * 2;
+      c.height = r.h * 2;
+      var ctx = c.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
+      // 灰度 + 对比度增强
+      var img = ctx.getImageData(0, 0, c.width, c.height);
+      var d = img.data;
+      for (var i = 0; i < d.length; i += 4) {
+        var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        g = g < 128 ? 0 : 255;
+        d[i] = d[i + 1] = d[i + 2] = g;
+      }
+      ctx.putImageData(img, 0, 0);
+      return c;
+    }
+
+    async function runOcrFrame() {
+      if (SCAN.ocrBusy || !SCAN.scanning) return;
+      SCAN.ocrBusy = true;
+      try {
+        var ok = await ensureOcrWorker();
+        if (!ok || !SCAN.scanning) return;
+        var c = captureOcrCanvas();
+        if (!c) return;
+        var result = await SCAN.ocrWorker.recognize(c);
+        var text = result && result.data && result.data.text ? result.data.text : '';
+        if (text && text.replace(/\s/g, '').length >= 3) {
+          onOcrText(text);
+        }
+      } catch (e) { /* 单帧失败忽略 */ } finally {
+        SCAN.ocrBusy = false;
+      }
+    }
+
+    // OCR 文本 → 提取取件码 → 匹配本地快递库
+    function onOcrText(text) {
+      if (SCAN.lastOcrText === text) return; // 同文本去重
+      SCAN.lastOcrText = text;
+      var result = API.resolveScanText(text);
+      if (result.status === 'pending' && result.pkg) {
+        pauseScan();
+        if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
+        flashSuccessFrame();
+        showPickupConfirm(result.pkg);
+      } else if (result.status === 'notfound') {
+        // 识别到了文字但没匹配上：轻提示一次，不弹窗打断
+        var code = result.candidates && result.candidates[0];
+        if (code) App.toast('识别到 ' + code + '，未匹配到快递', 2200);
+      }
+      // empty：无有效文字，静默继续
+    }
+
+    // 绿色识别框闪烁
+    function flashSuccessFrame() {
+      var frame = document.getElementById('scanFrame');
+      frame.classList.add('scan-frame--success');
+      setTimeout(function () { frame.classList.remove('scan-frame--success'); }, 1200);
+    }
+
+    // ---------- 3. 扫码结果 → 本地快递数据 ----------
+    function onDecoded(text) {
+      pauseScan();
+      if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
+      flashSuccessFrame();
+      var result = API.resolveScanCode(text);
+      if (result.status === 'pending' && result.pkg) {
+        showPickupConfirm(result.pkg);
+      } else {
+        showScanFailed(result.message || '未识别到快递二维码');
+      }
+    }
+
+    function showScanFailed(message) {
+      App.showModal({
+        title: '未识别到快递二维码',
+        icon: 'error',
+        desc: message,
+        actions: [
+          { label: '手动输入', style: 'btn-outline', onClick: function () { showManualInput(); } },
+          { label: '重新扫描', style: 'btn-primary', onClick: function () { resumeScan(); } },
+        ],
+        onCancel: function () { resumeScan(); },
+      });
+    }
+
+    function showPickupConfirm(pkg) {
+      App.showModal({
+        title: '发现快递',
+        icon: 'success',
+        desc: '<div style="text-align:center;line-height:1.8;">' +
+          '<div style="font-weight:600;color:#1E293B;font-size:15px;">' + pkg.company + ' ' + pkg.trackingNo + '</div>' +
+          '<div style="margin-top:6px;">取件码: <span style="font-family:monospace;font-weight:700;color:#2563EB;">' + pkg.pickupCode + '</span></div>' +
+          '<div>取件点: ' + pkg.pickupPoint + '</div>' +
+          '</div>',
+        confirmText: '确认取件',
+        cancelText: '取消',
+        onConfirm: async function () {
+          App.showLoading();
+          try {
+            var res = await API.confirmPickup(pkg.id);
+            App.hideLoading();
+            if (res.data.success) {
+              stopCamera();
+              showSuccessOverlay(pkg);
+            } else {
+              App.showModal({ title: '取件失败', icon: 'error', desc: res.data.message, confirmText: '知道了' });
+              resumeScan();
+            }
+          } catch (e) {
+            App.hideLoading();
+            App.toast('操作失败，请稍后重试');
+            resumeScan();
+          }
+        },
+        onCancel: function () { resumeScan(); },
+      });
+    }
+
+    function showSuccessOverlay(pkg) {
+      var overlay = document.getElementById('successOverlay');
+      document.getElementById('successCompany').textContent = pkg.company;
+      document.getElementById('successTracking').textContent = pkg.trackingNo;
+      document.getElementById('successCode').textContent = pkg.pickupCode;
+      document.getElementById('successPoint').textContent = pkg.pickupPoint;
+      overlay.classList.add('show');
+    }
+
+    // ---------- 4. 闪光灯（真实 torch 能力，不支持时明确提示） ----------
+    function getVideoTrack() {
+      if (!SCAN.stream) return null;
+      var tracks = SCAN.stream.getVideoTracks();
+      return tracks.length ? tracks[0] : null;
+    }
+
+    async function toggleFlash() {
+      var track = getVideoTrack();
+      if (!track) { App.toast('摄像头未启动'); return; }
+      var caps = track.getCapabilities ? track.getCapabilities() : null;
+      if (!caps || !caps.torch) { App.toast('当前设备不支持闪光灯'); return; }
+      try {
+        SCAN.torchOn = !SCAN.torchOn;
+        await track.applyConstraints({ advanced: [{ torch: SCAN.torchOn }] });
+        document.getElementById('flashBtn').classList.toggle('active', SCAN.torchOn);
+        App.toast(SCAN.torchOn ? '闪光灯已开启' : '闪光灯已关闭');
+      } catch (e) {
+        SCAN.torchOn = false;
+        App.toast('当前设备不支持闪光灯');
+      }
+    }
+
+    // ---------- 5. 相册图片识别（本地解码，不上传） ----------
+    function openAlbum() {
+      var input = document.getElementById('albumInput');
+      input.value = '';
+      input.click();
+    }
+
+    function handleAlbumChange(input) {
+      var file = input.files && input.files[0];
+      if (!file) return;
+      App.showLoading();
+      decodeImageFile(file).then(function (text) {
+        if (text) { App.hideLoading(); onDecoded(text); return null; }
+        // 二维码未命中 → 尝试本地 OCR 识别图片中的取件码
+        return ocrImageFile(file);
+      }).then(function (ocrText) {
+        App.hideLoading();
+        if (ocrText) {
+          var result = API.resolveScanText(ocrText);
+          if (result.status === 'pending' && result.pkg) { flashSuccessFrame(); showPickupConfirm(result.pkg); return; }
+          showScanFailed(result.message || '未识别到取件码');
+        } else {
+          showScanFailed('未能从所选图片中识别到二维码或取件码');
+        }
+      }).catch(function () {
+        App.hideLoading();
+        App.toast('图片识别失败，请更换图片');
+      });
+    }
+
+    // 相册图片 OCR（本地 Tesseract，不上传）
+    async function ocrImageFile(file) {
+      var ok = await ensureOcrWorker();
+      if (!ok) return null;
+      var src = await loadImageSource(file);
+      try {
+        var w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
+        var scale = Math.min(2, 900 / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.round(w * scale);
+        c.height = Math.round(h * scale);
+        var ctx = c.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(src, 0, 0, c.width, c.height);
+        var img = ctx.getImageData(0, 0, c.width, c.height);
+        var d = img.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          g = g < 140 ? 0 : 255;
+          d[i] = d[i + 1] = d[i + 2] = g;
+        }
+        ctx.putImageData(img, 0, 0);
+        var result = await SCAN.ocrWorker.recognize(c);
+        return result && result.data && result.data.text ? result.data.text : null;
+      } finally {
+        if (src.close) src.close();
+      }
+    }
+
+    function loadImageSource(file) {
+      if (typeof createImageBitmap === 'function') return createImageBitmap(file);
+      return new Promise(function (resolve, reject) {
+        var url = URL.createObjectURL(file);
+        var img = new Image();
+        img.onload = function () { resolve(img); URL.revokeObjectURL(url); };
+        img.onerror = function () { reject(new Error('image load error')); URL.revokeObjectURL(url); };
+        img.src = url;
+      });
+    }
+
+    async function decodeImageFile(file) {
+      var src = await loadImageSource(file);
+      try {
+        if (SCAN.useNativeDetector && SCAN.detector) {
+          var codes = await SCAN.detector.detect(src);
+          if (codes && codes.length > 0 && codes[0].rawValue) return codes[0].rawValue;
+          return null;
+        }
+        if (typeof jsQR !== 'function') return null;
+        var w = src.width || src.naturalWidth, h = src.height || src.naturalHeight;
+        var scale = Math.min(1, 640 / Math.max(w, h));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * scale));
+        c.height = Math.max(1, Math.round(h * scale));
+        var ctx = c.getContext('2d');
+        ctx.drawImage(src, 0, 0, c.width, c.height);
+        var img = ctx.getImageData(0, 0, c.width, c.height);
+        var r = jsQR(img.data, c.width, c.height, { inversionAttempts: 'attemptBoth' });
+        return r && r.data ? r.data : null;
+      } finally {
+        if (src.close) src.close();
+      }
+    }
+
+    // ---------- 6. 视图切换 ----------
+    function showScanView() {
+      var scanView = document.getElementById('scanView');
+      var deniedView = document.getElementById('deniedView');
+      deniedView.classList.add('hidden');
+      scanView.classList.remove('hidden');
+      scanView.querySelectorAll('.anim-fade-in-up').forEach(function (el) {
+        el.style.animation = 'none';
+        void el.offsetWidth;
+        el.style.animation = '';
+      });
+    }
+
+    function showDeniedView(descHtml) {
+      var scanView = document.getElementById('scanView');
+      var deniedView = document.getElementById('deniedView');
+      stopCamera();
+      scanView.classList.add('hidden');
+      if (descHtml) document.getElementById('deniedDesc').innerHTML = descHtml;
+      deniedView.classList.remove('hidden');
+    }
+
+    function deniedHintText(reason) {
+      var html = '';
+      if (reason) {
+        html += reason + '<br>';
+      } else {
+        html += '请在浏览器权限弹窗中允许访问相机，<br>或在系统设置中开启相机权限<br>';
+      }
+      if (location.protocol === 'file:') {
+        html += '<span style="display:inline-block;margin-top:8px;color:var(--color-warning);">提示：当前以本地文件方式打开，浏览器禁止调用摄像头。<br>请在项目目录运行 <b>node server.js</b>，然后访问<br>http://localhost:3000/scan.html</span>';
+      }
+      return html;
+    }
+
+    function goToSettings() {
+      App.showModal({
+        title: '如何开启相机权限',
+        desc: '<div style="text-align:left;line-height:1.9;font-size:13px;">' +
+          '1. 点击地址栏左侧的锁形/相机图标<br>' +
+          '2. 将「摄像头 / Camera」权限设为允许<br>' +
+          '3. 刷新页面后重新扫码<br><br>' +
+          'Windows 系统权限：设置 → 隐私和安全性 → 相机<br>' +
+          '确保允许桌面应用访问相机' +
+          '</div>',
+        confirmText: '知道了',
+        onConfirm: function () { App.closeModal(); },
+      });
+    }
+
+    // ---------- 7. 手动输入取件码 ----------
+    function showManualInput() {
+      App.showModal({
+        title: '手动输入取件码',
+        desc: '<div style="text-align:left;">' +
+          '<input type="text" class="manual-input-field" id="manualCodeInput" placeholder="请输入取件码，如 8-3-267" autocomplete="off" />' +
+          '<div class="manual-input-hint">取件码可在快递到达通知短信中查看</div>' +
+          '</div>',
+        confirmText: '确认取件',
+        cancelText: '取消',
+        onConfirm: function () {
+          var input = document.getElementById('manualCodeInput');
+          var code = input ? input.value.trim() : '';
+          if (!code) {
+            App.toast('请输入取件码');
+            return;
+          }
+          handleManualScan(code);
+        },
+        onCancel: function () { resumeScan(); },
+      });
+      setTimeout(function () {
+        var input = document.getElementById('manualCodeInput');
+        if (input) input.focus();
+      }, 350);
+    }
+
+    function handleManualScan(code) {
+      var result = API.resolveScanCode(code);
+      if (result.status === 'pending' && result.pkg) {
+        showPickupConfirm(result.pkg);
+      } else {
+        showScanFailed(result.message || '未识别到快递二维码');
+      }
+    }
+
+    // 页面离开时释放摄像头
+    window.addEventListener('pagehide', stopCamera);
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden && !document.getElementById('successOverlay').classList.contains('show')) {
+        // 后台挂起时保持流但暂停识别循环，避免浪费 CPU
+        pauseScan();
+      } else if (!document.hidden && SCAN.stream && !SCAN.scanning && !document.getElementById('successOverlay').classList.contains('show')) {
+        // 页面被系统权限弹窗等遮挡后恢复时，无需自动恢复（用户可通过重试/取消恢复）
+      }
+    });
+  </script>
+</body>
+</html>

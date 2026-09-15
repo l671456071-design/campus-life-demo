@@ -1,0 +1,124 @@
+{
+  "meta": {
+    "name": "东校区",
+    "viewBox": [0, 0, 100, 100],
+    "metersPerUnit": 6,
+    "walkSpeedMetersPerMin": 80
+  },
+  "geoBounds": {
+    "north": 30.5428,
+    "south": 30.5320,
+    "west": 114.3585,
+    "east": 114.3700
+  },
+  "defaultLocation": {
+    "x": 13,
+    "y": 24,
+    "label": "教学楼A 附近（默认位置）"
+  },
+  "pois": [
+    {
+      "id": "PP01",
+      "name": "菜鸟驿站（东门）",
+      "type": "station",
+      "x": 70,
+      "y": 55,
+      "address": "东门快递服务中心",
+      "businessHours": "08:00 - 20:00",
+      "color": "#2563EB",
+      "accessNode": "e1"
+    },
+    {
+      "id": "PP02",
+      "name": "菜鸟驿站（西门）",
+      "type": "station",
+      "x": 20,
+      "y": 40,
+      "address": "西门快递服务中心",
+      "businessHours": "08:00 - 22:00",
+      "color": "#2563EB",
+      "accessNode": "w2"
+    },
+    {
+      "id": "PP03",
+      "name": "智能快递柜A区",
+      "type": "locker",
+      "x": 50,
+      "y": 30,
+      "address": "紫荆公寓3号楼一层",
+      "businessHours": "24小时",
+      "color": "#10B981",
+      "accessNode": "c2"
+    },
+    {
+      "id": "PP04",
+      "name": "智能快递柜B区",
+      "type": "locker",
+      "x": 35,
+      "y": 70,
+      "address": "丁香公寓2号楼一层",
+      "businessHours": "24小时",
+      "color": "#10B981",
+      "accessNode": "b2"
+    },
+    {
+      "id": "PP05",
+      "name": "京东快递服务中心",
+      "type": "station",
+      "x": 80,
+      "y": 20,
+      "address": "北区学生宿舍旁",
+      "businessHours": "09:00 - 21:00",
+      "color": "#DC2626",
+      "accessNode": "c2"
+    },
+    {
+      "id": "PP06",
+      "name": "顺丰营业点",
+      "type": "station",
+      "x": 55,
+      "y": 85,
+      "address": "南门商业街",
+      "businessHours": "09:00 - 18:00",
+      "color": "#1E40AF",
+      "accessNode": "c3"
+    }
+  ],
+  "roads": {
+    "nodes": {
+      "w1": { "x": 0, "y": 50, "label": "西门" },
+      "w4": { "x": 0, "y": 24 },
+      "w3": { "x": 21, "y": 24 },
+      "w2": { "x": 21, "y": 50 },
+      "w5": { "x": 0, "y": 78 },
+      "b2": { "x": 35, "y": 78 },
+      "n1": { "x": 56, "y": 0, "label": "北门" },
+      "c2": { "x": 56, "y": 24 },
+      "c1": { "x": 56, "y": 50 },
+      "c3": { "x": 56, "y": 78 },
+      "s1": { "x": 56, "y": 100, "label": "南门" },
+      "e1": { "x": 75, "y": 50 },
+      "e3": { "x": 75, "y": 78 },
+      "e2": { "x": 100, "y": 50, "label": "东门" },
+      "e4": { "x": 100, "y": 78 }
+    },
+    "edges": [
+      ["w1", "w2"],
+      ["w2", "c1"],
+      ["c1", "e1"],
+      ["e1", "e2"],
+      ["w4", "w3"],
+      ["w3", "c2"],
+      ["w3", "w2"],
+      ["n1", "c2"],
+      ["c2", "c1"],
+      ["c1", "c3"],
+      ["c3", "s1"],
+      ["e1", "e3"],
+      ["w5", "b2"],
+      ["b2", "c3"],
+      ["c3", "e3"],
+      ["e3", "e4"]
+    ]
+  }
+}

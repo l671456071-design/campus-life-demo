@@ -1,0 +1,233 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>取件记录 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .record-expand {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, margin-top 0.3s, padding-top 0.3s;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 1px solid transparent;
+    }
+    .record-expand.show {
+      max-height: 400px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top-color: var(--color-border-light);
+    }
+  </style>
+</head>
+<body data-page="records">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">取件记录</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div style="padding: 16px;">
+        <!-- 统计卡片 -->
+        <div class="card anim-fade-in-up" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color: #fff; margin-bottom: 16px; position: relative; overflow: hidden;">
+          <div style="font-size: 13px; opacity: 0.85;">累计取件</div>
+          <div style="display:flex; align-items:baseline; gap:4px; margin-top:4px;">
+            <span style="font-size: 36px; font-weight: 800; line-height:1;">128</span>
+            <span style="font-size: 16px; opacity: 0.9;">件</span>
+          </div>
+          <div style="font-size: 12px; opacity: 0.75; margin-top: 8px;">本学期共取件 128 次，平均每周 8 件</div>
+          <svg style="position:absolute; right:-10px; bottom:-10px; width:90px; height:90px; opacity:0.12;" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+
+        <!-- 搜索栏 -->
+        <div class="search-bar" style="margin-bottom: 16px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索快递公司/单号">
+        </div>
+
+        <!-- 记录列表 -->
+        <div id="recordList"></div>
+      </div>
+    </main>
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script>
+    var allRecords = [];
+    var expandedIds = {};
+
+    function initRecordsPage() {
+      var list = document.getElementById('recordList');
+      list.innerHTML = App.skeletonList(3);
+
+      App.initPullToRefresh(document.getElementById('mainContent'), loadRecords);
+
+      var searchInput = document.getElementById('searchInput');
+      var searchTimer = null;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(function () {
+          renderRecords();
+        }, 200);
+      });
+
+      loadRecords();
+    }
+
+    async function loadRecords() {
+      var res = await API.fetchRecords({});
+      if (res.code === 0) {
+        allRecords = res.data;
+        renderRecords();
+      }
+    }
+
+    function renderRecords() {
+      var keyword = document.getElementById('searchInput').value.trim().toLowerCase();
+      var filtered = allRecords;
+      if (keyword) {
+        filtered = allRecords.filter(function (r) {
+          return (r.company + r.trackingNo + r.pickupPoint).toLowerCase().indexOf(keyword) !== -1;
+        });
+      }
+
+      var list = document.getElementById('recordList');
+
+      if (filtered.length === 0) {
+        list.innerHTML = App.emptyState('暂无取件记录', '取件后这里会显示历史记录');
+        return;
+      }
+
+      var groups = groupByDate(filtered);
+      var html = '';
+      groups.forEach(function (group, idx) {
+        var label = idx === 0 ? '今天' : (idx === 1 ? '昨天' : '更早');
+        html += '<div style="font-size:12px; color:var(--color-text-sub); font-weight:500; margin:' + (idx === 0 ? '0 0 8px' : '20px 0 8px') + ';">' + label + '</div>';
+        group.forEach(function (r, i) {
+          html += renderRecordCard(r, idx, i);
+        });
+      });
+
+      list.innerHTML = html;
+    }
+
+    function groupByDate(records) {
+      var dateMap = {};
+      records.forEach(function (r) {
+        var date = r.pickedAt.split(' ')[0];
+        if (!dateMap[date]) dateMap[date] = [];
+        dateMap[date].push(r);
+      });
+
+      var dates = Object.keys(dateMap).sort(function (a, b) {
+        return b.localeCompare(a);
+      });
+
+      var groups = [];
+      dates.forEach(function (date, idx) {
+        if (idx < 2) {
+          groups.push(dateMap[date]);
+        } else {
+          if (groups.length < 3) {
+            groups.push(dateMap[date]);
+          } else {
+            groups[2] = groups[2].concat(dateMap[date]);
+          }
+        }
+      });
+
+      return groups;
+    }
+
+    function renderRecordCard(r, groupIdx, itemIdx) {
+      var time = groupIdx < 2 ? r.pickedAt.split(' ')[1] : r.pickedAt;
+      var delay = Math.min((groupIdx * 3 + itemIdx) * 0.05, 0.3);
+      var isExpanded = expandedIds[r.id] ? ' show' : '';
+
+      return '<div class="card card--clickable anim-fade-in-up" style="margin-bottom:12px; animation-delay:' + delay + 's;" onclick="toggleRecord(\'' + r.id + '\')">' +
+        '<div style="display:flex; align-items:flex-start; gap:12px;">' +
+          App.pkgLogo(r) +
+          '<div style="flex:1; min-width:0;">' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">' +
+              '<span class="font-semibold">' + r.company + '</span>' +
+              '<span class="text-primary font-semibold" style="font-family:var(--font-mono); font-size:13px;">' + r.pickupCode + '</span>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px;">' +
+              '<span class="text-sub text-sm">' + r.trackingNo + '</span>' +
+              '<span class="tag">' + r.type + '</span>' +
+            '</div>' +
+            '<div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:2px;">' +
+              '<span class="text-sub text-sm truncate" style="flex:1;">' + r.pickupPoint + '</span>' +
+              '<span class="text-hint text-sm">' + time + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="record-expand' + isExpanded + '" id="expand-' + r.id + '">' +
+          '<div class="pickup-code-box">' +
+            '<div class="pickup-code-label">取件码</div>' +
+            '<div class="pickup-code-value">' + r.pickupCode + '</div>' +
+          '</div>' +
+          '<a href="map.html" class="btn btn-outline btn-block" style="margin-top:12px;">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>' +
+            '导航到取件点' +
+          '</a>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function toggleRecord(id) {
+      var el = document.getElementById('expand-' + id);
+      if (!el) return;
+      if (el.classList.contains('show')) {
+        el.classList.remove('show');
+        expandedIds[id] = false;
+      } else {
+        el.classList.add('show');
+        expandedIds[id] = true;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      initRecordsPage();
+    });
+  </script>
+</body>
+</html>

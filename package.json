@@ -1,0 +1,12 @@
+{
+  "name": "campus-package-app",
+  "version": "2.0.0",
+  "description": "校园智能取快递 App - 本地化可运行原型（零依赖，数据存于浏览器 localStorage）",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=14"
+  }
+}

@@ -1,0 +1,9 @@
+jsQR
+Copyright (c) 2016 Cosmo Wolfe
+https://github.com/cozmo/jsQR
+
+Licensed under the Apache License, Version 2.0:
+http://www.apache.org/licenses/LICENSE-2.0
+
+本文件为本地打包副本，用于在不支持 BarcodeDetector 的浏览器中
+离线识别二维码，运行时不访问任何网络资源。

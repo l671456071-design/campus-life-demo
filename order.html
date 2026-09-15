@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>我的订单 - 校园外卖</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* ===== Order Page Styles ===== */
+    .mode-tabs {
+      display: flex; gap: 6px; margin: 12px 16px 0;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md); padding: 4px;
+    }
+    .mode-tab {
+      flex: 1; padding: 8px 0; text-align: center;
+      font-size: 13px; font-weight: 600; color: var(--color-text-sub);
+      border-radius: var(--radius-sm); border: none;
+      transition: all 0.2s;
+    }
+    .mode-tab.active { background: var(--color-surface); color: var(--color-text); box-shadow: var(--shadow-sm); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .order-card {
+      padding: 14px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .order-head { display: flex; align-items: center; gap: 10px; }
+    .order-shop-logo {
+      width: 40px; height: 40px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .order-shop-name { font-size: 15px; font-weight: 700; color: var(--color-text); }
+    .order-time { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
+    .order-status {
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .order-status .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .st-unpaid { color: #B45309; }
+    .st-preparing { color: var(--color-warning); }
+    .st-delivering { color: var(--color-primary); }
+    .st-completed { color: var(--color-accent); }
+    .order-items { display: flex; gap: 6px; margin: 10px 0 2px; flex-wrap: wrap; }
+    .order-items .it-emoji {
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      background: var(--color-surface-alt);
+      display: flex; align-items: center; justify-content: center; font-size: 18px;
+    }
+    .order-items-text { font-size: 12px; color: var(--color-text-sub); margin-top: 6px; }
+    .order-foot {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--color-border);
+    }
+    .order-total { font-size: 15px; font-weight: 800; color: var(--color-text); }
+    .order-total .n { font-family: var(--font-mono); color: #E4423A; }
+    .order-actions { display: flex; gap: 8px; }
+    .order-actions .btn { padding: 7px 14px; font-size: 12px; }
+
+    /* 配送进度条 */
+    .order-progress { display: flex; align-items: center; gap: 4px; margin-top: 12px; }
+    .op-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 10px; color: var(--color-text-hint); }
+    .op-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--color-border); }
+    .op-step.done .op-dot { background: var(--color-accent); }
+    .op-step.done { color: var(--color-accent); font-weight: 600; }
+    .op-line { flex: 1.5; height: 2px; background: var(--color-border); border-radius: 1px; margin-bottom: 14px; }
+    .op-line.done { background: var(--color-accent); }
+
+    /* ===== 结算面板 ===== */
+    .addr-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+    .addr-card:active { transform: scale(0.99); }
+    .addr-card svg { width: 18px; height: 18px; color: var(--color-primary); flex-shrink: 0; }
+    .addr-card .a-body { flex: 1; min-width: 0; }
+    .addr-card .a-line1 { font-size: 14px; font-weight: 700; color: var(--color-text); }
+    .addr-card .a-line2 { font-size: 12px; color: var(--color-text-sub); margin-top: 2px; }
+    .addr-card .a-arrow { color: var(--color-text-hint); flex-shrink: 0; }
+
+    .co-section-title {
+      display: flex; align-items: center; gap: 6px;
+      margin: 18px 4px 10px;
+      font-size: 14px; font-weight: 700; color: var(--color-text);
+    }
+    .co-section-title::before { content: ''; display: block; width: 4px; height: 14px; border-radius: 2px; background: var(--color-primary); }
+
+    .co-card {
+      padding: 14px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+    .co-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; }
+    .co-item + .co-item { border-top: 1px solid var(--color-border-light); }
+    .co-item .it-emoji { width: 36px; height: 36px; border-radius: var(--radius-sm); background: var(--color-surface-alt); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+    .co-item .it-name { flex: 1; min-width: 0; font-size: 13px; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .co-item .it-qty { font-size: 12px; color: var(--color-text-hint); flex-shrink: 0; font-family: var(--font-mono); }
+    .co-item .it-price { font-size: 13px; font-weight: 700; color: var(--color-text); flex-shrink: 0; font-family: var(--font-mono); }
+
+    .fee-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--color-text-sub); padding: 6px 0; }
+    .fee-row.cut span:last-child { color: #E4423A; font-weight: 600; }
+    .fee-row.total { border-top: 1px dashed var(--color-border); margin-top: 6px; padding-top: 10px; font-size: 15px; font-weight: 800; color: var(--color-text); }
+    .fee-row.total .n { color: #E4423A; font-family: var(--font-mono); font-size: 18px; }
+
+    .ship-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; }
+    .ship-row + .ship-row { border-top: 1px solid var(--color-border-light); }
+    .ship-icon { width: 34px; height: 34px; border-radius: var(--radius-sm); background: var(--color-primary-lighter); color: var(--color-primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ship-icon svg { width: 17px; height: 17px; }
+    .ship-body { flex: 1; }
+    .ship-name { font-size: 13px; font-weight: 600; color: var(--color-text); }
+    .ship-sub { font-size: 11px; color: var(--color-text-sub); margin-top: 1px; }
+    .ship-check { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--color-border); flex-shrink: 0; position: relative; }
+    .ship-row.selected .ship-check { border-color: var(--color-primary); background: var(--color-primary); }
+    .ship-row.selected .ship-check::after {
+      content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff;
+    }
+
+    .note-input {
+      width: 100%; border: none; outline: none;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md);
+      padding: 11px 14px;
+      font-size: 13px; color: var(--color-text);
+      font-family: var(--font-body);
+    }
+    .note-input::placeholder { color: var(--color-text-hint); }
+
+    /* 底部提交栏 */
+    .submit-bar {
+      position: fixed; left: 12px; right: 12px;
+      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom, 0px) + 10px);
+      height: 52px;
+      background: var(--color-text);
+      border-radius: var(--radius-full);
+      display: flex; align-items: center;
+      padding: 0 6px 0 18px; gap: 10px;
+      z-index: 90;
+      box-shadow: var(--shadow-xl);
+    }
+    .submit-bar .sum { flex: 1; color: #fff; }
+    .submit-bar .sum .t { font-size: 17px; font-weight: 800; font-family: var(--font-mono); }
+    .submit-bar .sum .t::before { content: '¥'; font-size: 12px; }
+    .submit-bar .sum .s { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 1px; }
+    .submit-bar .go-submit {
+      height: 40px; padding: 0 24px; border: none; border-radius: var(--radius-full);
+      background: var(--color-warning); color: #fff;
+      font-size: 14px; font-weight: 700; flex-shrink: 0;
+    }
+    .submit-bar .go-submit:active { transform: scale(0.95); }
+  </style>
+</head>
+<body data-page="food">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="food.html" class="header-back-btn" id="backBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </a>
+      </div>
+      <div class="header-title">外卖订单</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <!-- 模式切换 -->
+      <div class="mode-tabs">
+        <button class="mode-tab active" id="tabOrders" onclick="switchMode('orders')">全部订单</button>
+        <button class="mode-tab" id="tabCheckout" onclick="switchMode('checkout')">购物车结算</button>
+      </div>
+
+      <!-- 订单列表面板 -->
+      <div class="panel active px-4" id="panelOrders" style="padding-top:12px;">
+        <div id="orderList" style="display:flex;flex-direction:column;gap:12px;"></div>
+      </div>
+
+      <!-- 结算面板 -->
+      <div class="panel px-4" id="panelCheckout" style="padding-top:12px;">
+        <div id="checkoutBody"></div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- 结算提交栏 -->
+  <div class="submit-bar" id="submitBar" style="display:none;">
+    <div class="sum">
+      <div class="t" id="submitTotal">0</div>
+      <div class="s" id="submitSub">合计</div>
+    </div>
+    <button class="go-submit" onclick="submitOrder()">提交订单</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var initialCheckout = params.get('checkout') === '1';
+      var syncTimer = null;
+
+      function money(n) {
+        var v = Math.round(n * 100) / 100;
+        return v % 1 === 0 ? String(v) : v.toFixed(v * 10 % 1 === 0 ? 1 : 2);
+      }
+
+      function fmtTime(ts) {
+        var d = new Date(ts);
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        return (d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+
+      // ---------- 模式切换 ----------
+      window.switchMode = function (mode) {
+        var isCheckout = mode === 'checkout';
+        document.getElementById('tabOrders').classList.toggle('active', !isCheckout);
+        document.getElementById('tabCheckout').classList.toggle('active', isCheckout);
+        document.getElementById('panelOrders').classList.toggle('active', !isCheckout);
+        document.getElementById('panelCheckout').classList.toggle('active', isCheckout);
+        document.getElementById('submitBar').style.display = isCheckout ? 'flex' : 'none';
+        if (isCheckout) renderCheckout(); else renderOrders();
+      };
+
+      // ---------- 订单列表 ----------
+      function orderCard(o, index) {
+        var stagger = index < 6 ? ' stagger-' + (index + 1) : '';
+        var statusText = Storage.ORDER_STATUS[o.status] || o.status;
+        var itemsText = (o.items || []).map(function (it) { return it.name + '×' + it.qty; }).join('、');
+        var emojis = (o.items || []).slice(0, 4).map(function (it) {
+          return '<span class="it-emoji">' + (it.emoji || '🍽️') + '</span>';
+        }).join('');
+
+        // 进度：待支付(0) → 制作中(1) → 配送中(2) → 已完成(3)
+        var stepIdx = { unpaid: 0, preparing: 1, delivering: 2, completed: 3 }[o.status] || 0;
+        var progressHtml =
+          '<div class="order-progress">' +
+            '<span class="op-step' + (stepIdx >= 0 && o.status !== 'unpaid' ? ' done' : '') + '"><span class="op-dot"></span>已下单</span>' +
+            '<span class="op-line' + (stepIdx >= 1 ? ' done' : '') + '"></span>' +
+            '<span class="op-step' + (stepIdx >= 1 ? ' done' : '') + '"><span class="op-dot"></span>制作中</span>' +
+            '<span class="op-line' + (stepIdx >= 2 ? ' done' : '') + '"></span>' +
+            '<span class="op-step' + (stepIdx >= 2 ? ' done' : '') + '"><span class="op-dot"></span>配送中</span>' +
+            '<span class="op-line' + (stepIdx >= 3 ? ' done' : '') + '"></span>' +
+            '<span class="op-step' + (stepIdx >= 3 ? ' done' : '') + '"><span class="op-dot"></span>已完成</span>' +
+          '</div>';
+
+        var actionsHtml = '';
+        if (o.status === 'unpaid') {
+          actionsHtml += '<button class="btn btn-primary" onclick="payNow(\'' + o.id + '\')">去支付</button>';
+        }
+        if (o.status === 'preparing') {
+          actionsHtml += '<button class="btn btn-outline" onclick="showProgressToast(\'' + o.id + '\')">制作中 · ' + (o.etaMinutes || 20) + '分钟送达</button>';
+        }
+        if (o.status === 'delivering') {
+          actionsHtml += '<button class="btn btn-outline" onclick="showProgressToast(\'' + o.id + '\')">预计 ' + (o.etaMinutes || 20) + ' 分钟送达</button>' +
+                        '<button class="btn btn-primary" onclick="location.href=\'map.html?mode=delivery&orderId=' + o.id + '\'">查看配送位置</button>';
+        }
+
+        return '<div class="order-card anim-fade-in-up' + stagger + '">' +
+          '<div class="order-head">' +
+            '<div class="order-shop-logo" style="background:' + (o.restaurantColor || '#FEF3C7') + '22;">' + (o.restaurantEmoji || '🍽️') + '</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div class="order-shop-name">' + o.restaurantName + '</div>' +
+              '<div class="order-time">' + fmtTime(o.createdAt) + ' · ' + (o.itemCount || 0) + ' 件商品</div>' +
+            '</div>' +
+            '<span class="order-status st-' + o.status + '"><span class="dot"></span>' + statusText + '</span>' +
+          '</div>' +
+          (emojis ? '<div class="order-items">' + emojis + '</div>' : '') +
+          (itemsText ? '<div class="order-items-text">' + itemsText + '</div>' : '') +
+          (o.note ? '<div class="order-items-text">备注：' + o.note + '</div>' : '') +
+          progressHtml +
+          '<div class="order-foot">' +
+            '<span class="order-total">合计 <span class="n">¥' + money(o.total) + '</span></span>' +
+            '<div class="order-actions">' + actionsHtml + '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      function renderOrders() {
+        var orders = Storage.syncOrderStatuses();
+        var listEl = document.getElementById('orderList');
+        if (!orders.length) {
+          listEl.innerHTML = App.emptyState('暂无外卖订单', '去外卖页逛逛，发现校园美味');
+          return;
+        }
+        var html = '';
+        orders.forEach(function (o, i) { html += orderCard(o, i); });
+        listEl.innerHTML = html;
+        scheduleSync();
+      }
+
+      // 有进行中订单时每 5 秒刷新一次状态
+      function scheduleSync() {
+        clearTimeout(syncTimer);
+        var orders = Storage.getOrders();
+        var hasActive = orders.some(function (o) { return o.status !== 'completed'; });
+        if (hasActive) {
+          syncTimer = setTimeout(renderOrders, 5000);
+        }
+      }
+
+      window.showProgressToast = function (id) {
+        var o = Storage.getOrder(id);
+        if (!o) return;
+        var labels = { preparing: '商家正在制作中，请稍候', delivering: '骑手配送中，预计 ' + (o.etaMinutes || 20) + ' 分钟送达' };
+        App.toast(labels[o.status] || '订单处理中');
+      };
+
+      // ---------- 模拟支付 ----------
+      window.payNow = function (id) {
+        App.showLoading('支付中...');
+        API.payOrder(id).then(function (res) {
+          App.hideLoading();
+          if (res.data.success) {
+            App.toastSuccess('支付成功，商家开始备餐');
+            renderOrders();
+          } else {
+            App.toast(res.data.message || '支付失败');
+          }
+        });
+      };
+
+      // ---------- 结算面板 ----------
+      function renderCheckout() {
+        var summary = Storage.getCartSummary();
+        var body = document.getElementById('checkoutBody');
+        var bar = document.getElementById('submitBar');
+        if (!summary.itemCount || !summary.restaurant) {
+          body.innerHTML = App.emptyState('购物车是空的', '先去挑点好吃的吧');
+          bar.style.display = 'none';
+          return;
+        }
+        bar.style.display = 'flex';
+        var r = summary.restaurant;
+        var addr = Storage.getDefaultAddress();
+        var itemsHtml = '';
+        Storage.getCart().items.forEach(function (it) {
+          itemsHtml += '<div class="co-item">' +
+            '<span class="it-emoji">' + (it.emoji || '🍽️') + '</span>' +
+            '<span class="it-name">' + it.name + '</span>' +
+            '<span class="it-qty">x' + it.qty + '</span>' +
+            '<span class="it-price">¥' + money(it.price * it.qty) + '</span>' +
+          '</div>';
+        });
+        body.innerHTML =
+          // 收货地址
+          '<div class="addr-card anim-fade-in-up">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+            '<div class="a-body">' +
+              '<div class="a-line1">' + addr.name + ' ' + addr.phone + '</div>' +
+              '<div class="a-line2">' + addr.text + '</div>' +
+            '</div>' +
+            '<svg class="a-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '</div>' +
+
+          // 店铺 + 商品
+          '<div class="co-section-title anim-fade-in-up">' + (r.emoji || '🍽️') + ' ' + r.name + ' · 商品清单</div>' +
+          '<div class="co-card anim-fade-in-up">' + itemsHtml + '</div>' +
+
+          // 配送方式
+          '<div class="co-section-title anim-fade-in-up">配送方式</div>' +
+          '<div class="co-card anim-fade-in-up">' +
+            '<div class="ship-row selected">' +
+              '<div class="ship-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/><path d="M5 18H3a2 2 0 0 1-2-2v-2h18l-2.34-6.34A2 2 0 0 0 14.76 6H3v4h13"/></svg></div>' +
+              '<div class="ship-body"><div class="ship-name">校园骑手配送</div><div class="ship-sub">约 ' + r.deliveryTime + ' 分钟送达 · 配送费 ' + (summary.deliveryFee === 0 ? '免配送费' : '¥' + money(summary.deliveryFee)) + '</div></div>' +
+              '<div class="ship-check"></div>' +
+            '</div>' +
+            '<div class="ship-row" style="opacity:0.45;">' +
+              '<div class="ship-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>' +
+              '<div class="ship-body"><div class="ship-name">到店自取</div><div class="ship-sub">开发中 · 敬请期待</div></div>' +
+              '<div class="ship-check"></div>' +
+            '</div>' +
+          '</div>' +
+
+          // 备注
+          '<div class="co-section-title anim-fade-in-up">订单备注</div>' +
+          '<input class="note-input anim-fade-in-up" id="noteInput" maxlength="50" placeholder="口味偏好、放行位置等（选填）">' +
+
+          // 费用明细
+          '<div class="co-section-title anim-fade-in-up">费用明细</div>' +
+          '<div class="co-card anim-fade-in-up" style="margin-bottom:80px;">' +
+            '<div class="fee-row"><span>商品总价</span><span>¥' + money(summary.subtotal) + '</span></div>' +
+            '<div class="fee-row"><span>配送费</span><span>' + (summary.deliveryFee === 0 ? '免配送费' : '¥' + money(summary.deliveryFee)) + '</span></div>' +
+            (summary.discount ? '<div class="fee-row cut"><span>满减优惠</span><span>-¥' + money(summary.discount) + '</span></div>' : '') +
+            '<div class="fee-row total"><span>应付合计</span><span class="n">¥' + money(summary.total) + '</span></div>' +
+          '</div>';
+
+        document.getElementById('submitTotal').textContent = money(summary.total);
+        document.getElementById('submitSub').textContent = '共 ' + summary.itemCount + ' 件 · ' + r.name;
+      }
+
+      // ---------- 提交订单 ----------
+      window.submitOrder = function () {
+        var note = '';
+        var noteEl = document.getElementById('noteInput');
+        if (noteEl) note = noteEl.value.trim();
+        App.showLoading('提交订单中...');
+        API.createOrder(null, note).then(function (res) {
+          App.hideLoading();
+          if (!res.data.success) {
+            App.toast(res.data.message || '提交失败');
+            return;
+          }
+          var order = res.data.order;
+          App.showModal({
+            icon: 'success',
+            title: '下单成功',
+            desc: '订单已生成，当前为待支付状态\n可在订单列表中模拟支付',
+            actions: [
+              { label: '继续逛逛', style: 'btn-outline' },
+              { label: '查看订单', style: 'btn-primary', onClick: function () { location.href = 'order.html'; } },
+            ],
+          });
+        });
+      };
+
+      // ---------- 初始化 ----------
+      if (initialCheckout) {
+        var summary = Storage.getCartSummary();
+        switchMode(summary.itemCount ? 'checkout' : 'orders');
+        if (!summary.itemCount) App.toast('购物车是空的');
+      } else {
+        renderOrders();
+      }
+
+      // 页面从后台切回时刷新状态
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && document.getElementById('panelOrders').classList.contains('active')) {
+          renderOrders();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

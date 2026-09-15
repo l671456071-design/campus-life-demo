@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>二维码测试工具 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    body { background: var(--color-bg); }
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+    .qr-card {
+      background: var(--color-surface);
+      border-radius: 12px;
+      padding: 14px 12px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border-light);
+      transition: transform 0.15s;
+    }
+    .qr-card:active { transform: scale(0.97); }
+    .qr-card svg { display: block; margin: 0 auto; background: #fff; border-radius: 8px; }
+    .qr-card-company {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .qr-card-code {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--color-text-sub);
+      margin-bottom: 8px;
+    }
+    .qr-card-status { margin-top: 8px; }
+    .qr-fullscreen {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.96);
+      z-index: 600;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #fff;
+    }
+    .qr-fullscreen.show { display: flex; }
+    .qr-fullscreen svg { background: #fff; border-radius: 16px; padding: 16px; }
+    .qr-fullscreen-label {
+      margin-top: 20px;
+      font-size: 14px;
+      text-align: center;
+      line-height: 1.8;
+      opacity: 0.9;
+      word-break: break-all;
+    }
+    .qr-fullscreen-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .format-toggle {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .format-toggle button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1.5px solid var(--color-border);
+      background: var(--color-surface);
+      font-size: 13px;
+      color: var(--color-text-sub);
+    }
+    .format-toggle button.active {
+      border-color: var(--color-primary);
+      color: var(--color-primary);
+      background: var(--color-primary-lighter);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body data-page="qrtest">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">二维码测试工具</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+    <main class="app-content">
+      <div style="padding: 16px;">
+        <div class="card anim-fade-in-up" style="padding:14px 16px;margin-bottom:16px;">
+          <div style="font-size:14px;font-weight:600;color:var(--color-text);">本地二维码生成器</div>
+          <div style="font-size:12px;color:var(--color-text-sub);margin-top:4px;line-height:1.6;">
+            用另一台设备或本机摄像头扫描下方二维码，即可测试真实扫码取件流程。生成完全在本地完成。
+          </div>
+          <div class="format-toggle" id="formatToggle">
+            <button class="active" data-format="json" onclick="setFormat('json')">JSON（含 packageId）</button>
+            <button data-format="plain" onclick="setFormat('plain')">纯取件码</button>
+          </div>
+        </div>
+
+        <div class="section-header anim-fade-in-up stagger-1">
+          <span class="section-title">待取快递二维码</span>
+          <span class="section-link" id="pendingQrCount"></span>
+        </div>
+        <div class="qr-grid" id="qrGrid"></div>
+
+        <div class="section-header anim-fade-in-up" style="margin-top:24px;">
+          <span class="section-title">自定义内容</span>
+        </div>
+        <div class="card anim-fade-in-up" style="padding:16px;">
+          <input type="text" id="customText" class="manual-input-field" style="text-align:left;font-family:var(--font-body);letter-spacing:0;" placeholder="输入任意文本，生成对应二维码" autocomplete="off">
+          <button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="renderCustomQr()">生成二维码</button>
+          <div id="customQrBox" style="margin-top:16px;text-align:center;"></div>
+        </div>
+
+        <div class="card anim-fade-in-up" style="padding:14px 16px;margin-top:16px;font-size:12px;color:var(--color-text-sub);line-height:1.7;">
+          提示：扫码页默认使用后置摄像头。本机测试时，可在手机浏览器打开本页，用另一台设备显示二维码对准扫描；或使用「相册识别」选择二维码截图。
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="qr-fullscreen" id="qrFullscreen" onclick="this.classList.remove('show')">
+    <button class="qr-fullscreen-close" onclick="document.getElementById('qrFullscreen').classList.remove('show')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div id="qrFullscreenBody"></div>
+    <div class="qr-fullscreen-label" id="qrFullscreenLabel"></div>
+    <div style="margin-top:16px;font-size:12px;opacity:0.6;">点击任意位置关闭</div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="app.js"></script>
+  <script src="libs/qr-encoder/qrcode.js"></script>
+  <script src="libs/qr-encoder/qrcode_UTF8.js"></script>
+  <script>
+    var qrFormat = 'json';
+
+    function setFormat(fmt) {
+      qrFormat = fmt;
+      document.querySelectorAll('#formatToggle button').forEach(function (b) {
+        b.classList.toggle('active', b.dataset.format === fmt);
+      });
+      renderPendingQrs();
+    }
+
+    function qrContent(pkg) {
+      return qrFormat === 'json'
+        ? JSON.stringify({ qrCode: pkg.pickupCode, packageId: pkg.id })
+        : pkg.pickupCode;
+    }
+
+    function makeQrSvg(text, cellSize) {
+      var qr = qrcode(0, 'M');
+      qr.addData(text, 'Byte');
+      qr.make();
+      return qr.createSvgTag({ cellSize: cellSize || 4, margin: 2, scalable: true });
+    }
+
+    function renderPendingQrs() {
+      var packages = Storage.getPackages().filter(function (p) {
+        return p.status === 'pending' && p.pickupCode;
+      });
+      document.getElementById('pendingQrCount').textContent = packages.length + ' 件';
+
+      var html = '';
+      packages.forEach(function (pkg) {
+        var svg = makeQrSvg(qrContent(pkg), 3);
+        html += '<div class="qr-card anim-fade-in-up" onclick="showFullQr(\'' + pkg.id + '\')">' +
+          '<div class="qr-card-company">' + pkg.company + '</div>' +
+          '<div class="qr-card-code">' + pkg.pickupCode + '</div>' +
+          svg +
+          '<div class="qr-card-status"><span class="status-badge ' + App.statusClass(pkg.status) + '">' + App.statusLabel(pkg.status) + '</span></div>' +
+          '</div>';
+      });
+      document.getElementById('qrGrid').innerHTML = html || App.emptyState('暂无待取快递', '确认取件后此处不再显示');
+    }
+
+    function showFullQr(packageId) {
+      var pkg = Storage.getPackage(packageId);
+      if (!pkg) return;
+      document.getElementById('qrFullscreenBody').innerHTML = makeQrSvg(qrContent(pkg), 8);
+      document.getElementById('qrFullscreenLabel').innerHTML =
+        pkg.company + ' · ' + pkg.pickupCode + '<br>' +
+        '<span style="opacity:0.6;font-size:12px;">' + escapeHtml(qrContent(pkg)) + '</span>';
+      document.getElementById('qrFullscreen').classList.add('show');
+    }
+
+    function renderCustomQr() {
+      var text = document.getElementById('customText').value.trim();
+      if (!text) { App.toast('请输入内容'); return; }
+      try {
+        document.getElementById('customQrBox').innerHTML =
+          makeQrSvg(text, 5) +
+          '<div style="font-size:12px;color:var(--color-text-sub);margin-top:8px;word-break:break-all;">' + escapeHtml(text) + '</div>';
+      } catch (e) {
+        App.toast('生成失败：' + e.message);
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      renderPendingQrs();
+    });
+  </script>
+</body>
+</html>

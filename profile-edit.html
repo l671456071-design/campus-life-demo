@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>个人信息 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .avatar-section {
+      text-align: center;
+      padding: 28px 16px 24px;
+    }
+    .avatar-big-wrap {
+      position: relative;
+      display: inline-block;
+      cursor: pointer;
+    }
+    .avatar-big-wrap:active { transform: scale(0.96); }
+    .avatar-big-wrap { transition: transform 0.15s; }
+    .avatar-edit-badge {
+      position: absolute;
+      right: 0;
+      bottom: 2px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--color-primary);
+      border: 2.5px solid var(--color-surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .avatar-edit-badge svg { width: 14px; height: 14px; }
+    .avatar-hint {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--color-text-sub);
+    }
+
+    .form-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border-light);
+    }
+    .form-item {
+      display: flex;
+      align-items: center;
+      padding: 4px 16px;
+      border-bottom: 1px solid var(--color-border-light);
+      min-height: 56px;
+    }
+    .form-item:last-child { border-bottom: none; }
+    .form-label {
+      width: 72px;
+      flex-shrink: 0;
+      font-size: 15px;
+      color: var(--color-text);
+      font-weight: 500;
+    }
+    .form-input, .form-select {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 15px;
+      color: var(--color-text);
+      padding: 12px 0;
+      font-family: inherit;
+      text-align: right;
+    }
+    .form-input::placeholder { color: var(--color-text-hint); }
+    .form-select {
+      appearance: none;
+      -webkit-appearance: none;
+      direction: rtl;
+    }
+    .form-select-wrap {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .form-select-wrap svg {
+      width: 16px;
+      height: 16px;
+      color: var(--color-text-hint);
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+    .form-readonly {
+      flex: 1;
+      text-align: right;
+      font-size: 15px;
+      color: var(--color-text-sub);
+    }
+
+    .local-tip {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin: 14px 4px 20px;
+      font-size: 12px;
+      line-height: 1.6;
+      color: var(--color-text-hint);
+    }
+    .local-tip svg { width: 14px; height: 14px; flex-shrink: 0; margin-top: 2px; }
+
+    /* 头像选择底部弹层 */
+    .avatar-sheet-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 900;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    .avatar-sheet-backdrop.show { opacity: 1; pointer-events: auto; }
+    .avatar-sheet {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: var(--color-surface);
+      border-radius: 20px 20px 0 0;
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      transform: translateY(100%);
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0.35, 1);
+    }
+    .avatar-sheet-backdrop.show .avatar-sheet { transform: translateY(0); }
+    .avatar-sheet-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--color-text);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .avatar-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .avatar-grid-item {
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .avatar-grid-item:active { transform: scale(0.9); }
+    .avatar-grid-item.selected { border-color: var(--color-primary); }
+    .avatar-sheet-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: var(--radius-md);
+      background: var(--color-surface-alt);
+      color: var(--color-text);
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-bottom: 10px;
+      font-family: inherit;
+    }
+    .avatar-sheet-btn:active { opacity: 0.7; }
+    .avatar-sheet-btn svg { width: 18px; height: 18px; }
+    .avatar-sheet-btn.danger { color: var(--color-danger); }
+    .avatar-sheet-cancel {
+      background: transparent;
+      color: var(--color-text-sub);
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body data-page="profile-edit">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="profile.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">个人信息</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <!-- 头像 -->
+      <div class="avatar-section anim-fade-in-up">
+        <div class="avatar-big-wrap" role="button" tabindex="0" aria-label="更换头像" onclick="openAvatarSheet()" onkeydown="if(event.key==='Enter')openAvatarSheet()">
+          <span id="avatarPreview"></span>
+          <span class="avatar-edit-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </span>
+        </div>
+        <div class="avatar-hint">点击头像可更换</div>
+      </div>
+
+      <div style="padding: 0 16px;">
+        <!-- 表单 -->
+        <div class="form-card anim-fade-in-up stagger-1">
+          <div class="form-item">
+            <div class="form-label">姓名</div>
+            <input class="form-input" id="inputName" type="text" maxlength="12" placeholder="请输入姓名">
+          </div>
+          <div class="form-item">
+            <div class="form-label">学号</div>
+            <input class="form-input" id="inputStudentId" type="text" inputmode="numeric" maxlength="20" placeholder="请输入学号">
+          </div>
+          <div class="form-item">
+            <div class="form-label">校区</div>
+            <div class="form-select-wrap">
+              <select class="form-select" id="inputCampus">
+                <option value="涵江校区">涵江校区</option>
+                <option value="仙游校区">仙游校区</option>
+              </select>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </div>
+          </div>
+          <div class="form-item">
+            <div class="form-label">宿舍楼</div>
+            <input class="form-input" id="inputDorm" type="text" maxlength="20" placeholder="如：兰苑 3号楼">
+          </div>
+          <div class="form-item">
+            <div class="form-label">手机号</div>
+            <div class="form-readonly" id="phoneDisplay">未绑定</div>
+          </div>
+        </div>
+
+        <div class="local-tip anim-fade-in-up stagger-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span>个人信息（含头像）仅保存在本设备的浏览器本地存储中，不会上传到任何服务器。清除浏览器数据会同时清除这些信息。</span>
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg anim-fade-in-up stagger-3" id="saveBtn" onclick="saveProfile()">保存</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- 头像选择底部弹层 -->
+  <div class="avatar-sheet-backdrop" id="avatarSheet">
+    <div class="avatar-sheet">
+      <div class="avatar-sheet-title">更换头像</div>
+      <div class="avatar-grid" id="avatarGrid"></div>
+      <button class="avatar-sheet-btn" onclick="triggerUpload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        从相册选择
+      </button>
+      <button class="avatar-sheet-btn danger" onclick="resetAvatar()">恢复默认头像</button>
+      <button class="avatar-sheet-btn avatar-sheet-cancel" onclick="closeAvatarSheet()">取消</button>
+    </div>
+  </div>
+  <input type="file" id="avatarFileInput" accept="image/*" aria-label="上传头像图片" tabindex="-1" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;">
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    var PRESET_AVATARS = [
+      { emoji: '🦊', bg: '#FFEDD5' },
+      { emoji: '🐼', bg: '#E0F2FE' },
+      { emoji: '🐯', bg: '#FEF3C7' },
+      { emoji: '🐸', bg: '#DCFCE7' },
+      { emoji: '🐰', bg: '#FCE7F3' },
+      { emoji: '🐨', bg: '#E0E7FF' },
+      { emoji: '🦁', bg: '#FEF9C3' },
+      { emoji: '🐧', bg: '#F1F5F9' },
+    ];
+
+    // 编辑草稿：保存前只改草稿，点保存才写入 localStorage
+    var draftAvatar = null;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      App.initTheme();
+      loadProfile();
+      renderAvatarGrid();
+    });
+
+    function loadProfile() {
+      var user = Storage.getUser();
+      draftAvatar = user.avatar || null;
+
+      document.getElementById('inputName').value = user.name || '';
+      document.getElementById('inputStudentId').value = user.studentId || '';
+      document.getElementById('phoneDisplay').textContent = user.phone || '未绑定';
+
+      // campus 形如 "涵江校区 · 兰苑 3号楼"，拆成校区 + 宿舍楼
+      var parts = (user.campus || '').split('·');
+      var campus = (parts[0] || '').trim();
+      var dorm = (parts[1] || '').trim();
+      var select = document.getElementById('inputCampus');
+      var matched = false;
+      for (var i = 0; i < select.options.length; i++) {
+        if (select.options[i].value === campus) { matched = true; break; }
+      }
+      if (matched) select.value = campus;
+      document.getElementById('inputDorm').value = dorm || (matched ? '' : (user.campus || ''));
+
+      renderAvatarPreview();
+    }
+
+    // ---- 头像 ----
+    function renderAvatarPreview() {
+      document.getElementById('avatarPreview').innerHTML =
+        App.avatarHtml({ name: document.getElementById('inputName').value, avatar: draftAvatar }, 96);
+    }
+
+    function renderAvatarGrid() {
+      var html = '';
+      PRESET_AVATARS.forEach(function (a, i) {
+        var selected = draftAvatar && draftAvatar.type === 'emoji' && draftAvatar.emoji === a.emoji;
+        html += '<div class="avatar-grid-item' + (selected ? ' selected' : '') + '" role="button" tabindex="0" style="background:' + a.bg + ';" data-idx="' + i + '" onclick="pickPreset(' + i + ')" onkeydown="if(event.key===\'Enter\')pickPreset(' + i + ')">' + a.emoji + '</div>';
+      });
+      document.getElementById('avatarGrid').innerHTML = html;
+    }
+
+    function pickPreset(i) {
+      var a = PRESET_AVATARS[i];
+      draftAvatar = { type: 'emoji', emoji: a.emoji, bg: a.bg };
+      renderAvatarPreview();
+      renderAvatarGrid();
+      closeAvatarSheet();
+    }
+
+    function resetAvatar() {
+      draftAvatar = null;
+      renderAvatarPreview();
+      renderAvatarGrid();
+      closeAvatarSheet();
+      App.toast('已恢复默认头像');
+    }
+
+    function openAvatarSheet() {
+      renderAvatarGrid();
+      document.getElementById('avatarSheet').classList.add('show');
+    }
+
+    function closeAvatarSheet() {
+      document.getElementById('avatarSheet').classList.remove('show');
+    }
+
+    document.getElementById('avatarSheet').addEventListener('click', function (e) {
+      if (e.target === this) closeAvatarSheet();
+    });
+
+    // ---- 本地图片上传：压缩为 200px JPEG base64，只存 localStorage ----
+    function triggerUpload() {
+      document.getElementById('avatarFileInput').click();
+    }
+
+    document.getElementById('avatarFileInput').addEventListener('change', function (e) {
+      var file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) return;
+      if (file.type.indexOf('image/') !== 0) {
+        App.toast('请选择图片文件');
+        return;
+      }
+      var reader = new FileReader();
+      reader.onload = function () {
+        var img = new Image();
+        img.onload = function () {
+          var MAX = 200;
+          var scale = Math.min(1, MAX / Math.max(img.width, img.height));
+          var w = Math.max(1, Math.round(img.width * scale));
+          var h = Math.max(1, Math.round(img.height * scale));
+          var canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, w, h);
+          ctx.drawImage(img, 0, 0, w, h);
+          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          if (dataUrl.length > 500 * 1024) {
+            App.toast('图片过大，请换一张');
+            return;
+          }
+          draftAvatar = { type: 'image', data: dataUrl };
+          renderAvatarPreview();
+          closeAvatarSheet();
+          App.toastSuccess('头像已选择，记得保存');
+        };
+        img.onerror = function () { App.toast('图片读取失败'); };
+        img.src = reader.result;
+      };
+      reader.onerror = function () { App.toast('图片读取失败'); };
+      reader.readAsDataURL(file);
+    });
+
+    // 姓名改动时，默认头像（首字）实时更新
+    document.getElementById('inputName').addEventListener('input', renderAvatarPreview);
+
+    // ---- 保存：只写 localStorage，不调用任何后端接口 ----
+    function saveProfile() {
+      var name = document.getElementById('inputName').value.trim();
+      var studentId = document.getElementById('inputStudentId').value.trim();
+      var campus = document.getElementById('inputCampus').value;
+      var dorm = document.getElementById('inputDorm').value.trim();
+
+      if (!name) {
+        App.toast('请填写姓名');
+        return;
+      }
+      if (studentId && !/^[0-9]{4,20}$/.test(studentId)) {
+        App.toast('学号应为 4-20 位数字');
+        return;
+      }
+
+      var user = Storage.getUser();
+      user.name = name;
+      user.studentId = studentId;
+      user.campus = dorm ? campus + ' · ' + dorm : campus;
+      user.avatar = draftAvatar;
+      Storage.saveUser(user);
+
+      App.toastSuccess('已保存');
+      setTimeout(function () { location.href = 'profile.html'; }, 600);
+    }
+  </script>
+</body>
+</html>

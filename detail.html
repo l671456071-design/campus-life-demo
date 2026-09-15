@@ -1,0 +1,341 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>快递详情 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+</head>
+<body data-page="detail">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="packages.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">快递详情</div>
+      <div class="header-right"></div>
+    </header>
+    <main class="app-content" id="mainContent">
+      <div class="px-4" style="padding-top:16px;padding-bottom:20px;" id="detailContent">
+        <!-- 骨架屏 -->
+        <div class="skeleton" style="width:100%;height:80px;border-radius:16px;margin-bottom:16px;"></div>
+        <div class="skeleton" style="width:100%;height:120px;border-radius:16px;margin-bottom:16px;"></div>
+        <div class="skeleton" style="width:100%;height:200px;border-radius:16px;"></div>
+      </div>
+    </main>
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var pkgId = params.get('id') || 'PK001';
+      var contentEl = document.getElementById('detailContent');
+
+      function statusBanner(pkg) {
+        var config = {
+          pending: { bg: '#FEF3C7', color: '#B45309', icon: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>', label: '待取件' },
+          picked: { bg: '#D1FAE5', color: '#059669', icon: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>', label: '已取件' },
+          expired: { bg: '#FEE2E2', color: '#EF4444', icon: '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>', label: '已逾期' },
+          incoming: { bg: '#DBEAFE', color: '#2563EB', icon: '<rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>', label: '运输中' }
+        };
+        var c = config[pkg.status] || config.pending;
+        var html = '<div class="card anim-fade-in-up" style="background:' + c.bg + ';padding:20px;display:flex;align-items:center;gap:16px;margin-bottom:16px;">' +
+          '<div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;flex-shrink:0;">' +
+            '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="' + c.color + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + c.icon + '</svg>' +
+          '</div>' +
+          '<div>' +
+            '<div style="font-size:18px;font-weight:700;color:' + c.color + ';">' + c.label + '</div>';
+        if (pkg.status === 'picked' && pkg.pickedAt) {
+          html += '<div style="font-size:13px;color:' + c.color + ';opacity:0.8;margin-top:4px;">取件时间：' + pkg.pickedAt + '</div>';
+        } else if (pkg.status === 'pending' && pkg.expiresIn) {
+          html += '<div style="font-size:13px;color:' + c.color + ';opacity:0.8;margin-top:4px;">剩余 ' + pkg.expiresIn + '，请尽快取件</div>';
+        } else if (pkg.status === 'incoming' && pkg.estimatedTime) {
+          html += '<div style="font-size:13px;color:' + c.color + ';opacity:0.8;margin-top:4px;">' + pkg.estimatedTime + '</div>';
+        } else if (pkg.status === 'expired') {
+          html += '<div style="font-size:13px;color:' + c.color + ';opacity:0.8;margin-top:4px;">' + (pkg.remark || '包裹已退回') + '</div>';
+        }
+        html += '</div></div>';
+        return html;
+      }
+
+      function pickupCodeCard(pkg) {
+        if (pkg.status === 'incoming') {
+          return '<div class="card anim-fade-in-up stagger-1" style="margin-bottom:16px;text-align:center;padding:24px;">' +
+            '<svg style="margin:0 auto 12px;color:var(--color-text-hint);" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
+            '<div style="font-size:14px;color:var(--color-text-sub);">快递运输中，暂无取件码</div>' +
+            '<div style="font-size:13px;color:var(--color-text-hint);margin-top:6px;">' + (pkg.estimatedTime || '') + '</div>' +
+          '</div>';
+        }
+        if (!pkg.pickupCode) return '';
+        return '<div class="anim-fade-in-up stagger-1" style="margin-bottom:16px;">' +
+          '<div class="pickup-code-box">' +
+            '<div class="pickup-code-label">取件码</div>' +
+            '<div class="pickup-code-value">' + pkg.pickupCode + '</div>' +
+            '<button class="btn btn-outline btn-sm" style="margin-top:12px;gap:6px;" onclick="copyCode(\'' + pkg.pickupCode + '\')">' +
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+              '复制取件码' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      }
+
+      function infoCard(pkg) {
+        var rows = [
+          { label: '快递公司', value: pkg.company, hasLogo: true },
+          { label: '物流单号', value: pkg.trackingNo, copyable: true },
+          { label: '寄件人', value: pkg.sender, badge: App.platformBadge(pkg.sender) },
+          { label: '包裹类型', value: pkg.type },
+          { label: '包裹大小', value: pkg.size },
+          { label: '到达时间', value: pkg.arrivedAt || '尚未到达' }
+        ];
+        var html = '<div class="card anim-fade-in-up stagger-2" style="margin-bottom:16px;">' +
+          '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">快递信息</div>';
+        rows.forEach(function (row) {
+          html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--color-border-light);">';
+          if (row.last) html = html.replace(/border-bottom:1px solid var\(--color-border-light\);">$/, '">');
+          html += '<span style="font-size:13px;color:var(--color-text-sub);">' + row.label + '</span>';
+          html += '<div style="display:flex;align-items:center;gap:6px;">';
+          if (row.hasLogo) {
+            html += '<div class="pkg-logo" style="width:20px;height:20px;border-radius:4px;font-size:10px;background:' + pkg.logoColor + ';">' + pkg.shortName + '</div>';
+          }
+          html += '<span style="font-size:13px;font-weight:500;color:var(--color-text);">' + row.value + '</span>';
+          if (row.badge) {
+            html += '<span style="margin-left:2px;">' + row.badge + '</span>';
+          }
+          if (row.copyable) {
+            html += '<button class="header-back-btn" style="width:24px;height:24px;" onclick="copyCode(\'' + pkg.trackingNo + '\')">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-hint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+            '</button>';
+          }
+          html += '</div></div>';
+        });
+        html += '</div>';
+        return html;
+      }
+
+      function addressCard(pkg) {
+        var navIcon = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>';
+        var poiId = '';
+        var points = Storage.getPickupPoints();
+        for (var i = 0; i < points.length; i++) {
+          if (points[i].name === pkg.pickupPoint) { poiId = points[i].id; break; }
+        }
+        var escapedName = pkg.pickupPoint.replace(/'/g, "\\'");
+        var escapedAddr = (pkg.pickupAddress || '').replace(/'/g, "\\'");
+        return '<div class="card anim-fade-in-up stagger-3" style="margin-bottom:16px;position:relative;">' +
+          '<a href="javascript:void(0)" onclick="App.showMapNav(\'' + poiId + '\',\'' + escapedName + '\',\'' + escapedAddr + '\')" class="header-back-btn" style="position:absolute;top:12px;right:12px;width:36px;height:36px;background:var(--color-primary-lighter);color:var(--color-primary);">' + navIcon + '</a>' +
+          '<div style="font-size:15px;font-weight:700;margin-bottom:12px;">取件地址</div>' +
+          '<div style="display:flex;flex-direction:column;gap:10px;padding-right:40px;">' +
+            '<div style="display:flex;align-items:baseline;gap:8px;">' +
+              '<span style="font-size:13px;color:var(--color-text-sub);flex-shrink:0;width:64px;">取件点</span>' +
+              '<span style="font-size:14px;font-weight:600;">' + pkg.pickupPoint + '</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:baseline;gap:8px;">' +
+              '<span style="font-size:13px;color:var(--color-text-sub);flex-shrink:0;width:64px;">详细地址</span>' +
+              '<span style="font-size:13px;color:var(--color-text);line-height:1.6;">' + pkg.pickupAddress + '</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:baseline;gap:8px;">' +
+              '<span style="font-size:13px;color:var(--color-text-sub);flex-shrink:0;width:64px;">营业时间</span>' +
+              '<span style="font-size:13px;color:var(--color-text);">' + pkg.businessHours + '</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:baseline;gap:8px;">' +
+              '<span style="font-size:13px;color:var(--color-text-sub);flex-shrink:0;width:64px;">预计取件</span>' +
+              '<span style="font-size:13px;color:var(--color-primary);font-weight:500;">' + pkg.estimatedTime + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }
+
+      function timelineCard(pkg) {
+        var steps = [
+          { label: '已揽收', desc: '商家已将包裹交给快递', done: true },
+          { label: '运输中', desc: '包裹正在运往校园', done: true },
+          { label: '到达分拣中心', desc: '包裹已到达校园分拣中心', done: true },
+          { label: '待取件', desc: '包裹到达取件点，等待取件', done: false, current: true }
+        ];
+        var html = '<div class="card anim-fade-in-up stagger-4" id="timelineCard" style="margin-bottom:16px;">' +
+          '<div style="font-size:15px;font-weight:700;margin-bottom:16px;">物流时间线</div>' +
+          '<div style="position:relative;">';
+        steps.forEach(function (s, i) {
+          var isLast = i === steps.length - 1;
+          var lineColor = s.done ? 'var(--color-accent)' : 'var(--color-border)';
+          var dotBg = s.current ? 'var(--color-primary)' : (s.done ? 'var(--color-accent)' : 'var(--color-border)');
+          var textColor = s.current ? 'var(--color-primary)' : (s.done ? 'var(--color-text)' : 'var(--color-text-hint)');
+          var fontWeight = s.current ? '700' : '500';
+          html += '<div style="display:flex;gap:12px;position:relative;' + (isLast ? '' : 'min-height:56px;') + '">';
+          html += '<div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">';
+          html += '<div style="width:12px;height:12px;border-radius:50%;background:' + dotBg + ';' + (s.current ? 'box-shadow:0 0 0 4px var(--color-primary-light);' : '') + '"></div>';
+          if (!isLast) {
+            html += '<div style="width:2px;flex:1;background:' + (s.done ? 'var(--color-accent)' : 'var(--color-border)') + ';margin-top:4px;min-height:24px;"></div>';
+          }
+          html += '</div>';
+          html += '<div style="padding-bottom:' + (isLast ? '0' : '16px') + ';">';
+          html += '<div style="font-size:14px;font-weight:' + fontWeight + ';color:' + textColor + ';">' + s.label + '</div>';
+          html += '<div style="font-size:12px;color:var(--color-text-hint);margin-top:2px;">' + s.desc + '</div>';
+          if (s.current) {
+            html += '<div style="font-size:12px;color:var(--color-primary);margin-top:4px;">' + (pkg.estimatedTime || '') + '</div>';
+          }
+          html += '</div></div>';
+        });
+        html += '</div></div>';
+        return html;
+      }
+
+      function actionButtons(pkg) {
+        if (pkg.status === 'pending') {
+          return '<div class="anim-fade-in-up stagger-5" style="display:flex;gap:12px;margin-top:8px;">' +
+            '<a href="scan.html" class="btn btn-primary" style="flex:1;gap:6px;">' +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>' +
+              '扫码取件' +
+            '</a>' +
+            '<a href="javascript:void(0)" class="btn btn-outline" style="flex:1;gap:6px;" onclick="App.showIdentityCode()">' +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="3"/><circle cx="8" cy="10" r="2"/><path d="M14 8h6"/><path d="M14 12h6"/><path d="M5 16h14"/></svg>' +
+              '身份码' +
+            '</a>' +
+          '</div>';
+        } else if (pkg.status === 'incoming') {
+          return '<div class="anim-fade-in-up stagger-5" style="margin-top:8px;">' +
+            '<button class="btn btn-outline btn-block" style="gap:6px;" onclick="scrollToTimeline()">' +
+              '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
+              '查看物流' +
+            '</button>' +
+          '</div>';
+        }
+        return '';
+      }
+
+      function renderDetail(pkg) {
+        if (!pkg) {
+          contentEl.innerHTML = App.errorState('未找到快递', '该快递信息不存在或已删除', 'loadDetail');
+          return;
+        }
+        var html = '';
+        html += statusBanner(pkg);
+        html += pickupCodeCard(pkg);
+        html += infoCard(pkg);
+        html += addressCard(pkg);
+        if (pkg.status === 'incoming') {
+          html += timelineCard(pkg);
+        }
+        html += actionButtons(pkg);
+        contentEl.innerHTML = html;
+      }
+
+      function loadDetail() {
+        contentEl.innerHTML = '<div class="skeleton" style="width:100%;height:80px;border-radius:16px;margin-bottom:16px;"></div>' +
+          '<div class="skeleton" style="width:100%;height:120px;border-radius:16px;margin-bottom:16px;"></div>' +
+          '<div class="skeleton" style="width:100%;height:200px;border-radius:16px;"></div>';
+
+        // 先从本地加载
+        var localPkg = Storage.getPackage(pkgId);
+        if (localPkg) {
+          renderDetail(localPkg);
+        }
+
+        // 如果已登录，从 API 加载最新数据（含物流轨迹）
+        if (ApiClient.isLoggedIn()) {
+          ApiClient.getPackage(pkgId).then(function (res) {
+            if (res.code === 0 && res.data) {
+              var apiPkg = res.data;
+              // 合并 API 数据到本地
+              if (localPkg) {
+                Storage.updatePackage(pkgId, {
+                  status: apiPkg.status,
+                  company: apiPkg.company || localPkg.company,
+                  pickupCode: apiPkg.pickupCode || localPkg.pickupCode,
+                  pickupPoint: apiPkg.pickupPoint || localPkg.pickupPoint,
+                  sender: apiPkg.sender || localPkg.sender,
+                  trackingNo: apiPkg.trackingNo || localPkg.trackingNo,
+                });
+              }
+              // 用 API 返回的数据（含 tracking）重新渲染
+              var merged = Storage.getPackage(pkgId) || apiPkg;
+              if (apiPkg.tracking && apiPkg.tracking.length > 0) {
+                merged.tracking = apiPkg.tracking;
+                merged.status = apiPkg.status || merged.status;
+              }
+              renderDetail(merged);
+            }
+          });
+        } else if (!localPkg) {
+          // 未登录且本地也没有数据，用 API 模拟加载
+          API.fetchPackage(pkgId).then(function (res) {
+            renderDetail(res.data);
+          }).catch(function () {
+            contentEl.innerHTML = App.errorState('加载失败', '请检查网络后重试', 'loadDetail');
+          });
+        }
+      }
+
+      // 全局函数
+      window.copyCode = function (code) {
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(code).then(function () {
+            App.toastSuccess('已复制：' + code);
+          }).catch(function () {
+            App.toastSuccess('已复制：' + code);
+          });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = code;
+          document.body.appendChild(ta);
+          ta.select();
+          try { document.execCommand('copy'); } catch (e) {}
+          document.body.removeChild(ta);
+          App.toastSuccess('已复制：' + code);
+        }
+      };
+
+      window.scrollToTimeline = function () {
+        var el = document.getElementById('timelineCard');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.style.transition = 'box-shadow 0.3s';
+          el.style.boxShadow = '0 0 0 2px var(--color-primary)';
+          setTimeout(function () { el.style.boxShadow = ''; }, 2000);
+        }
+      };
+
+      window.loadDetail = loadDetail;
+
+      loadDetail();
+    })();
+  </script>
+</body>
+</html>

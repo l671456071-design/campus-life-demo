@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园智能生活 App 本地化升级报告</title>
+<style>
+  :root {
+    --primary: #2563EB; --primary-light: #DBEAFE; --primary-lighter: #EFF6FF;
+    --accent: #10B981; --accent-light: #D1FAE5;
+    --warning: #F59E0B; --warning-light: #FEF3C7;
+    --danger: #EF4444; --danger-light: #FEE2E2;
+    --bg: #F1F5F9; --surface: #fff; --border: #E2E8F0;
+    --text: #1E293B; --text-sub: #64748B; --text-hint: #94A3B8;
+    --mono: "SF Mono", "Cascadia Code", Consolas, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; padding: 32px 16px; }
+  .wrap { max-width: 880px; margin: 0 auto; }
+  .hero { background: linear-gradient(135deg, #1E40AF, #2563EB 55%, #3B82F6); color: #fff; border-radius: 20px; padding: 40px 36px; margin-bottom: 24px; box-shadow: 0 12px 32px rgba(30,64,175,0.25); }
+  .hero h1 { font-size: 26px; letter-spacing: 1px; margin-bottom: 10px; }
+  .hero p { font-size: 14px; opacity: 0.85; }
+  .hero .meta { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 20px; font-size: 13px; }
+  .hero .meta span { background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 999px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 26px 28px; margin-bottom: 22px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+  h2 { font-size: 18px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; }
+  h2 .idx { background: var(--primary); color: #fff; width: 26px; height: 26px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  h3 { font-size: 15px; margin: 18px 0 10px; color: var(--text); }
+  p, li { font-size: 14px; color: var(--text-sub); }
+  p strong, li strong { color: var(--text); }
+  ul { padding-left: 20px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 5px; margin-right: 6px; }
+  .tag-ok { background: var(--accent-light); color: #047857; }
+  .tag-mock { background: var(--warning-light); color: #B45309; }
+  .tag-key { background: var(--primary-light); color: var(--primary); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  th { text-align: left; background: var(--bg); color: var(--text-sub); font-weight: 600; padding: 8px 12px; border: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 8px 12px; border: 1px solid var(--border); color: var(--text-sub); }
+  td:first-child { color: var(--text); font-weight: 500; }
+  code { font-family: var(--mono); font-size: 12.5px; background: var(--bg); padding: 2px 6px; border-radius: 4px; color: #B45309; }
+  pre { font-family: var(--mono); font-size: 12.5px; background: #0F172A; color: #E2E8F0; border-radius: 12px; padding: 18px 20px; overflow-x: auto; line-height: 1.6; margin: 12px 0; }
+  pre .c { color: #64748B; }
+  pre .k { color: #93C5FD; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 14px 0; }
+  .mini { background: var(--bg); border-radius: 12px; padding: 14px 16px; border: 1px solid var(--border); }
+  .mini .t { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .mini .d { font-size: 12.5px; color: var(--text-sub); }
+  .result-banner { background: var(--accent-light); border: 1px solid #A7F3D0; border-radius: 14px; padding: 18px 22px; margin-bottom: 22px; display: flex; align-items: center; gap: 14px; }
+  .result-banner .big { font-size: 30px; font-weight: 800; color: #047857; font-family: var(--mono); white-space: nowrap; }
+  .result-banner .desc { font-size: 13px; color: #065F46; }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 12px 0; }
+  .flow .step { background: var(--primary-lighter); border: 1px solid var(--primary-light); color: var(--primary); font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 8px; }
+  .flow .arr { color: var(--text-hint); font-size: 14px; }
+  .note { background: var(--warning-light); border-left: 4px solid var(--warning); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: #92400E; margin: 12px 0; }
+  .footer { text-align: center; font-size: 12px; color: var(--text-hint); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <h1>校园智能生活 App · 本地化升级报告</h1>
+    <p>campus-package-app 二次功能升级：3D 校园地图 + 摄像头/OCR 扫码取件 + 校园外卖模块</p>
+    <div class="meta">
+      <span>升级日期：2026-09-14</span>
+      <span>验收结果：100 / 100 项通过</span>
+      <span>零 CDN · 零在线地图 API · 零云端 OCR</span>
+    </div>
+  </div>
+
+  <div class="result-banner">
+    <div class="big">100/100</div>
+    <div class="desc"><strong>自动化验收全部通过</strong>（node verify.js），并经真实浏览器端到端实测：外卖浏览 → 加购 → 结算 → 支付 → 制作 → 配送 → 3D 配送地图全链路无 Console 错误。</div>
+  </div>
+
+  <!-- ============ 1. 3D 地图 ============ -->
+  <div class="card">
+    <h2><span class="idx">1</span>已完成的 3D 地图功能</h2>
+    <p><code>map.html</code> 已从 2D SVG 示意图升级为<strong>本地化 3D 校园地图</strong>，基于 <code>libs/three/three.min.js</code>（Three.js v0.128 本地文件，无 CDN）。</p>
+
+    <h3>1.1 场景内容（低面数建模，手机流畅）</h3>
+    <ul>
+      <li><strong>建筑</strong>：教学楼、6 个宿舍苑区、食堂、图书馆、体育馆/运动场、信息楼等，全部使用 Box/Cylinder 基础几何体，带<strong>高度层次、真实投影阴影</strong>（DirectionalLight castShadow）</li>
+      <li><strong>道路</strong>：按校园实际布局的路网，浅灰色路面 + 中心虚线</li>
+      <li><strong>绿化</strong>：草地色块 + 树木（InstancedMesh 批量渲染，降低 Draw Call）+ 路灯</li>
+      <li><strong>氛围</strong>：半球光 + 平行光 + 场景雾（fog），增强透视纵深感</li>
+    </ul>
+
+    <h3>1.2 视角与交互</h3>
+    <ul>
+      <li>默认 <strong>45° 俯视透视相机</strong>（PerspectiveCamera）</li>
+      <li>支持<strong>单指/鼠标拖动旋转</strong>（左右 theta）、<strong>上下俯仰</strong>（phi 有角度限制）、<strong>双指捏合/滚轮缩放</strong>（radius 有最近/最远限制），不会转到地图无法使用的角度</li>
+      <li>工具条：放大 / 缩小 / 重置视角 / 回到定位</li>
+    </ul>
+
+    <h3>1.3 用户定位</h3>
+    <ul>
+      <li>调用 <code>navigator.geolocation.getCurrentPosition()</code>，成功后按 WGS84 → 涵江校区<strong>经纬度投影校准</strong>落到 3D 场景，显示<strong>蓝色定位点 + 脉冲光圈 + “我的位置”标签</strong></li>
+      <li>失败/拒绝授权时降级为<strong>本地默认位置</strong>（图书馆北侧），功能不中断</li>
+    </ul>
+
+    <h3>1.4 3D POI 与路线</h3>
+    <ul>
+      <li>6 个取件点（菜鸟驿站楷苑/南门、兰苑/菊苑快递柜、京东、顺丰）渲染为<strong>可点击 3D 立体标记</strong>（Raycaster 点击拾取，呼吸动画）</li>
+      <li>点击后底部弹出信息卡：名称 / 类型（驿站·快递柜）/ 营业状态与时间 / <strong>待取快递数量（实时计算）</strong> / 路线距离与步行时间 / “前往这里”</li>
+      <li><strong>本地路径规划</strong>：路网节点+边保存在页面内 CAMPUS_DATA（nodes/edges JSON），<strong>Dijkstra 最短路</strong>计算“用户 → 路网 → 取件点”，渲染<strong>发光虚线路线 + 流光脉冲</strong>，并显示“距离：120m / 预计步行：2分钟”</li>
+    </ul>
+
+    <h3>1.5 配送模式（外卖联动）</h3>
+    <ul>
+      <li>URL 参数 <code>map.html?mode=delivery&orderId=xxx</code> 进入</li>
+      <li>显示<strong>店铺 POI、收货地址标记、3D 电动车骑手模型</strong>（含保温箱）沿路线移动</li>
+      <li>顶部配送状态条：配送中徽章 / <strong>预计送达 X 分钟（倒计时）</strong> / 配送距离 XXXm / 订单号 / 实时进度条；底部配送卡片：店铺 → 收货地址、商品件数、合计金额</li>
+      <li>订单完成后地图显示“已送达”</li>
+    </ul>
+    <p><span class="tag tag-ok">验收通过</span>浏览器实测：3D 场景渲染正常，无 Three.js/WebGL 报错。</p>
+  </div>
+
+  <!-- ============ 2. OCR 扫码 ============ -->
+  <div class="card">
+    <h2><span class="idx">2</span>已完成的 OCR 扫码功能（scan.html）</h2>
+
+    <h3>2.1 识别流程</h3>
+    <div class="flow">
+      <span class="step">打开 scan.html</span><span class="arr">→</span>
+      <span class="step">请求摄像头权限 getUserMedia</span><span class="arr">→</span>
+      <span class="step">实时取帧：先识别二维码（jsQR）</span><span class="arr">→</span>
+      <span class="step">无二维码则启动 OCR（Tesseract.js）</span><span class="arr">→</span>
+      <span class="step">正则提取取件码</span><span class="arr">→</span>
+      <span class="step">匹配本地快递库</span><span class="arr">→</span>
+      <span class="step">发现快递 → 确认取件</span>
+    </div>
+
+    <h3>2.2 摄像头</h3>
+    <ul>
+      <li>真实摄像头取流（facingMode: environment 后置优先），视频帧送入本地识别引擎</li>
+      <li>HTTPS 环境下生效；失败时降级为<strong>手动输入取件码</strong>，不阻断使用</li>
+    </ul>
+
+    <h3>2.3 二维码 + OCR 双引擎</h3>
+    <ul>
+      <li><strong>二维码</strong>：<code>libs/qr-scanner/jsQR.js</code> 逐帧识别，支持 JSON 格式（含 packageId）与纯文本取件码</li>
+      <li><strong>OCR</strong>：<code>libs/tesseract/</code>（Tesseract.js 本地版）<strong>只识别扫描框区域</strong>（截图 → 灰度 → 二值化增强 → 识别），白名单限制为数字/字母/连字符/冒号，不整图识别，速度更快、误识更少</li>
+      <li>相册导入图片同样走“二维码 → OCR”两级兜底</li>
+    </ul>
+
+    <h3>2.4 取件码提取规则（api.js）</h3>
+    <ul>
+      <li>自动清理空格、换行、全角冒号等噪声字符</li>
+      <li>三层正则提取：① 三段式（<code>8-3-267</code> / <code>A-12-568</code> / <code>12-35-88</code> / <code>C-12-45</code> 纯字母首段）② 中文前缀（“取件码：8-3-267”、“取件码 83267”、“取货码/提取码/凭码”）③ 4–8 位纯数字兜底（<code>83267</code>）</li>
+      <li>候选逐个<strong>归一化匹配本地快递数据库</strong>（pickupCode 无视大小写与分隔符）</li>
+      <li>匹配成功 → 弹出“发现快递”卡片（快递公司 / 单号 / 取件码 / 取件点）；无匹配 → “未找到对应快递，请重新扫描或手动输入取件码”</li>
+    </ul>
+
+    <h3>2.5 识别 UI</h2>
+    <ul>
+      <li>扫描框提示“将取件码对准扫描框”+ 扫描线往返动画</li>
+      <li>识别成功：扫描框<strong>变绿并放大</strong>（scan-frame--success 动画）</li>
+      <li>确认取件后状态 pending → picked 写入 localStorage，并联动取件记录、消息通知、累计取件数</li>
+    </ul>
+    <p><span class="tag tag-ok">验收通过</span>浏览器实测：手动输入 <code>8-3-267</code> 成功匹配 SF 包裹并完成取件；node 端 11 项 OCR 提取规则全部通过（含字母段、中文前缀、噪声文本）。</p>
+  </div>
+
+  <!-- ============ 3. 本地数据结构 ============ -->
+  <div class="card">
+    <h2><span class="idx">3</span>本地数据结构（统一数据源 storage.js）</h2>
+    <p>全部数据仅存 <strong>localStorage</strong>（隐私模式自动降级内存存储），由 <code>storage.js</code> 统一读写，各页面禁止自行保存。首次运行从 <code>mock.js</code> 初始化种子数据。</p>
+    <table>
+      <tr><th>Key</th><th>内容</th><th>说明</th></tr>
+      <tr><td><code>packageDB</code></td><td>packages 快递</td><td>15 条种子，取件状态实时变更</td></tr>
+      <tr><td><code>pickupRecordDB</code></td><td>records 取件记录</td><td>取件成功自动 unshift</td></tr>
+      <tr><td><code>messageDB</code></td><td>messages 消息</td><td>取件成功自动追加未读通知</td></tr>
+      <tr><td><code>userDB</code></td><td>user 用户</td><td>昵称/学号/校区/宿舍/头像</td></tr>
+      <tr><td><code>pickupPointDB</code></td><td>points 取件点</td><td>待取数量由 packages 实时计算</td></tr>
+      <tr><td><code>appSettingsDB</code></td><td>settings 设置</td><td>主题/通知偏好</td></tr>
+      <tr><td><code>restaurantDB</code></td><td>restaurants 店铺</td><td>7 家，含 3D 坐标 + 路网接入点</td></tr>
+      <tr><td><code>foodDB</code></td><td>foods 菜品</td><td>38 道，按 restaurantId 归属</td></tr>
+      <tr><td><code>foodCartDB</code></td><td>cart 购物车</td><td>单店铺结构，跨店加购自动替换</td></tr>
+      <tr><td><code>foodOrderDB</code></td><td>orders 订单</td><td>待支付→制作中→配送中→已完成</td></tr>
+    </table>
+    <div class="note">订单演示时间轴：<strong>制作 30 秒 → 配送 180 秒 → 完成</strong>（Storage.FOOD_TIMINGS），页面加载/每 5 秒/从后台切回时自动同步状态；配送进度 0~1 供 3D 地图定位骑手位置。</div>
+  </div>
+
+  <!-- ============ 4. 外卖模块 ============ -->
+  <div class="card">
+    <h2><span class="idx">4</span>外卖模块（新增 3 个页面）</h2>
+
+    <div class="grid">
+      <div class="mini"><div class="t">🍱 food.html 外卖首页</div><div class="d">当前位置（读用户资料校区）· 搜索店铺/菜品 · 6 大分类（早餐/快餐/奶茶/小吃/水果/夜宵）· 7 家店铺卡片（评分、月售、配送时间、起送价、配送费、满减标签、营业状态实时计算）· 进行中订单提示条（一键进配送地图）</div></div>
+      <div class="mini"><div class="t">🛒 food-detail.html 店铺详情</div><div class="d">店铺信息头部 · 菜品列表（emoji 配图、价格、月售、描述）· 数量步进器加购/减购 · 底部黑色购物车结算栏（件数、小计、配送费、已优惠、还差多少起送）· 跨店加购提示整单替换 · 休息中店铺禁止下单</div></div>
+      <div class="mini"><div class="t">🧾 order.html 订单</div><div class="d">双面板：购物车结算（收货地址、商品清单、配送方式、备注、费用明细、提交订单）+ 全部订单（状态徽章、四段进度条、去支付/查看配送位置按钮，每 5 秒自动刷新状态）</div></div>
+    </div>
+
+    <h3>配送与 3D 地图结合（本次升级重点）</h3>
+    <div class="flow">
+      <span class="step">选餐加购</span><span class="arr">→</span>
+      <span class="step">去结算</span><span class="arr">→</span>
+      <span class="step">提交订单（待支付）</span><span class="arr">→</span>
+      <span class="step">模拟支付（制作中）</span><span class="arr">→</span>
+      <span class="step">30s 后自动配送中</span><span class="arr">→</span>
+      <span class="step">查看配送位置</span><span class="arr">→</span>
+      <span class="step">3D 配送地图</span>
+    </div>
+    <p>配送地图显示<strong>用户位置、店铺位置、骑手位置（沿 Dijkstra 路线实时移动）、配送路线</strong>，并显示预计送达分钟与配送距离。店铺均带有校园 3D 坐标与路网接入点（accessNode），路线为真实路网规划。</p>
+
+    <h3>底部导航重构</h3>
+    <p>全部 11 个带导航的页面统一为 <strong>首页 / 快递 / 扫码 / 外卖 / 我的</strong>（中央扫码按钮保持凸起设计）；<strong>地图不再是一级 Tab</strong>，保留为功能页，可从快递详情、外卖配送、取件点等入口进入。</p>
+    <p><span class="tag tag-ok">验收通过</span>浏览器端到端实测：加购 → 结算（¥13 合计校验正确）→ 下单成功弹窗 → 支付 → 制作中 → 35 秒后配送中 → 3D 配送地图（配送中徽章 / 预计送达 3 分钟 / 配送距离 594m / 进度条 / 底部配送卡片），全程零 Console 错误。</p>
+  </div>
+
+  <!-- ============ 5. 模拟数据 ============ -->
+  <div class="card">
+    <h2><span class="idx">5</span>仍然属于模拟的数据</h2>
+    <table>
+      <tr><th>模块</th><th>模拟项</th><th>说明</th></tr>
+      <tr><td rowspan="4">外卖</td><td>店铺 / 菜品 / 价格 / 销量</td><td>mock.js 种子数据（7 店 38 菜）</td></tr>
+      <tr><td>支付</td><td>无真实支付，点击“去支付”即模拟成功（货到付款）</td></tr>
+      <tr><td>订单时间轴</td><td>制作 30s / 配送 180s 定时推进，非真实商家节奏</td></tr>
+      <tr><td>骑手位置</td><td>按配送进度沿路线插值的本地模拟，视觉与真实配送一致</td></tr>
+      <tr><td>快递</td><td>包裹/取件码/记录</td><td>种子数据；真实状态流转写入 localStorage</td></tr>
+      <tr><td>地图</td><td>骑手/POI 位置</td><td>本地坐标数据；用户定位为真实 geolocation（失败降级默认点）</td></tr>
+      <tr><td>登录</td><td>验证码</td><td>后端开发模式，验证码打印在终端</td></tr>
+      <tr><td>店铺营业状态</td><td>isOpen</td><td>按本地时间规则计算（早餐店 06:30–10:30 等）</td></tr>
+    </table>
+  </div>
+
+  <!-- ============ 6. 浏览器权限 ============ -->
+  <div class="card">
+    <h2><span class="idx">6</span>浏览器权限要求</h2>
+    <table>
+      <tr><th>功能</th><th>权限</th><th>不授权的后果</th></tr>
+      <tr><td>扫码取件（摄像头）</td><td>摄像头 + <strong>必须 HTTPS</strong>（或 localhost）</td><td>降级为手动输入取件码，功能不中断</td></tr>
+      <tr><td>OCR 面单识别</td><td>同摄像头；首次识别需加载本地 wasm（约 4.7MB，仅一次）</td><td>可改用相册导入图片识别</td></tr>
+      <tr><td>3D 地图定位</td><td>地理位置（geolocation）</td><td>使用本地默认位置（图书馆北侧）</td></tr>
+      <tr><td>取件提醒通知</td><td>浏览器 Notification（可选）</td><td>仅站内消息中心提示</td></tr>
+      <tr><td>数据持久化</td><td>localStorage</td><td>隐私模式自动降级为内存存储（仅当次会话有效）</td></tr>
+    </table>
+    <div class="note">手机访问自签名 HTTPS 站点：首次会提示“不安全的证书”，点击<strong>高级 → 继续访问</strong>即可；摄像头必须在此 HTTPS 环境下才可用。</div>
+  </div>
+
+  <!-- ============ 7. 启动方式 ============ -->
+  <div class="card">
+    <h2><span class="idx">7</span>本地启动方式</h2>
+    <pre><span class="c"># 进入项目根目录</span>
+cd campus-package-app
+
+<span class="c"># 启动本地 HTTPS 服务（node-forge 自动生成证书，端口 3000）</span>
+node server.js
+
+<span class="c"># 访问（首次需信任自签名证书）</span>
+本机：    https://localhost:3000/login.html
+局域网：  https://192.168.x.x:3000/login.html
+远程组网：https://100.x.x.x:3000/login.html  <span class="c"># Tailscale 内网地址（示例已脱敏）</span>
+
+<span class="c"># 运行自动化验收（100 项，无需浏览器）</span>
+node verify.js</pre>
+    <p>登录方式：手机号 + 验证码，<strong>验证码打印在启动服务的终端</strong>（开发模式）。<code>file://</code> 直开 HTML 会导致 API/摄像头失败，务必经 server.js 访问。</p>
+  </div>
+
+  <!-- ============ 8. 目录结构 ============ -->
+  <div class="card">
+    <h2><span class="idx">8</span>当前项目目录结构</h2>
+    <pre>campus-package-app/
+├── <span class="k">页面（16 个 HTML）</span>
+│   ├── index.html            首页（待取概览/快捷入口）
+│   ├── packages.html         快递列表
+│   ├── detail.html           快递详情（地图导航入口）
+│   ├── track.html            物流跟踪
+│   ├── scan.html             <span class="k">扫码取件：摄像头 + 二维码 + OCR</span>
+│   ├── map.html              <span class="k">3D 校园地图（Three.js，含配送模式）</span>
+│   ├── food.html             <span class="k">外卖首页（分类/搜索/店铺）</span>
+│   ├── food-detail.html      <span class="k">店铺详情 + 菜品 + 购物车</span>
+│   ├── order.html            <span class="k">订单结算 + 订单列表</span>
+│   ├── messages.html / records.html / profile.html / profile-edit.html
+│   ├── settings.html / login.html / test-qr.html
+├── <span class="k">核心 JS</span>
+│   ├── mock.js               种子数据（快递/店铺/菜品/消息…）
+│   ├── storage.js            <span class="k">统一本地数据层（10 个 localStorage Key）</span>
+│   ├── api.js                本地 API 层（含 OCR 取件码提取）
+│   ├── api-client.js         HTTPS 后端封装（JWT）
+│   ├── app.js                公共组件（toast/modal/导航/头像）
+│   ├── theme-init.js         主题预渲染（防闪白）
+│   └── verify.js             自动化验收（100 项）
+├── <span class="k">本地依赖库（零 CDN）</span>
+│   ├── libs/three/three.min.js                        3D 渲染（589KB）
+│   ├── libs/tesseract/                                 OCR 引擎
+│   │   ├── tesseract.min.js / worker.min.js
+│   │   ├── core/tesseract-core[-simd].wasm.js         4.6MB×2
+│   │   └── lang/eng.traineddata.gz                    1.9MB
+│   ├── libs/qr-scanner/jsQR.js                        二维码识别
+│   └── libs/qr-encoder/qrcode.js                      二维码生成（测试）
+├── assets/（图标 / 校园平面图 SVG + 路网数据）
+├── backend/（HTTPS 服务、验证码登录、快递 API）
+├── server.js                静态 HTTPS 服务器（node-forge 证书）
+├── styles.css               设计系统（亮/暗双主题）
+└── package.json / README.md</pre>
+  </div>
+
+  <!-- ============ 9. 验收对照 ============ -->
+  <div class="card">
+    <h2><span class="idx">9</span>验收清单对照（24 / 24）</h2>
+    <table>
+      <tr><th>#</th><th>验收项</th><th>结果</th><th>#</th><th>验收项</th><th>结果</th></tr>
+      <tr><td>1</td><td>地图 2D → 3D</td><td>✅</td><td>13</td><td>地图已从底部 Tab 删除</td><td>✅</td></tr>
+      <tr><td>2</td><td>3D 地图完全本地运行</td><td>✅</td><td>14</td><td>新增“外卖”Tab</td><td>✅</td></tr>
+      <tr><td>3</td><td>可旋转、缩放（带限制）</td><td>✅</td><td>15</td><td>浏览店铺</td><td>✅</td></tr>
+      <tr><td>4</td><td>显示用户位置（geolocation）</td><td>✅</td><td>16</td><td>查看菜品</td><td>✅</td></tr>
+      <tr><td>5</td><td>点击 3D 快递点</td><td>✅</td><td>17</td><td>加入购物车</td><td>✅</td></tr>
+      <tr><td>6</td><td>本地路线规划（Dijkstra）</td><td>✅</td><td>18</td><td>生成订单</td><td>✅</td></tr>
+      <tr><td>7</td><td>调用真实摄像头</td><td>✅</td><td>19</td><td>配送中订单进 3D 地图</td><td>✅</td></tr>
+      <tr><td>8</td><td>识别二维码</td><td>✅</td><td>20</td><td>核心数据全部本地化</td><td>✅</td></tr>
+      <tr><td>9</td><td>OCR 识别数字取件码</td><td>✅</td><td>21</td><td>无 CDN</td><td>✅</td></tr>
+      <tr><td>10</td><td>OCR 结果提取取件码</td><td>✅</td><td>22</td><td>无在线地图 API</td><td>✅</td></tr>
+      <tr><td>11</td><td>匹配本地快递数据</td><td>✅</td><td>23</td><td>无云端 OCR</td><td>✅</td></tr>
+      <tr><td>12</td><td>取件成功保存状态</td><td>✅</td><td>24</td><td>localhost 正常运行</td><td>✅</td></tr>
+    </table>
+    <p style="margin-top:10px;"><span class="tag tag-key">verify.js 分组</span> [1] 二维码编解码 9 项 · [2] Storage 数据层 17 项 · [3] 扫码解析 7 项 · [3b] OCR 提取 11 项 · [2b] 外卖数据层 28 项 · [4] 静态资源 4 项 · [5] 结构验收 24 项 = <strong>100 项全部通过</strong>。</p>
+  </div>
+
+  <p class="footer">校园智能生活 App · 本地化升级报告 · 2026-09-14 · 全部功能离线可用</p>
+</div>
+</body>
+</html>
