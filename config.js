@@ -41,21 +41,35 @@ var APP_CONFIG = {
   APP_CONFIG.isDemo = APP_CONFIG.mode === 'demo';
 })();
 
-// demo 模式：注入顶部演示提示条（所有页面统一，无需逐页修改 HTML）
+// demo 模式：在 header 右侧注入低调"演示"小标签（所有页面统一）
+// 不再使用醒目的横幅，改用低调的 chip 标签嵌入到 header 中，避免破坏商业 App 观感
 if (APP_CONFIG.isDemo) {
   document.addEventListener('DOMContentLoaded', function () {
-    if (document.getElementById('demoBanner')) return;
+    if (document.getElementById('demoChip')) return;
     var shell = document.querySelector('.app-shell');
     if (!shell) return;
-    var banner = document.createElement('div');
-    banner.id = 'demoBanner';
-    banner.innerHTML = '当前为演示模式 · 数据均为虚拟数据';
-    banner.setAttribute('style',
-      'flex-shrink:0;padding:7px 12px;text-align:center;font-size:12px;font-weight:600;' +
-      'background:#FEF3C7;color:#B45309;letter-spacing:0.5px;z-index:600;'
-    );
     var header = shell.querySelector('.app-header');
-    if (header) shell.insertBefore(banner, header);
-    else shell.insertBefore(banner, shell.firstChild);
+    if (!header) return;
+    // 优先插入到 header-right，找不到则放到 header-left
+    var target = header.querySelector('.header-right') || header.querySelector('.header-left');
+    if (!target) target = header;
+    var chip = document.createElement('span');
+    chip.id = 'demoChip';
+    chip.className = 'demo-chip';
+    chip.textContent = '演示';
+    chip.title = '当前为演示模式 · 数据均为虚拟数据';
+    // 内联兜底样式（防止 styles.css 未及时加载时仍可见）
+    chip.setAttribute('style',
+      'display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;' +
+      'background:#FEF3C7;color:#B45309;font-size:10px;font-weight:600;letter-spacing:0.3px;' +
+      'margin-left:8px;flex-shrink:0;'
+    );
+    // 小圆点提示符
+    try {
+      var dot = document.createElement('span');
+      dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block;';
+      chip.insertBefore(dot, chip.firstChild);
+    } catch (e) {}
+    target.appendChild(chip);
   });
 }

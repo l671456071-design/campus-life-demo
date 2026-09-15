@@ -213,9 +213,9 @@ var API = {
   },
 
   // ---- 订单 ----
-  createOrder: async function (address, note) {
+  createOrder: async function (address, note, opts) {
     await delay(200);
-    var result = Storage.createOrder(address, note);
+    var result = Storage.createOrder(address, note, opts);
     return { code: 0, data: result };
   },
 
@@ -231,9 +231,9 @@ var API = {
     return { code: 0, data: Storage.getOrder(id) || null };
   },
 
-  payOrder: async function (id) {
+  payOrder: async function (id, payMethod) {
     await delay(400);
-    var result = Storage.payOrder(id);
+    var result = Storage.payOrder(id, payMethod);
     return { code: 0, data: result };
   },
 

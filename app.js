@@ -73,7 +73,13 @@ var App = {
       actionsHtml = '<div class="modal-actions"><button class="btn btn-outline" data-action="cancel">' + (opts.cancelText || '取消') + '</button><button class="btn btn-primary" data-action="confirm">' + opts.confirmText + '</button></div>';
     }
 
-    backdrop.innerHTML = '<div class="modal">' + iconSvg + '<div class="modal-title">' + (opts.title || '') + '</div><div class="modal-desc">' + (opts.desc || '') + '</div>' + actionsHtml + '</div>';
+    // 支持自定义 body（用于嵌入 QR 码、表单等复杂内容）
+    // customBody 存在时，替换 desc + actions 区域，保留 icon 和 title
+    var bodyHtml = opts.customBody
+      ? opts.customBody
+      : '<div class="modal-desc">' + (opts.desc || '') + '</div>' + actionsHtml;
+
+    backdrop.innerHTML = '<div class="modal">' + iconSvg + '<div class="modal-title">' + (opts.title || '') + '</div>' + bodyHtml + '</div>';
     document.body.appendChild(backdrop);
     requestAnimationFrame(function () { backdrop.classList.add('show'); });
 

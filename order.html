@@ -131,6 +131,29 @@
       content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff;
     }
 
+    /* 支付方式 */
+    .pay-row { display: flex; align-items: center; gap: 10px; padding: 12px 0; cursor: pointer; }
+    .pay-row + .pay-row { border-top: 1px solid var(--color-border-light); }
+    .pay-icon {
+      width: 34px; height: 34px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0; color: #fff;
+    }
+    .pay-icon--wechat { background: #1AAD19; }
+    .pay-icon--alipay { background: #1677FF; }
+    .pay-icon--cod { background: var(--color-text-hint); }
+    .pay-body { flex: 1; }
+    .pay-name { font-size: 13px; font-weight: 600; color: var(--color-text); }
+    .pay-sub { font-size: 11px; color: var(--color-text-sub); margin-top: 1px; }
+    .pay-row.selected .pay-check { border-color: var(--color-primary); background: var(--color-primary); }
+    .pay-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 2px solid var(--color-border); flex-shrink: 0; position: relative;
+    }
+    .pay-row.selected .pay-check::after {
+      content: ''; position: absolute; inset: 4px; border-radius: 50%; background: #fff;
+    }
+
     .note-input {
       width: 100%; border: none; outline: none;
       background: var(--color-surface-alt);
@@ -303,7 +326,7 @@
             '<div class="order-shop-logo" style="background:' + (o.restaurantColor || '#FEF3C7') + '22;">' + (o.restaurantEmoji || '🍽️') + '</div>' +
             '<div style="flex:1;min-width:0;">' +
               '<div class="order-shop-name">' + o.restaurantName + '</div>' +
-              '<div class="order-time">' + fmtTime(o.createdAt) + ' · ' + (o.itemCount || 0) + ' 件商品</div>' +
+              '<div class="order-time">' + fmtTime(o.createdAt) + ' · ' + (o.itemCount || 0) + ' 件商品' + (o.payMethodLabel ? ' · ' + o.payMethodLabel : '') + '</div>' +
             '</div>' +
             '<span class="order-status st-' + o.status + '"><span class="dot"></span>' + statusText + '</span>' +
           '</div>' +
@@ -350,11 +373,15 @@
 
       // ---------- 模拟支付 ----------
       window.payNow = function (id) {
-        App.showLoading('支付中...');
-        API.payOrder(id).then(function (res) {
+        var payMethod = 'wechat'; // 订单列表中支付时默认微信支付
+        var order = Storage.getOrder(id);
+        if (order && order.payMethod) payMethod = order.payMethod;
+        var label = { wechat: '微信支付', alipay: '支付宝', cod: '货到付款' }[payMethod] || '微信支付';
+        App.showLoading(label + '中...');
+        API.payOrder(id, payMethod).then(function (res) {
           App.hideLoading();
           if (res.data.success) {
-            App.toastSuccess('支付成功，商家开始备餐');
+            App.toastSuccess(label + '成功，商家开始备餐');
             renderOrders();
           } else {
             App.toast(res.data.message || '支付失败');
@@ -418,6 +445,32 @@
           '<div class="co-section-title anim-fade-in-up">订单备注</div>' +
           '<input class="note-input anim-fade-in-up" id="noteInput" maxlength="50" placeholder="口味偏好、放行位置等（选填）">' +
 
+          // 支付方式
+          '<div class="co-section-title anim-fade-in-up">支付方式</div>' +
+          '<div class="co-card anim-fade-in-up" style="margin-bottom:8px;">' +
+            '<div class="pay-row selected" data-pay="wechat" onclick="selectPayMethod(\'wechat\')">' +
+              '<div class="pay-icon pay-icon--wechat">' +
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M9.5 4C5.36 4 2 6.69 2 10c0 1.89 1.1 3.56 2.82 4.63L4 17l2.76-1.46c.84.21 1.74.32 2.74.32l.51-.01a4.55 4.55 0 0 1-.21-1.34c0-3.04 2.91-5.5 6.5-5.5l.5.01C16.13 6.13 13.16 4 9.5 4zm-2.27 4.7a.94.94 0 1 1 0-1.88.94.94 0 0 1 0 1.88zm4.55 0a.94.94 0 1 1 0-1.88.94.94 0 0 1 0 1.88zM22 14.5c0-2.49-2.49-4.5-5.5-4.5S11 12.01 11 14.5 13.49 19 16.5 19c.71 0 1.42-.13 2.07-.37L20.5 20l-.55-1.62C21.21 17.41 22 16.02 22 14.5zm-7-1.06a.7.7 0 1 1 0-1.4.7.7 0 0 1 0 1.4zm3.5 0a.7.7 0 1 1 0-1.4.7.7 0 0 1 0 1.4z"/></svg>' +
+              '</div>' +
+              '<div class="pay-body"><div class="pay-name">微信支付</div><div class="pay-sub">推荐 · 模拟支付</div></div>' +
+              '<div class="pay-check"></div>' +
+            '</div>' +
+            '<div class="pay-row" data-pay="alipay" onclick="selectPayMethod(\'alipay\')">' +
+              '<div class="pay-icon pay-icon--alipay">' +
+                '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3h14a3 3 0 0 1 3 3v8.6c-2.2.86-4.65 1.45-6.6 1.65.34.55.5 1.04.7 1.6.13.4.27.8.43 1.13 2.36-.46 4.4-1.15 5.47-1.78V18a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm3.13 7.65c0 1.62 1.43 2.95 3.18 2.95 1.46 0 2.55-.74 3.36-2.06.55.94 1.07 1.46 1.6 1.46.43 0 .88-.27.88-.7 0-.3-.27-.55-.6-.7-.4-.16-.85-.18-1.3-.18.3-.7.5-1.43.55-2.07h.9c.4 0 .55-.18.55-.45 0-.32-.18-.5-.55-.5h-.85c-.07-.85-.55-1.4-1.4-1.4-1.02 0-1.85.85-2.36 2.13-.4.93-.65 1.85-.65 2.7 0 .07 0 .14.02.21-.43.07-.86.1-1.3.1-1.27 0-2.16-.85-2.16-2.1 0-1.06.6-2.05 1.62-2.94.07.07.13.13.2.18.55.55 1.06.85 1.62.85.36 0 .7-.13.7-.46 0-.32-.32-.5-.78-.5-.4 0-.85.18-1.32.18-.43 0-.83-.18-1.27-.83-.07-.13-.13-.18-.13-.32 0-.32.27-.55.7-.55.18 0 .36.07.55.18.27.13.5.18.7.18.4 0 .78-.13.78-.55 0-.32-.32-.55-.78-.55-.36 0-.7.13-1.07.13-.5 0-.85-.18-1.13-.55-.07-.13-.13-.27-.13-.4 0-.32.27-.55.7-.55.18 0 .36.07.55.18.27.13.5.18.7.18.4 0 .78-.13.78-.55 0-.32-.32-.55-.78-.55-.36 0-.7.13-1.07.13-.5 0-.85-.18-1.13-.55-.07-.13-.13-.27-.13-.4 0-.32.27-.55.7-.55.18 0 .36.07.55.18.27.13.5.18.7.18.4 0 .78-.13.78-.55 0-.32-.32-.55-.78-.55z"/></svg>' +
+              '</div>' +
+              '<div class="pay-body"><div class="pay-name">支付宝</div><div class="pay-sub">模拟支付</div></div>' +
+              '<div class="pay-check"></div>' +
+            '</div>' +
+            '<div class="pay-row" data-pay="cod" onclick="selectPayMethod(\'cod\')">' +
+              '<div class="pay-icon pay-icon--cod">' +
+                '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="6" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+              '</div>' +
+              '<div class="pay-body"><div class="pay-name">货到付款</div><div class="pay-sub">骑手送达后付款（模拟）</div></div>' +
+              '<div class="pay-check"></div>' +
+            '</div>' +
+          '</div>' +
+
           // 费用明细
           '<div class="co-section-title anim-fade-in-up">费用明细</div>' +
           '<div class="co-card anim-fade-in-up" style="margin-bottom:80px;">' +
@@ -431,13 +484,30 @@
         document.getElementById('submitSub').textContent = '共 ' + summary.itemCount + ' 件 · ' + r.name;
       }
 
+      // ---- 支付方式选择 ----
+      window.selectPayMethod = function (method) {
+        var rows = document.querySelectorAll('.pay-row[data-pay]');
+        rows.forEach(function (row) {
+          if (row.dataset.pay === method) row.classList.add('selected');
+          else row.classList.remove('selected');
+        });
+      };
+
+      // 获取当前选中的支付方式（默认 wechat）
+      function getSelectedPayMethod() {
+        var sel = document.querySelector('.pay-row.selected[data-pay]');
+        return sel ? sel.dataset.pay : 'wechat';
+      }
+
       // ---------- 提交订单 ----------
       window.submitOrder = function () {
         var note = '';
         var noteEl = document.getElementById('noteInput');
         if (noteEl) note = noteEl.value.trim();
+        var payMethod = getSelectedPayMethod();
+        var payLabel = { wechat: '微信支付', alipay: '支付宝', cod: '货到付款' }[payMethod] || '微信支付';
         App.showLoading('提交订单中...');
-        API.createOrder(null, note).then(function (res) {
+        API.createOrder(null, note, { payMethod: payMethod }).then(function (res) {
           App.hideLoading();
           if (!res.data.success) {
             App.toast(res.data.message || '提交失败');
@@ -447,7 +517,7 @@
           App.showModal({
             icon: 'success',
             title: '下单成功',
-            desc: '订单已生成，当前为待支付状态\n可在订单列表中模拟支付',
+            desc: '支付方式：' + payLabel + '\n订单已生成，可在订单列表中模拟支付',
             actions: [
               { label: '继续逛逛', style: 'btn-outline' },
               { label: '查看订单', style: 'btn-primary', onClick: function () { location.href = 'order.html'; } },

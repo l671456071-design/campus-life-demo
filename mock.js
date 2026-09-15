@@ -149,4 +149,45 @@ var DB = {
     { name: "极兔速递", shortName: "JT", color: "#F97316" },
     { name: "申通快递", shortName: "ST", color: "#0891B2" },
   ],
+
+  // 校区列表（支持校区切换）
+  campuses: [
+    { id: "hanjiang", name: "涵江校区", desc: "主校区 · 兰苑/楷苑/菊苑/梅苑" },
+    { id: "xianyou",  name: "仙游校区", desc: "分校区 · 兰香园/桂香园/菊香园" },
+  ],
+
+  // 接入的微信小程序合作伙伴（仅展示入口，无法直接拉起小程序）
+  // QR 内容为小程序分享口令，仅作示意；用户需用微信扫码体验
+  miniPrograms: [
+    {
+      id: "MP01",
+      name: "有食美食集丨H",
+      desc: "校园周边美食集合，海量商家任选",
+      shareKey: "#小程序://有食美食集丨H/gIdPMQsijyAMErm",
+      qrContent: "https://weixin.qq.com/r/demo-mp-youshi-food",
+      tags: ["满减", "新客优惠", "免配送费"],
+      color: "#10B981",
+      emoji: "🍱",
+    },
+    {
+      id: "MP02",
+      name: "学长外卖L丨涵江店",
+      desc: "学长学姐自营外卖，涵江校区直达",
+      shareKey: "#小程序://学长外卖L丨涵江店/xAKwPmGG6i81qsx",
+      qrContent: "https://weixin.qq.com/r/demo-mp-xuezhang-001",
+      tags: ["学生自营", "涵江专送", "起送低"],
+      color: "#2563EB",
+      emoji: "🛵",
+    },
+    {
+      id: "MP03",
+      name: "湄食校园生活圈",
+      desc: "校园生活 + 美食 + 社区一体化平台",
+      shareKey: "#小程序://湄食校园生活圈/Cfp2vdk52EZYE7I",
+      qrContent: "https://weixin.qq.com/r/demo-mp-meishi-life",
+      tags: ["生活圈", "校园社区", "福利多"],
+      color: "#F97316",
+      emoji: "🏪",
+    },
+  ],
 };

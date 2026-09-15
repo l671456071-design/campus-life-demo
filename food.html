@@ -107,6 +107,75 @@
     [data-theme="dark"] .shop-promo { background: #3B1D1A; border-color: #7C2D26; color: #FCA5A5; }
     .shop-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
     .shop-tag { font-size: 11px; color: var(--color-primary); background: var(--color-primary-lighter); border-radius: 4px; padding: 1px 6px; }
+
+    /* 校区切换 tabs */
+    .campus-tabs {
+      display: flex; gap: 6px; margin: 8px 16px 0;
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md); padding: 4px;
+    }
+    .campus-tab {
+      flex: 1; padding: 8px 0; text-align: center;
+      font-size: 13px; font-weight: 600; color: var(--color-text-sub);
+      border-radius: var(--radius-sm); border: none; background: none;
+      transition: all 0.2s; cursor: pointer;
+    }
+    .campus-tab.active {
+      background: var(--color-surface); color: var(--color-primary);
+      box-shadow: var(--shadow-sm);
+    }
+    .campus-tab:active { transform: scale(0.96); }
+
+    /* 小程序合作入口 */
+    .mp-section-title {
+      display: flex; align-items: center; gap: 6px;
+      margin: 20px 4px 10px;
+      font-size: 14px; font-weight: 700; color: var(--color-text);
+    }
+    .mp-section-title::before { content: ''; display: block; width: 4px; height: 14px; border-radius: 2px; background: var(--color-primary); }
+    .mp-section-title .mp-tip { font-size: 11px; font-weight: 400; color: var(--color-text-hint); margin-left: 4px; }
+
+    .mp-grid { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    .mp-card {
+      display: flex; gap: 12px; padding: 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      align-items: stretch;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .mp-card:active { transform: scale(0.98); }
+    .mp-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; line-height: 1; flex-shrink: 0;
+    }
+    .mp-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .mp-name { font-size: 14px; font-weight: 700; color: var(--color-text); }
+    .mp-desc { font-size: 11px; color: var(--color-text-sub); line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .mp-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 2px; }
+    .mp-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; background: var(--color-primary-lighter); color: var(--color-primary); }
+    .mp-qr {
+      width: 60px; height: 60px; padding: 4px; flex-shrink: 0;
+      background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .mp-qr svg { width: 100%; height: 100%; display: block; }
+    [data-theme="dark"] .mp-qr { background: #fff; }
+
+    /* QR 弹窗 */
+    .qr-modal-body { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 6px 0 4px; }
+    .qr-modal-qr {
+      width: 200px; height: 200px; padding: 10px;
+      background: #fff; border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
+    }
+    .qr-modal-qr svg { width: 100%; height: 100%; }
+    .qr-modal-tip { font-size: 12px; color: var(--color-text-sub); text-align: center; line-height: 1.5; }
+    .qr-modal-actions { display: flex; gap: 8px; margin-top: 8px; width: 100%; }
+    .qr-modal-actions .btn { flex: 1; }
   </style>
 </head>
 <body data-page="food">
@@ -122,11 +191,13 @@
         <div class="food-loc anim-fade-in-up">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <span>当前位置</span><strong id="locText">涵江校区</strong>
-          <span style="margin-left:auto;">切换校园 ›</span>
         </div>
 
+        <!-- 校区切换 tabs -->
+        <div class="campus-tabs anim-fade-in-up" id="campusTabs"></div>
+
         <!-- 搜索栏 -->
-        <div class="search-bar anim-fade-in-up">
+        <div class="search-bar anim-fade-in-up" style="margin-top:8px;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" id="searchInput" placeholder="搜索店铺 / 菜品">
         </div>
@@ -146,7 +217,14 @@
         </div>
 
         <!-- 店铺列表 -->
-        <div id="shopList" style="margin-top:4px;display:flex;flex-direction:column;gap:12px;margin-bottom:20px;"></div>
+        <div id="shopList" style="margin-top:4px;display:flex;flex-direction:column;gap:12px;"></div>
+
+        <!-- 接入的小程序合作入口 -->
+        <div class="mp-section-title anim-fade-in-up">
+          合作小程序入口
+          <span class="mp-tip">长按或点击复制分享码，前往微信打开</span>
+        </div>
+        <div class="mp-grid" id="mpGrid"></div>
       </div>
     </main>
     <!-- 固定 tab bar —— 以下代码完全不可修改 -->
@@ -313,6 +391,7 @@
       function refresh() {
         state.keyword = searchInput.value.trim();
         loadShops();
+        renderMiniPrograms();
         return Promise.resolve();
       }
 
@@ -323,8 +402,148 @@
         document.getElementById('locText').textContent = campus;
       } catch (e) {}
 
+      // ---- 校区切换 tabs ----
+      function renderCampusTabs() {
+        var campuses = Storage.getCampuses();
+        var currentId = Storage.getCampusId();
+        var html = '';
+        campuses.forEach(function (c) {
+          var active = c.id === currentId ? ' active' : '';
+          html += '<button class="campus-tab' + active + '" data-campus="' + c.id + '" title="' + (c.desc || '') + '">' + c.name + '</button>';
+        });
+        var tabsEl = document.getElementById('campusTabs');
+        tabsEl.innerHTML = html;
+        tabsEl.querySelectorAll('.campus-tab').forEach(function (tab) {
+          tab.addEventListener('click', function () {
+            var cid = this.dataset.campus;
+            Storage.setCampusId(cid);
+            tabsEl.querySelectorAll('.campus-tab').forEach(function (t) { t.classList.remove('active'); });
+            this.classList.add('active');
+            // 同步位置显示
+            var campuses = Storage.getCampuses();
+            for (var i = 0; i < campuses.length; i++) {
+              if (campuses[i].id === cid) {
+                document.getElementById('locText').textContent = campuses[i].name;
+                break;
+              }
+            }
+            App.toast('已切换到 ' + (cid === 'xianyou' ? '仙游校区' : '涵江校区'));
+            loadShops();
+          });
+        });
+      }
+
+      // ---- 小程序合作入口 ----
+      // 生成一个简单的装饰性 QR 图案（视觉示意，非真实可识别二维码）
+      // 真实扫码请使用微信扫一扫小程序码或搜索小程序名称
+      function fakeQrSvg(seed) {
+        // 基于 seed 字符串生成稳定的 6x6 模块矩阵，仅用于视觉示意
+        var n = 0;
+        for (var i = 0; i < seed.length; i++) n = (n * 31 + seed.charCodeAt(i)) >>> 0;
+        function rand() { n = (n * 1103515245 + 12345) & 0x7fffffff; return n / 0x7fffffff; }
+        var size = 7; // 7x7 模块
+        var cell = 100 / size;
+        var rects = '';
+        // 三个定位角
+        function corner(cx, cy) {
+          return '<rect x="' + (cx * cell) + '" y="' + (cy * cell) + '" width="' + (3 * cell) + '" height="' + (3 * cell) + '" fill="#1E293B"/>' +
+                 '<rect x="' + ((cx + 1) * cell) + '" y="' + ((cy + 1) * cell) + '" width="' + cell + '" height="' + cell + '" fill="#fff"/>';
+        }
+        rects += corner(0, 0) + corner(size - 3, 0) + corner(0, size - 3);
+        // 中间随机点
+        for (var y = 0; y < size; y++) {
+          for (var x = 0; x < size; x++) {
+            // 跳过三个定位角区域
+            var inCorner = (x < 3 && y < 3) || (x >= size - 3 && y < 3) || (x < 3 && y >= size - 3);
+            if (inCorner) continue;
+            if (rand() < 0.5) {
+              rects += '<rect x="' + (x * cell) + '" y="' + (y * cell) + '" width="' + cell + '" height="' + cell + '" fill="#1E293B"/>';
+            }
+          }
+        }
+        return '<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">' + rects + '</svg>';
+      }
+
+      function copyText(text) {
+        return new Promise(function (resolve) {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(resolve, function () {
+              fallbackCopy(text); resolve();
+            });
+          } else {
+            fallbackCopy(text); resolve();
+          }
+        });
+      }
+      function fallbackCopy(text) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+        } catch (e) {}
+      }
+
+      function renderMiniPrograms() {
+        var mps = Storage.getMiniPrograms();
+        var html = '';
+        if (!mps.length) {
+          document.getElementById('mpGrid').innerHTML = '';
+          return;
+        }
+        mps.forEach(function (mp, i) {
+          var tags = (mp.tags || []).map(function (t) {
+            return '<span class="mp-tag">' + t + '</span>';
+          }).join('');
+          var qr = fakeQrSvg(mp.id + mp.shareKey);
+          html += '<div class="mp-card anim-fade-in-up" onclick="showMpQr(\'' + mp.id + '\')">' +
+            '<div class="mp-icon" style="background:' + (mp.color || '#2563EB') + '22;">' + (mp.emoji || '🔗') + '</div>' +
+            '<div class="mp-body">' +
+              '<div class="mp-name">' + mp.name + '</div>' +
+              '<div class="mp-desc">' + (mp.desc || '') + '</div>' +
+              (tags ? '<div class="mp-tags">' + tags + '</div>' : '') +
+            '</div>' +
+            '<div class="mp-qr">' + qr + '</div>' +
+          '</div>';
+        });
+        document.getElementById('mpGrid').innerHTML = html;
+      }
+
+      window.showMpQr = function (id) {
+        var mps = Storage.getMiniPrograms();
+        var mp = null;
+        for (var i = 0; i < mps.length; i++) { if (mps[i].id === id) { mp = mps[i]; break; } }
+        if (!mp) return;
+        var qr = fakeQrSvg(mp.id + mp.shareKey + '-big');
+        App.showModal({
+          title: mp.name,
+          customBody: '<div class="qr-modal-body">' +
+            '<div class="qr-modal-qr">' + qr + '</div>' +
+            '<div class="qr-modal-tip">' + (mp.desc || '') + '<br/>点击下方按钮复制分享码，前往微信粘贴打开</div>' +
+            '<div class="qr-modal-actions">' +
+              '<button class="btn btn-outline" onclick="App.closeModal()">关闭</button>' +
+              '<button class="btn btn-primary" onclick="copyMpShare(\'' + mp.id + '\')">复制分享码</button>' +
+            '</div>' +
+          '</div>',
+        });
+      };
+
+      window.copyMpShare = function (id) {
+        var mps = Storage.getMiniPrograms();
+        var mp = null;
+        for (var i = 0; i < mps.length; i++) { if (mps[i].id === id) { mp = mps[i]; break; } }
+        if (!mp) return;
+        copyText(mp.shareKey).then(function () {
+          App.toastSuccess('已复制，前往微信粘贴打开');
+          App.closeModal();
+        });
+      };
+
+      renderCampusTabs();
       renderChips();
       loadShops();
+      renderMiniPrograms();
       App.initPullToRefresh(mainContent, refresh);
     })();
   </script>

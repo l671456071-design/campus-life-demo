@@ -429,11 +429,15 @@ var Storage = {
   },
 
   // 从购物车生成订单（待支付状态）
-  createOrder: function (address, note) {
+  // opts 可携带 { payMethod: 'wechat' | 'alipay' | 'cod' }
+  createOrder: function (address, note, opts) {
     var summary = this.getCartSummary();
     if (!summary.itemCount) return { success: false, message: '购物车是空的' };
     var r = summary.restaurant || {};
     var now = Date.now();
+    opts = opts || {};
+    var payMethod = opts.payMethod || 'wechat';
+    var payMethodLabel = { wechat: '微信支付', alipay: '支付宝', cod: '货到付款（模拟）' }[payMethod] || '微信支付';
     var order = {
       id: 'FO' + now,
       restaurantId: r.id,
@@ -453,7 +457,8 @@ var Storage = {
       note: note || '',
       status: 'unpaid',
       createdAt: now,
-      payMethod: '货到付款（模拟）',
+      payMethod: payMethod,
+      payMethodLabel: payMethodLabel,
     };
     var orders = this.getOrders();
     orders.unshift(order);
@@ -463,12 +468,17 @@ var Storage = {
   },
 
   // 模拟支付：待支付 → 制作中
-  payOrder: function (id) {
+  // 可携带 payMethod（wechat/alipay/cod），覆盖订单创建时的支付方式
+  payOrder: function (id, payMethod) {
     var orders = this.getOrders();
     for (var i = 0; i < orders.length; i++) {
       if (orders[i].id === id && orders[i].status === 'unpaid') {
         orders[i].status = 'preparing';
         orders[i].preparingAt = Date.now();
+        if (payMethod) {
+          orders[i].payMethod = payMethod;
+          orders[i].payMethodLabel = { wechat: '微信支付', alipay: '支付宝', cod: '货到付款（模拟）' }[payMethod] || orders[i].payMethodLabel;
+        }
         this._write(this.KEYS.orders, orders);
         return { success: true, order: orders[i] };
       }
@@ -506,6 +516,46 @@ var Storage = {
     if (order.status !== 'delivering' || !order.deliveringAt) return 0;
     var p = (Date.now() - order.deliveringAt) / this.FOOD_TIMINGS.deliveringMs;
     return Math.max(0, Math.min(1, p));
+  },
+
+  // ---- 校区切换 ----
+  // 校区信息存储在 user.campusId，默认涵江
+  getCampusId: function () {
+    var user = this.getUser();
+    return user.campusId || 'hanjiang';
+  },
+
+  setCampusId: function (campusId) {
+    var user = this.getUser();
+    user.campusId = campusId;
+    // 同步更新 campus 字段（兼容旧逻辑：campus 形如 "涵江校区 · 兰苑 5号楼"）
+    var campuses = this.getCampuses();
+    for (var i = 0; i < campuses.length; i++) {
+      if (campuses[i].id === campusId) {
+        var dorm = user.dormitory || '兰苑 5号楼';
+        user.campus = campuses[i].name + ' · ' + dorm;
+        break;
+      }
+    }
+    this.saveUser(user);
+    return user;
+  },
+
+  // 从 DB 读取校区列表
+  getCampuses: function () {
+    if (typeof DB === 'undefined' || !DB.campuses) {
+      return [
+        { id: 'hanjiang', name: '涵江校区', desc: '主校区 · 兰苑/楷苑/菊苑/梅苑' },
+        { id: 'xianyou',  name: '仙游校区', desc: '分校区 · 兰香园/桂香园/菊香园' },
+      ];
+    }
+    return DB.campuses;
+  },
+
+  // 从 DB 读取小程序合作入口
+  getMiniPrograms: function () {
+    if (typeof DB === 'undefined' || !DB.miniPrograms) return [];
+    return DB.miniPrograms;
   },
 
   // ---- 重置全部本地数据（恢复初始演示数据） ----

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
@@ -25,65 +25,69 @@
     <main class="app-content" id="mainContent">
       <div class="px-4" style="padding-top:16px;">
         <!-- 待取快递横幅卡片 -->
-        <div class="card anim-fade-in-up" style="background:linear-gradient(135deg, #2563EB, #1D4ED8);padding:20px;color:#fff;position:relative;overflow:hidden;">
-          <div style="position:relative;z-index:1;">
-            <div style="display:flex;align-items:flex-end;gap:10px;">
-              <span style="font-size:40px;font-weight:800;line-height:1;" id="pendingCount">5</span>
-              <span style="font-size:14px;font-weight:500;opacity:0.9;padding-bottom:4px;">件待取快递</span>
+        <div class="hero-card anim-fade-in-up">
+          <div class="hero-card-main">
+            <div class="hero-card-row">
+              <span class="hero-card-num" id="pendingCount">0</span>
+              <span class="hero-card-unit">件待取</span>
             </div>
-            <p style="font-size:12px;opacity:0.8;margin-top:10px;line-height:1.5;" id="pendingHint">其中 2 件将在24小时内到期，请尽快取件</p>
+            <p class="hero-card-sub" id="pendingHint">暂无待取快递</p>
+            <a href="packages.html" class="hero-card-cta">
+              立即查看
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
           </div>
-          <svg style="position:absolute;right:-10px;bottom:-10px;width:100px;height:100px;opacity:0.18;color:#fff;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <svg class="hero-card-deco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
 
         <!-- 快捷操作网格 -->
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;">
-          <a href="packages.html" class="quick-action anim-fade-in-up stagger-1">
+        <div class="quick-grid">
+          <a href="scan.html" class="quick-action quick-action--primary anim-fade-in-up stagger-1">
+            <div class="quick-action-icon quick-action-icon--primary">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+            </div>
+            <span class="quick-action-label quick-action-label--primary">扫码取件</span>
+          </a>
+          <a href="packages.html" class="quick-action anim-fade-in-up stagger-2">
             <div class="quick-action-icon" style="background:#DBEAFE;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             </div>
             <span class="quick-action-label">待取快递</span>
           </a>
-          <a href="scan.html" class="quick-action anim-fade-in-up stagger-2">
-            <div class="quick-action-icon" style="background:#D1FAE5;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-            </div>
-            <span class="quick-action-label">扫码取件</span>
-          </a>
           <a href="track.html" class="quick-action anim-fade-in-up stagger-3">
             <div class="quick-action-icon" style="background:#FFEDD5;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
             </div>
             <span class="quick-action-label">查快递</span>
           </a>
           <a href="records.html" class="quick-action anim-fade-in-up stagger-4">
             <div class="quick-action-icon" style="background:#EDE9FE;">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <span class="quick-action-label">取件记录</span>
           </a>
         </div>
 
         <!-- 最近待取 -->
-        <div style="margin-top:24px;" class="anim-fade-in-up stagger-3">
+        <div style="margin-top:20px;" class="anim-fade-in-up stagger-3">
           <div class="section-header">
             <span class="section-title">最近待取</span>
             <a href="packages.html" class="section-link">查看全部
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
           </div>
-          <div id="recentList" style="display:flex;flex-direction:column;gap:12px;"></div>
+          <div id="recentList" style="display:flex;flex-direction:column;gap:10px;"></div>
         </div>
 
         <!-- 取件点概览 -->
-        <div style="margin-top:24px;margin-bottom:20px;" class="anim-fade-in-up stagger-4">
+        <div style="margin-top:20px;margin-bottom:20px;" class="anim-fade-in-up stagger-4">
           <div class="section-header">
             <span class="section-title">常用取件点</span>
             <a href="map.html" class="section-link">查看地图
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </a>
           </div>
-          <div id="pointsList" style="display:flex;gap:12px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;">
+          <div id="pointsList" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;">
           </div>
         </div>
       </div>
@@ -136,36 +140,84 @@
         });
       }
 
+      function copyPickupCode(code) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(function () {
+            App.toastSuccess('取件码已复制');
+          }).catch(function () {
+            fallbackCopy(code);
+          });
+        } else {
+          fallbackCopy(code);
+        }
+      }
+      window.copyPickupCode = copyPickupCode;
+
+      function fallbackCopy(text) {
+        try {
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          App.toastSuccess('取件码已复制');
+        } catch (e) {
+          App.toast('复制失败，请手动记下');
+        }
+      }
+
       function renderRecent() {
         var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; });
-        var recent = pending.slice(0, 3);
+        // 优先展示 24h 内到期，最多 3 条
+        var urgent = pending.filter(function (p) {
+          if (!p.expiresIn) return false;
+          var m = p.expiresIn.match(/(\d+)/);
+          return m && parseInt(m[1]) <= 24;
+        });
+        var others = pending.filter(function (p) { return urgent.indexOf(p) === -1; });
+        var recent = urgent.concat(others).slice(0, 3);
         var html = '';
         recent.forEach(function (pkg, i) {
           var stagger = 'stagger-' + (i + 1);
+          var urgentBadge = '';
+          if (pkg.expiresIn) {
+            var m = pkg.expiresIn.match(/(\d+)/);
+            if (m && parseInt(m[1]) <= 24) {
+              urgentBadge = '<span class="pkg-urgent-badge">紧急</span>';
+            }
+          }
           html += '<div class="pkg-card card--clickable anim-fade-in-up ' + stagger + '" onclick="location.href=\'detail.html?id=' + pkg.id + '\'">' +
             '<div class="pkg-card-header">' +
-              '<div class="pkg-company">' + App.pkgLogo(pkg) + '<span class="pkg-company-name">' + pkg.company + '</span>' + App.platformBadge(pkg.sender) + '</div>' +
+              '<div class="pkg-company">' + App.pkgLogo(pkg) + '<span class="pkg-company-name">' + pkg.company + '</span>' + urgentBadge + '</div>' +
               '<span class="status-badge ' + App.statusClass(pkg.status) + '">' + App.statusLabel(pkg.status) + '</span>' +
-            '</div>' +
-            '<div class="pkg-info">' +
-              (pkg.pickupCode
-                ? '<div class="pkg-info-item"><span class="pkg-info-label">取件码</span><span class="pkg-info-value" style="font-family:var(--font-mono);">' + pkg.pickupCode + '</span></div>'
-                : '<div class="pkg-info-item"><span class="pkg-info-label">单号</span><span class="pkg-info-value">' + pkg.trackingNo + '</span></div>') +
-              '<div class="pkg-info-item"><span class="pkg-info-label">取件点</span><span class="pkg-info-value truncate" style="max-width:120px;">' + pkg.pickupPoint + '</span></div>' +
             '</div>';
           if (pkg.pickupCode) {
-            html += '<div class="pkg-actions">' +
-              '<button class="btn btn-outline btn-sm" onclick="event.stopPropagation();App.showModal({title:\'取件码\',desc:\'' + pkg.pickupCode + '\',icon:\'success\',confirmText:\'我知道了\',onConfirm:function(){App.closeModal();}})">查看取件码</button>' +
-              '<a href="map.html" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">导航</a>' +
+            html += '<div class="pkg-code-row" onclick="event.stopPropagation();copyPickupCode(\'' + pkg.pickupCode + '\')" title="点击复制">' +
+              '<span class="pkg-code-label">取件码</span>' +
+              '<span class="pkg-code-value">' + pkg.pickupCode + '</span>' +
+              '<svg class="pkg-code-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
             '</div>';
           } else {
-            html += '<div class="pkg-actions">' +
-              '<a href="detail.html?id=' + pkg.id + '" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">查看详情</a>' +
-              '<a href="map.html" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">导航</a>' +
-            '</div>';
+            html += '<div class="pkg-info"><div class="pkg-info-item"><span class="pkg-info-label">单号</span><span class="pkg-info-value" style="font-family:var(--font-mono);font-size:12px;">' + pkg.trackingNo + '</span></div></div>';
           }
+          html += '<div class="pkg-info pkg-info--compact">' +
+            '<div class="pkg-info-item"><span class="pkg-info-label">取件点</span><span class="pkg-info-value truncate" style="max-width:160px;">' + pkg.pickupPoint + '</span></div>' +
+            (pkg.expiresIn ? '<div class="pkg-info-item"><span class="pkg-info-label">到期</span><span class="pkg-info-value pkg-expires">' + pkg.expiresIn + '</span></div>' : '') +
+          '</div>';
+          html += '<div class="pkg-actions">' +
+            (pkg.pickupCode
+              ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyPickupCode(\'' + pkg.pickupCode + '\')">查看取件码</button>'
+              : '<a href="detail.html?id=' + pkg.id + '" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">查看详情</a>') +
+            '<a href="map.html" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">导航</a>' +
+          '</div>';
           html += '</div>';
         });
+        if (!recent.length) {
+          html = App.emptyState('暂无待取快递', ' Relax，放松一下');
+        }
         document.getElementById('recentList').innerHTML = html;
       }
 
@@ -206,12 +258,13 @@
           var m = p.expiresIn.match(/(\d+)/);
           return m && parseInt(m[1]) <= 24;
         });
+        var hint = document.getElementById('pendingHint');
         if (urgent.length > 0) {
-          document.getElementById('pendingHint').textContent = '其中 ' + urgent.length + ' 件将在24小时内到期，请尽快取件';
+          hint.textContent = '其中 ' + urgent.length + ' 件将在 24 小时内到期';
         } else if (pending.length > 0) {
-          document.getElementById('pendingHint').textContent = '暂无紧急待取件，可安排时间取件';
+          hint.textContent = '暂无紧急待取件，可安排时间取件';
         } else {
-          document.getElementById('pendingHint').textContent = '当前没有待取快递，放松一下吧';
+          hint.textContent = '当前没有待取快递，放松一下吧';
         }
       }
 

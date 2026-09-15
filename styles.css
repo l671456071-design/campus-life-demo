@@ -661,3 +661,172 @@ img { max-width: 100%; display: block; }
 .hidden { display: none !important; }
 .rounded-full { border-radius: var(--radius-full); }
 .relative { position: relative; }
+
+/* ===== Homepage Hero Card (待取主卡片) ===== */
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  padding: 20px 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #2563EB, #1D4ED8);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-card-main { position: relative; z-index: 1; flex: 1; min-width: 0; }
+.hero-card-row { display: flex; align-items: flex-end; gap: 6px; }
+.hero-card-num {
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  font-family: var(--font-mono);
+  letter-spacing: -1px;
+}
+.hero-card-unit {
+  font-size: 14px;
+  font-weight: 600;
+  opacity: 0.92;
+  padding-bottom: 5px;
+}
+.hero-card-sub {
+  font-size: 12px;
+  opacity: 0.82;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+.hero-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 12px;
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.18);
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: var(--radius-full);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  backdrop-filter: blur(4px);
+  transition: background 0.2s;
+}
+.hero-card-cta:active { background: rgba(255,255,255,0.28); }
+.hero-card-cta svg { width: 14px; height: 14px; }
+.hero-card-deco {
+  position: absolute;
+  right: -16px;
+  bottom: -12px;
+  width: 90px;
+  height: 90px;
+  opacity: 0.14;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* ===== Quick Grid (首页快捷操作) ===== */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-top: 14px;
+  background: var(--color-surface);
+  padding: 10px 4px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.quick-action { padding: 4px 0; }
+.quick-action-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s;
+  margin: 0 auto;
+}
+.quick-action:active .quick-action-icon { transform: scale(0.9); }
+.quick-action-label { font-size: 11px; color: var(--color-text); margin-top: 6px; }
+
+/* 优先级最高的扫码取件 */
+.quick-action--primary { position: relative; }
+.quick-action-icon--primary {
+  background: linear-gradient(135deg, var(--color-primary), var(--color-primary-hover));
+  box-shadow: 0 4px 12px rgba(37,99,235,0.28);
+}
+.quick-action-label--primary {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+/* ===== Package Card Enhancements (首页最近待取) ===== */
+.pkg-card { padding: 12px 14px; border: 1px solid var(--color-border-light); }
+.pkg-urgent-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+  font-size: 10px;
+  font-weight: 700;
+  vertical-align: middle;
+}
+.pkg-code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, var(--color-primary-lighter), var(--color-primary-light));
+  border: 1.2px dashed var(--color-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.pkg-code-row:active { transform: scale(0.98); }
+.pkg-code-label {
+  font-size: 11px;
+  color: var(--color-text-sub);
+  flex-shrink: 0;
+}
+.pkg-code-value {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--color-primary);
+  letter-spacing: 1.5px;
+}
+.pkg-code-copy {
+  width: 16px;
+  height: 16px;
+  color: var(--color-primary);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+.pkg-info--compact { margin-top: 8px; gap: var(--spacing-3); }
+.pkg-expires { color: var(--color-warning); font-weight: 600; }
+
+/* ===== Demo Mode Label (低调演示模式标签) ===== */
+.demo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-warning-light);
+  color: #B45309;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.demo-chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+[data-theme="dark"] .demo-chip { background: var(--color-warning-light); color: var(--color-warning); }
