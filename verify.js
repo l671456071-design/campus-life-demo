@@ -245,14 +245,19 @@ const localFiles = new Set(fs.readdirSync(ROOT).concat(
 // 仅后端服务期存在的路由入口（dev-login.html 是服务器页，链接的 /gray/ 由后端路由提供，
 // 不属于静态文件，故不参与“本地文件死链”检查）
 const SERVER_ONLY_REFS = new Set(['/gray/', '/gray', '/dev', '/dev-login.html']);
+// 自包含嵌入页：iframe 场景（无应用脚本链、data: 图标），不参与死链/脚本顺序检查
+const EMBED_PAGES = new Set(['spark-badge.html']);
 htmlFiles.forEach(f => {
   const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
   const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m => m[1]);
   refs.forEach(ref => {
+    if (ref.startsWith('data:')) return; // 内联 data URI（如 favicon data:,）
     if (ref.startsWith('http://') || ref.startsWith('https://') || ref.startsWith('//')) {
       if (ref.startsWith('http://www.w3.org') || ref.startsWith('https://www.w3.org')) return; // SVG 命名空间，非资源加载
+      if (EMBED_PAGES.has(f)) return; // 嵌入场景页自身零外链豁免（防御性）
       externalRefs.push(f + ' → ' + ref);
     } else if (!ref.startsWith('javascript:') && !ref.startsWith('#') && ref !== '' && !SERVER_ONLY_REFS.has(ref)) {
+      if (EMBED_PAGES.has(f)) return;
       if (/[+'"]/.test(ref)) return; // JS 字符串动态拼接片段（如 src="' + p.image + '"），非真实引用
       const clean = ref.split('?')[0].split('#')[0].replace(/^\.\//, ''); // 归一化 ./ 相对前缀
       if (!localFiles.has(clean)) deadLinks.push(f + ' → ' + ref);
@@ -422,7 +427,7 @@ check('config.js isDemo 恒为 false 常量', /isDemo:\s*false/.test(configSrc))
 
 // 6.6 每个功能页都在 storage.js 之前引入 config.js，且引入 storage.js 的页面同时引入 demo-data.js
 // （本地化升级报告.html 是说明文档；dev-login.html / gray 是刻意自包含的服务器分发页，均不参与本项检查）
-const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html', 'about.html', 'website.html']);
+const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html', 'about.html', 'website.html', 'spark-badge.html']);
 const demoScriptPages = fs.readdirSync(ROOT)
   .filter(f => f.endsWith('.html') && !SELF_CONTAINED_PAGES.has(f));
 let scriptIssues = [];
@@ -1414,7 +1419,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 已跟进到 v8（[20]）', /var VERSION = 'v8'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v9（[21]）', /var VERSION = 'v9'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -2092,8 +2097,95 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     }
   })();
 
-  // 20.8 缓存版本 v8
-  check('sw.js 版本升级 v8', /var VERSION = 'v8';/.test(swSrc8));
+  // 20.8 缓存（版本号由最新发布块断言）
+  check('sw.js 版本机制为 v9 体系（campus-life 缓存名）', /var VERSION = 'v\d+';/.test(swSrc8) && swSrc8.indexOf("'campus-life-' + VERSION") !== -1);
+})();
+
+// ============================================================
+// [21] v9 改版：Apple Liquid Glass 全站材质 + SF Pro 字体 /
+//              首页 Spark 徽章光雨视觉 / 应用官网重排
+// ============================================================
+(function () {
+  console.log('\n[21] v9：Liquid Glass/Apple字体/Spark徽章/官网重排');
+  const cssSrc9 = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
+  const idxSrc9 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const webSrc9 = fs.readFileSync(path.join(ROOT, 'website.html'), 'utf8');
+  const badgeSrc9 = fs.readFileSync(path.join(ROOT, 'spark-badge.html'), 'utf8');
+  const swSrc9 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+
+  // 21.1 Apple 官方字体栈
+  check('styles.css 字体改为 Apple 官方栈（-apple-system/SF Pro/PingFang SC）',
+    /--font-body:\s*-apple-system,\s*BlinkMacSystemFont,\s*"SF Pro Text",\s*"SF Pro Display",\s*"PingFang SC"/.test(cssSrc9) &&
+    /--font-display:[\s\S]{0,40}-apple-system/.test(cssSrc9));
+
+  // 21.2 Liquid Glass tokens（亮/暗双套）
+  check('styles.css Liquid Glass tokens 齐全（glass-bg/blur/highlight/shadow）',
+    cssSrc9.indexOf('--glass-bg:') !== -1 && cssSrc9.indexOf('--glass-blur:') !== -1 &&
+    cssSrc9.indexOf('--glass-highlight:') !== -1 && cssSrc9.indexOf('--glass-shadow:') !== -1);
+  check('styles.css 玻璃暗色覆盖（dark 与 prefers-color-scheme 双处 glass-bg）',
+    (cssSrc9.match(/--glass-bg:/g) || []).length >= 4);
+
+  // 21.3 交互组件全玻璃化
+  check('顶栏玻璃化（.app-header 半透明 + backdrop-filter）',
+    /\.app-header\s*\{[^}]*--glass-bg[\s\S]{0,200}backdrop-filter:\s*var\(--glass-blur\)/.test(cssSrc9));
+  check('主按钮着色玻璃（.btn-primary 渐变 + inset 高光）',
+    /\.btn-primary\s*\{[^}]*linear-gradient\(180deg[^}]*inset 0 1px 0 rgba\(255, 255, 255, 0\.35\)/.test(cssSrc9.replace(/\n/g, ' ')) ||
+    (/\.btn-primary\s*\{[\s\S]*?inset 0 1px 0 rgba\(255, 255, 255, 0\.35\)[\s\S]*?\}/.test(cssSrc9)));
+  check('次按钮玻璃片（.btn-outline backdrop-filter + 白描边）',
+    /\.btn-outline\s*\{[\s\S]*?backdrop-filter:\s*var\(--glass-blur\)[\s\S]*?border: 1px solid var\(--glass-border\)/.test(cssSrc9));
+  check('chips 玻璃胶囊（.chip glass-bg + blur）',
+    /\.chip\s*\{[\s\S]*?--glass-bg[\s\S]*?backdrop-filter:\s*var\(--glass-blur\)/.test(cssSrc9));
+  check('弹窗玻璃（.modal glass-bg-strong + blur-strong）',
+    /\.modal\s*\{[\s\S]*?--glass-bg-strong[\s\S]*?var\(--glass-blur-strong\)/.test(cssSrc9));
+  check('卡片玻璃（.card/.pkg-card/.stat-card 均走 glass-bg）',
+    ['.card', '.pkg-card', '.stat-card'].every(sel =>
+      new RegExp(sel.replace(/-/g, '\\-') + '\\s*\\{[^}]*var\\(--glass-bg\\)').test(cssSrc9)));
+  check('ActionSheet/Toast/引导卡玻璃化（action-sheet + toast + guide-card blur）',
+    /\.action-sheet\s*\{[\s\S]*?backdrop-filter:\s*var\(--glass-blur-strong\)/.test(cssSrc9) &&
+    /\.toast\s*\{[\s\S]*?backdrop-filter:\s*var\(--glass-blur\)/.test(cssSrc9) &&
+    /\.guide-card\s*\{[\s\S]*?var\(--glass-blur-strong\)/.test(cssSrc9));
+  check('环境光色场（.app-shell radial-gradient 背景，玻璃有可折射内容）',
+    /\.app-shell\s*\{[\s\S]*?radial-gradient\(120% 90% at 88% -12%[\s\S]*?var\(--color-bg\)/.test(cssSrc9));
+
+  // 21.4 首页 Spark 徽章
+  check('index.html Spark 徽章 hero（shader-frame + sparkBadge + caption）',
+    idxSrc9.indexOf('id="sparkBadge"') !== -1 && idxSrc9.indexOf('shader-frame') !== -1 &&
+    idxSrc9.indexOf('光雨与卷曲噪声余烬组成的凭证') !== -1);
+  check('index.html 徽章 iframe 休眠挂载（sandbox allow-scripts + IntersectionObserver + visibilitychange）',
+    idxSrc9.indexOf("setAttribute('sandbox', 'allow-scripts')") !== -1 &&
+    idxSrc9.indexOf('IntersectionObserver') !== -1 && idxSrc9.indexOf('visibilitychange') !== -1 &&
+    /postMessage\(\{\s*type:\s*'spark-badge-controls'/.test(idxSrc9));
+  check('index.html 首页局部交互玻璃化（ai-search-bar/quick-icon/more-item/apps-toggle 走 glass）',
+    ['.ai-search-bar {', '.quick-icon {', '.more-item {', '.apps-toggle {'].every(sel => {
+      const at = idxSrc9.indexOf(sel);
+      return at !== -1 && idxSrc9.indexOf('--glass-bg', at) !== -1 &&
+        idxSrc9.indexOf('--glass-bg', at) - at < 400;
+    }));
+
+  // 21.5 应用官网重排（个人网站排版进官网）
+  check('website.html Spark 徽章官网 hero + 品牌区（ws-shader-frame + ws-brand h1）',
+    webSrc9.indexOf('ws-shader-frame') !== -1 && webSrc9.indexOf('ws-brand') !== -1 &&
+    webSrc9.indexOf('id="sparkBadge"') !== -1);
+  check('website.html 功能一览对齐 v8（扫码性能/AI双引擎/手动录入/实时钟文案）',
+    webSrc9.indexOf('OCR 空闲预加载') !== -1 && webSrc9.indexOf('DeepSeek') !== -1 &&
+    webSrc9.indexOf('手动录入') !== -1 && webSrc9.indexOf('精确到秒') !== -1);
+  check('website.html 官网玻璃化（ws-tag/ws-grid-item/ws-card 全走 glass tokens）',
+    ['.ws-tag', '.ws-grid-item', '.ws-card'].every(sel =>
+      webSrc9.indexOf(sel) !== -1) &&
+    (webSrc9.match(/var\(--glass-bg\)/g) || []).length >= 3 &&
+    webSrc9.indexOf('backdrop-filter: var(--glass-blur)') !== -1);
+  check('website.html 更新日志含 v9/v8（Liquid Glass 与扫码五项）',
+    webSrc9.indexOf('v9.0.0') !== -1 && webSrc9.indexOf('v8.0.0') !== -1 &&
+    webSrc9.indexOf('Liquid Glass') !== -1);
+
+  // 21.6 徽章场景自包含
+  check('spark-badge.html 已入应用且零外部依赖（无 src/href 外链）',
+    badgeSrc9.indexOf('<canvas id="c"') !== -1 &&
+    !/<script[^>]+src=/.test(badgeSrc9) && !/<link[^>]+href="http/.test(badgeSrc9));
+
+  // 21.7 缓存
+  check('sw.js v9 且预缓存 spark-badge.html',
+    /var VERSION = 'v9';/.test(swSrc9) && swSrc9.indexOf("'./spark-badge.html'") !== -1);
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

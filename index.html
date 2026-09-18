@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    /* ===== 生活门户首页（单色调 · 大留白 · 每屏一个焦点：AI 搜索栏） ===== */
+    /* ===== 生活门户首页（单色调 · 大留白 · 每屏一个焦点） ===== */
     .home-hello { padding: 16px 16px 12px; }
     .home-hello .hello-title { font-size: 22px; font-weight: 800; color: var(--color-text); letter-spacing: 0.2px; }
     .home-hello .hello-date { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
@@ -20,16 +20,41 @@
     .life-section { padding: 18px 16px 0; }
     .life-section .section-header { margin-bottom: 12px; }
 
-    /* —— AI 搜索栏：本页唯一视觉焦点 —— */
+    /* —— Spark 徽章：.shader-frame 容器承载 Canvas 2D 光雨凭证（iframe 休眠挂载） —— */
+    .shader-frame {
+      position: relative;
+      margin: 2px 16px 0;
+      height: 380px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: var(--glass-highlight), 0 14px 36px rgba(15, 23, 42, 0.22);
+      border: 1px solid rgba(255,255,255,0.10);
+    }
+    .shader-frame .spark-badge { position: absolute; inset: 0; }
+    .shader-frame .spark-badge .spark-badge__frame { width: 100%; height: 100%; border: 0; display: block; }
+    .shader-caption {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 26px 18px 14px;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.55));
+      pointer-events: none;
+      z-index: 2;
+    }
+    .shader-caption .cap-title { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: .3px; }
+    .shader-caption .cap-sub { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 3px; }
+
+    /* —— AI 搜索栏：玻璃胶囊 —— */
     .ai-search-bar {
       display: flex; align-items: center; gap: 10px;
       margin: 2px 16px 0;
-      background: var(--color-surface);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
       border-radius: 999px;
       padding: 12px 16px;
-      box-shadow: var(--shadow-md);
+      box-shadow: var(--glass-highlight), var(--glass-shadow);
       text-decoration: none;
-      border: 1.5px solid rgba(37, 99, 235, 0.12);
+      border: 1px solid var(--glass-border);
       transition: transform 0.2s;
     }
     .ai-search-bar:active { transform: scale(0.98); }
@@ -59,8 +84,11 @@
     .quick-item:active { transform: scale(0.93); }
     .quick-icon {
       width: 52px; height: 52px; border-radius: 17px;
-      background: var(--color-surface);
-      box-shadow: var(--shadow-sm);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
       display: flex; align-items: center; justify-content: center;
     }
     .quick-icon svg { width: 24px; height: 24px; }
@@ -84,9 +112,12 @@
       position: relative;
       display: flex; flex-direction: column; align-items: center; gap: 8px;
       padding: 14px 4px 12px;
-      background: var(--color-surface);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight);
       border-radius: 16px;
-      box-shadow: var(--shadow-sm);
       text-decoration: none;
       transition: transform 0.2s;
     }
@@ -106,13 +137,15 @@
     .apps-toggle {
       display: block;
       margin: 12px auto 0;
-      background: var(--color-surface);
-      border: none;
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
       border-radius: 999px;
       padding: 9px 22px;
       font-size: 13px; font-weight: 600;
-      color: var(--color-primary);
-      box-shadow: var(--shadow-sm);
+      color: var(--color-primary-text, var(--color-primary));
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
     }
     .apps-toggle:active { transform: scale(0.96); }
     .apps-toggle svg { width: 14px; height: 14px; vertical-align: -2px; margin-left: 2px; transition: transform .3s; }
@@ -138,8 +171,17 @@
         <div class="hello-date" id="helloDate"></div>
       </div>
 
+      <!-- Spark 徽章（光雨 Canvas 凭证）：首页第一视觉锚点 -->
+      <div class="shader-frame anim-fade-in-up stagger-1">
+        <div class="spark-badge" id="sparkBadge" data-state="loading" data-variant="badge"></div>
+        <div class="shader-caption">
+          <div class="cap-title">Spark 徽章</div>
+          <div class="cap-sub">光雨与卷曲噪声余烬组成的凭证 · Ultimate</div>
+        </div>
+      </div>
+
       <!-- AI 搜索栏（伪输入，点击进入 AI 对话页） -->
-      <a href="ai.html" class="ai-search-bar anim-fade-in-up stagger-1" id="aiSearchBar">
+      <a href="ai.html" class="ai-search-bar anim-fade-in-up stagger-2" id="aiSearchBar">
         <span class="ai-search-ic">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.6 4.8L18.5 8l-4.9 1.6L12 14.5l-1.6-4.9L5.5 8l4.9-1.2z"/><path d="M19 14l.8 2.4L22 17l-2.2.6L19 20l-.8-2.4L16 17l2.2-.6z"/></svg>
         </span>
@@ -150,7 +192,7 @@
       </a>
 
       <!-- 常用功能：4 个，每个功能全页只出现一次 -->
-      <div class="life-section anim-fade-in-up stagger-2">
+      <div class="life-section anim-fade-in-up stagger-3">
         <div class="section-header"><span class="section-title">常用</span></div>
         <div class="quick-grid">
           <a href="packages.html" class="quick-item">
@@ -181,7 +223,7 @@
       </div>
 
       <!-- 全部应用：默认折叠，展开后显示完整分类 -->
-      <div class="life-section anim-fade-in-up stagger-3" style="padding-bottom:28px;">
+      <div class="life-section anim-fade-in-up stagger-4" style="padding-bottom:28px;">
         <div class="section-header"><span class="section-title">全部应用</span></div>
         <div class="all-apps-wrap collapsed" id="allAppsWrap">
           <div class="more-grid">
@@ -346,6 +388,65 @@
         syncHeight();
       });
       syncHeight();
+
+      /* ---------- SparkBadge（光雨凭证 · Canvas 2D 自包含场景） ----------
+         与源站行为一致：IntersectionObserver(rootMargin 80px) + visibilitychange
+         控制挂载/卸载；iframe sandbox="allow-scripts"，src 为 spark-badge.html；
+         挂载即 postMessage 一次，load 后再发一次并置 is-ready。 */
+      var CONTROLS = { speed: 1.00, particleAmount: 1.00, rainAmount: 1.00, turbulence: 1.00, spread: 1.00 };
+      var badgeHost = document.getElementById('sparkBadge');
+      var badgeFrame = null;
+      var badgeIntersects = true;
+      var badgeReady = false;
+
+      function postBadgeControls() {
+        if (badgeFrame && badgeFrame.contentWindow) {
+          badgeFrame.contentWindow.postMessage({ type: 'spark-badge-controls', controls: CONTROLS }, '*');
+        }
+      }
+      function setBadgeState() {
+        badgeHost.setAttribute('data-state', !badgeFrame ? 'paused' : badgeReady ? 'ready' : 'loading');
+      }
+      function mountBadge() {
+        if (badgeFrame) return;
+        badgeReady = false;
+        badgeFrame = document.createElement('iframe');
+        badgeFrame.className = 'spark-badge__frame';
+        badgeFrame.title = 'Spark 徽章 · 光雨凭证';
+        badgeFrame.setAttribute('sandbox', 'allow-scripts');
+        badgeFrame.setAttribute('loading', 'lazy');
+        badgeFrame.addEventListener('load', function () {
+          postBadgeControls();
+          badgeReady = true;
+          badgeFrame.classList.add('is-ready');
+          setBadgeState();
+        });
+        badgeFrame.src = 'spark-badge.html';
+        badgeHost.appendChild(badgeFrame);
+        postBadgeControls();
+        setBadgeState();
+      }
+      function unmountBadge() {
+        if (!badgeFrame) return;
+        badgeFrame.remove();
+        badgeFrame = null;
+        badgeReady = false;
+        setBadgeState();
+      }
+      function syncBadge() {
+        if (badgeIntersects && document.visibilityState !== 'hidden') mountBadge();
+        else unmountBadge();
+      }
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          badgeIntersects = entries[0].isIntersecting;
+          syncBadge();
+        }, { rootMargin: '80px' }).observe(badgeHost);
+      } else {
+        badgeIntersects = true;
+      }
+      document.addEventListener('visibilitychange', syncBadge);
+      syncBadge();
 
       // 下拉刷新（仅刷新红点）
       App.initPullToRefresh(document.getElementById('mainContent'), function () {

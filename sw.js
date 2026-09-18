@@ -8,7 +8,7 @@
 // 用户数据安全：仅缓存 App 外壳与静态资源；localStorage 业务数据不经过 SW
 'use strict';
 
-var VERSION = 'v8';
+var VERSION = 'v9';
 var CACHE_NAME = 'campus-life-' + VERSION;
 
 // 预缓存：App 外壳（页面 + 核心脚本 + 3D/扫码本地库 + 图标）
@@ -20,7 +20,7 @@ var PRECACHE = [
   './ai.html',
   './savings.html', './schedule.html', './forum.html', './jobs.html',
   './myhome.html', './about.html', './website.html',
-  './bathroom.html', './campus-data.js',
+  './bathroom.html', './campus-data.js', './spark-badge.html',
   './festival.html', './stopwatch.html', './notes.html',
   './decibel.html', './fitness.html', './lazy.html',
   './libs/xlsx/xlsx.full.min.js',

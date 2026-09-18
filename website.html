@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>应用官网 - 校园取件</title>
+  <title>应用官网 - 校园生活</title>
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#2563EB">
@@ -12,79 +12,125 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    .ws-hero {
-      margin: 16px 16px 0;
-      padding: 30px 20px 28px;
-      border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, #2563EB 0%, #4F8DFD 55%, #86B4FF 100%);
-      color: #fff;
-      text-align: center;
-      box-shadow: 0 12px 28px rgba(37, 99, 235, 0.30);
+    /* ===== 应用官网（Liquid Glass · 与 App v8 改版同源设计） ===== */
+
+    /* —— Hero：Spark 徽章光雨凭证，全幅视觉锚点 —— */
+    .ws-shader-frame {
       position: relative;
+      margin: 14px 16px 0;
+      height: 340px;
+      border-radius: 24px;
       overflow: hidden;
+      background: #000;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      box-shadow: 0 16px 44px rgba(15, 23, 42, 0.28);
     }
-    .ws-hero::after {
-      content: '';
-      position: absolute;
-      right: -34px; top: -34px;
-      width: 130px; height: 130px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.12);
+    .ws-shader-frame .spark-badge { position: absolute; inset: 0; }
+    .ws-shader-frame .spark-badge .spark-badge__frame { width: 100%; height: 100%; border: 0; display: block; }
+    .ws-shader-caption {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      padding: 30px 20px 16px;
+      background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.62));
+      pointer-events: none;
+      z-index: 2;
     }
-    .ws-hero-logo {
-      width: 72px; height: 72px; border-radius: 20px;
-      background: rgba(255, 255, 255, 0.18);
-      backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 38px; margin: 0 auto 14px;
-      border: 1px solid rgba(255, 255, 255, 0.25);
+    .ws-shader-caption .cap-title { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: .3px; }
+    .ws-shader-caption .cap-sub { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 3px; }
+
+    /* —— 品牌区：品牌名最大声 —— */
+    .ws-brand { padding: 24px 20px 4px; text-align: left; }
+    .ws-brand h1 {
+      font-size: 30px; font-weight: 800; letter-spacing: -0.5px;
+      color: var(--color-text); line-height: 1.2;
     }
-    .ws-hero h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 1px; }
-    .ws-hero p { margin: 10px 0 0; font-size: 13.5px; line-height: 1.7; opacity: 0.92; }
+    .ws-brand h1 .en {
+      background: linear-gradient(135deg, var(--color-primary), #60A5FA);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent; color: var(--color-primary);
+    }
+    .ws-brand .ws-slogan { margin-top: 8px; font-size: 14px; color: var(--color-text-sub); line-height: 1.7; }
+    .ws-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
     .ws-tag {
       display: inline-flex; align-items: center; gap: 5px;
-      margin-top: 14px; padding: 5px 12px;
+      padding: 6px 13px;
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.16);
-      font-size: 12px;
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight);
+      font-size: 12px; font-weight: 600; color: var(--color-text-sub);
     }
-    .ws-section { margin: 16px 16px 0; }
-    .ws-section-title {
-      font-size: 15px; font-weight: 700; color: var(--color-text);
-      margin: 0 0 10px;
-    }
+
+    .ws-section { margin: 22px 16px 0; }
+    .ws-section-title { font-size: 16px; font-weight: 800; color: var(--color-text); margin: 0 0 11px; letter-spacing: 0.2px; }
+
+    /* —— 功能玻璃网格 —— */
     .ws-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
     .ws-grid-item {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border-light);
-      border-radius: var(--radius-md);
-      box-shadow: var(--shadow-sm);
-      padding: 13px 14px;
-    }
-    .ws-grid-item .gi-emoji { font-size: 22px; }
-    .ws-grid-item .gi-name { margin-top: 7px; font-size: 14px; font-weight: 600; color: var(--color-text); }
-    .ws-grid-item .gi-desc { margin-top: 3px; font-size: 12px; color: var(--color-text-sub); line-height: 1.55; }
-    .ws-card {
-      background: var(--color-surface);
-      border: 1px solid var(--color-border-light);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
-      padding: 15px 16px;
+      padding: 14px 15px;
+      transition: transform 0.2s;
+    }
+    .ws-grid-item:active { transform: scale(0.97); }
+    .ws-grid-item .gi-emoji {
+      width: 40px; height: 40px; border-radius: 13px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      background: var(--color-primary-lighter, #EFF6FF);
+      border: 1px solid var(--glass-border-soft);
+    }
+    .ws-grid-item .gi-name { margin-top: 9px; font-size: 14px; font-weight: 700; color: var(--color-text); }
+    .ws-grid-item .gi-desc { margin-top: 3px; font-size: 12px; color: var(--color-text-sub); line-height: 1.6; }
+
+    /* —— 亮点 / 更新日志玻璃卡 —— */
+    .ws-card {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
+      border-radius: var(--radius-lg);
+      padding: 16px 17px;
     }
     .ws-changelog-item { display: flex; gap: 12px; }
-    .ws-changelog-item + .ws-changelog-item { margin-top: 14px; }
+    .ws-changelog-item + .ws-changelog-item { margin-top: 15px; }
     .ws-cl-dot {
       flex-shrink: 0;
       width: 8px; height: 8px; border-radius: 50%;
       background: var(--color-primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
       margin-top: 6px;
     }
-    .ws-cl-ver { font-size: 13px; font-weight: 600; color: var(--color-text); }
+    .ws-cl-ver { font-size: 13.5px; font-weight: 700; color: var(--color-text); }
     .ws-cl-date { font-size: 11px; color: var(--color-text-hint); margin-left: 6px; font-weight: 400; }
-    .ws-cl-body { font-size: 12.5px; color: var(--color-text-sub); line-height: 1.7; margin-top: 2px; }
+    .ws-cl-body { font-size: 12.5px; color: var(--color-text-sub); line-height: 1.7; margin-top: 3px; }
+
+    /* —— CTA —— */
+    .ws-cta-wrap { padding: 26px 16px 0; }
+    .ws-cta {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      width: 100%;
+      padding: 15px 0;
+      border-radius: var(--radius-md);
+      background: linear-gradient(180deg, rgba(59, 130, 246, 0.94), rgba(37, 99, 235, 0.96));
+      color: #fff; font-size: 15px; font-weight: 700;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 8px 22px rgba(37, 99, 235, 0.34);
+      transition: transform 0.2s;
+      text-decoration: none;
+    }
+    .ws-cta:active { transform: scale(0.97); }
+    .ws-cta svg { width: 18px; height: 18px; }
     .ws-foot {
       text-align: center;
-      padding: 22px 16px calc(24px + env(safe-area-inset-bottom));
+      padding: 22px 16px calc(26px + env(safe-area-inset-bottom));
       font-size: 12px; color: var(--color-text-hint); line-height: 1.8;
     }
   </style>
@@ -93,29 +139,63 @@
   <div class="app-shell">
     <header class="app-header">
       <div class="header-left">
-        <a href="profile.html" class="header-back-btn">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        <a href="profile.html" class="header-back-btn" aria-label="返回">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
         </a>
       </div>
       <div class="header-title">应用官网</div>
       <div class="header-right" style="width:32px;"></div>
     </header>
 
-    <main class="app-content">
-      <div class="ws-hero anim-fade-in-up">
-        <div class="ws-hero-logo">📦</div>
-        <h1>校园取件 Campus Life</h1>
-        <p>一站式校园生活助手<br>快递 · 外卖 · 课程 · 存钱 · 圈子 · 求职</p>
-        <div class="ws-tag">🔒 纯本地 · 离线可用 · 无需注册</div>
+    <main class="app-content" style="padding-bottom:24px;">
+      <!-- Hero：Spark 徽章（光雨 Canvas 凭证） -->
+      <div class="ws-shader-frame anim-fade-in-up">
+        <div class="spark-badge" id="sparkBadge" data-state="loading" data-variant="badge"></div>
+        <div class="ws-shader-caption">
+          <div class="cap-title">Spark 徽章</div>
+          <div class="cap-sub">光雨与卷曲噪声余烬组成的凭证 · Ultimate</div>
+        </div>
       </div>
 
-      <div class="ws-section anim-fade-in-up stagger-1">
+      <!-- 品牌 -->
+      <div class="ws-brand anim-fade-in-up stagger-1">
+        <h1>校园生活 <span class="en">Campus Life</span></h1>
+        <div class="ws-slogan">一站式校园生活助手：扫码取件、AI 问答、3D 地图、课程外卖，全部装进口袋。</div>
+        <div class="ws-tags">
+          <span class="ws-tag">📴 纯本地 · 离线可用</span>
+          <span class="ws-tag">🔒 免注册 · 数据不出设备</span>
+          <span class="ws-tag">⚡ PWA 秒开</span>
+        </div>
+      </div>
+
+      <!-- 功能一览（v8） -->
+      <div class="ws-section anim-fade-in-up stagger-2">
         <div class="ws-section-title">功能一览</div>
         <div class="ws-grid">
           <div class="ws-grid-item">
+            <div class="gi-emoji">📷</div>
+            <div class="gi-name">扫码取件</div>
+            <div class="gi-desc">OCR 空闲预加载不白屏，GPU 扫描线稳定 60fps</div>
+          </div>
+          <div class="ws-grid-item">
+            <div class="gi-emoji">✨</div>
+            <div class="gi-name">AI 助手</div>
+            <div class="gi-desc">本地规则 + DeepSeek 云端双引擎，断网也能答</div>
+          </div>
+          <div class="ws-grid-item">
             <div class="gi-emoji">📦</div>
-            <div class="gi-name">快递取件</div>
-            <div class="gi-desc">待取列表、扫码导入、取件记录一站管理</div>
+            <div class="gi-name">快递管理</div>
+            <div class="gi-desc">手动录入面单信息，一键全部清零，记录不丢失</div>
+          </div>
+          <div class="ws-grid-item">
+            <div class="gi-emoji">🗺</div>
+            <div class="gi-name">3D 校园地图</div>
+            <div class="gi-desc">聚合标记 + 一键导航最近驿站，列表顺滑滚动</div>
+          </div>
+          <div class="ws-grid-item">
+            <div class="gi-emoji">🗓</div>
+            <div class="gi-name">课程表</div>
+            <div class="gi-desc">Excel/XLS 一键导入，真实起止时钟与备注</div>
           </div>
           <div class="ws-grid-item">
             <div class="gi-emoji">🍜</div>
@@ -123,29 +203,20 @@
             <div class="gi-desc">点餐下单，制作配送状态实时可查</div>
           </div>
           <div class="ws-grid-item">
-            <div class="gi-emoji">🗓</div>
-            <div class="gi-name">课程表</div>
-            <div class="gi-desc">支持手动添加与 Excel/XLS 一键导入</div>
+            <div class="gi-emoji">🛁</div>
+            <div class="gi-name">浴室指南</div>
+            <div class="gi-desc">名称可自定义，实时时钟 + 步行时间精确到秒</div>
           </div>
           <div class="ws-grid-item">
-            <div class="gi-emoji">💰</div>
-            <div class="gi-name">存钱计划</div>
-            <div class="gi-desc">目标制存钱，攒下每一笔小金库</div>
-          </div>
-          <div class="ws-grid-item">
-            <div class="gi-emoji">💬</div>
-            <div class="gi-name">校园圈子</div>
-            <div class="gi-desc">发帖分享生活，支持相册图片发布</div>
-          </div>
-          <div class="ws-grid-item">
-            <div class="gi-emoji">💼</div>
-            <div class="gi-name">实习求职</div>
-            <div class="gi-desc">分步简历向导 + 投递进度全流程跟踪</div>
+            <div class="gi-emoji">🎉</div>
+            <div class="gi-name">节日倒计时</div>
+            <div class="gi-desc">DIY 自定义节日，相册背景与月历打点</div>
           </div>
         </div>
       </div>
 
-      <div class="ws-section anim-fade-in-up stagger-2">
+      <!-- 为什么选择我们 -->
+      <div class="ws-section anim-fade-in-up stagger-3">
         <div class="ws-section-title">为什么选择我们</div>
         <div class="ws-card">
           <div class="ws-changelog-item">
@@ -159,34 +230,42 @@
             <span class="ws-cl-dot"></span>
             <div>
               <div class="ws-cl-ver">PWA 离线可用</div>
-              <div class="ws-cl-body">支持添加到主屏幕，断网状态下所有功能照常使用，弱网宿舍楼也能流畅运行。</div>
+              <div class="ws-cl-body">添加到主屏幕后断网照常使用，弱网宿舍楼也流畅运行。</div>
             </div>
           </div>
           <div class="ws-changelog-item">
             <span class="ws-cl-dot"></span>
             <div>
-              <div class="ws-cl-ver">轻量极速</div>
-              <div class="ws-cl-body">纯静态页面 + 本地脚本库，无任何第三方统计与追踪，秒开无广告。</div>
+              <div class="ws-cl-ver">Apple Liquid Glass 设计</div>
+              <div class="ws-cl-body">全站毛玻璃材质与 SF Pro 字体体系，按压力学反馈，观感与手感都对齐 iOS。</div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="ws-section anim-fade-in-up stagger-3">
+      <!-- 更新日志 -->
+      <div class="ws-section anim-fade-in-up stagger-4">
         <div class="ws-section-title">更新日志</div>
         <div class="ws-card">
           <div class="ws-changelog-item">
             <span class="ws-cl-dot"></span>
             <div>
-              <div class="ws-cl-ver">v3.0.0<span class="ws-cl-date">2026-09-18</span></div>
-              <div class="ws-cl-body">课程表支持 XLS 导入；实习求职新增真实分步简历流程与投递状态跟踪；个人中心全新改版，新增个人空间与相册；浴室排队移至首页；新增指引模式。</div>
+              <div class="ws-cl-ver">v9.0.0<span class="ws-cl-date">2026-06</span></div>
+              <div class="ws-cl-body">全站 Apple Liquid Glass 毛玻璃改版 + SF Pro 官方字体；首页引入 Spark 徽章光雨视觉；应用官网全新排版。</div>
             </div>
           </div>
           <div class="ws-changelog-item">
             <span class="ws-cl-dot"></span>
             <div>
-              <div class="ws-cl-ver">v2.0.0</div>
-              <div class="ws-cl-body">新增校园外卖、存钱计划、校园圈子模块；全面适配暗色主题。</div>
+              <div class="ws-cl-ver">v8.0.0<span class="ws-cl-date">2026-06</span></div>
+              <div class="ws-cl-body">扫码性能五项优化（空闲预加载 / 720p 静音 / GPU 扫描线 / 节流 500ms / 释放资源）；个人中心头像直换 + 加微信与喝咖啡入口；快递手动录入与全部清零；浴室改名 + 实时钟；AI DeepSeek 后端代理；地图列表滑动优化。</div>
+            </div>
+          </div>
+          <div class="ws-changelog-item">
+            <span class="ws-cl-dot"></span>
+            <div>
+              <div class="ws-cl-ver">v7.0.0</div>
+              <div class="ws-cl-body">3D 地图 60/40 重构与标记聚合；AI 本地校园助手；首页与个人中心改版；身份码相册识别。</div>
             </div>
           </div>
           <div class="ws-changelog-item">
@@ -199,11 +278,76 @@
         </div>
       </div>
 
+      <!-- CTA -->
+      <div class="ws-cta-wrap anim-fade-in-up stagger-5">
+        <a href="index.html" class="ws-cta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><polyline points="12 5 19 12 12 19"/></svg>
+          进入校园生活
+        </a>
+      </div>
+
       <div class="ws-foot">
-        校园取件开发团队 · © 2026 Campus Life<br>
+        校园生活开发团队 · © 2026 Campus Life<br>
         本站为应用介绍页，数据功能请进入应用体验
       </div>
     </main>
   </div>
+  <script>
+    (function () {
+      /* SparkBadge 挂载（与首页同款：IntersectionObserver + visibilitychange 休眠） */
+      var CONTROLS = { speed: 1.00, particleAmount: 1.00, rainAmount: 1.00, turbulence: 1.00, spread: 1.00 };
+      var host = document.getElementById('sparkBadge');
+      var frame = null;
+      var intersects = true;
+      var ready = false;
+
+      function postControls() {
+        if (frame && frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'spark-badge-controls', controls: CONTROLS }, '*');
+        }
+      }
+      function setState() {
+        host.setAttribute('data-state', !frame ? 'paused' : ready ? 'ready' : 'loading');
+      }
+      function mount() {
+        if (frame) return;
+        ready = false;
+        frame = document.createElement('iframe');
+        frame.className = 'spark-badge__frame';
+        frame.title = 'Spark 徽章 · 光雨凭证';
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.setAttribute('loading', 'lazy');
+        frame.addEventListener('load', function () {
+          postControls();
+          ready = true;
+          frame.classList.add('is-ready');
+          setState();
+        });
+        frame.src = 'spark-badge.html';
+        host.appendChild(frame);
+        postControls();
+        setState();
+      }
+      function unmount() {
+        if (!frame) return;
+        frame.remove();
+        frame = null;
+        ready = false;
+        setState();
+      }
+      function sync() {
+        if (intersects && document.visibilityState !== 'hidden') mount();
+        else unmount();
+      }
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          intersects = entries[0].isIntersecting;
+          sync();
+        }, { rootMargin: '80px' }).observe(host);
+      }
+      document.addEventListener('visibilitychange', sync);
+      sync();
+    })();
+  </script>
 </body>
 </html>
