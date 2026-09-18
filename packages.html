@@ -14,24 +14,96 @@
 </head>
 <body data-page="packages">
   <div class="app-shell">
-    <header class="app-header">
-      <div class="header-left"></div>
+    <header class="app-header header--left">
       <div class="header-title">全部快递</div>
-      <div class="header-right"></div>
+      <div class="header-spacer"></div>
+      <div class="header-right">
+        <a href="messages.html" class="header-back-btn" style="position:relative;margin-right:6px;">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="badge-dot" id="msgBadge" style="position:absolute;top:6px;right:6px;background:var(--color-danger);width:8px;height:8px;display:none;"></span>
+        </a>
+        <a href="scan.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </a>
+      </div>
     </header>
     <main class="app-content" id="mainContent">
       <div class="px-4" style="padding-top:12px;">
-        <!-- 搜索栏 -->
-        <div class="search-bar anim-fade-in-up">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="searchInput" placeholder="搜索快递公司/单号/取件点">
+        <!-- 待取快递横幅（原首页区块迁入） -->
+        <div class="hero-card anim-fade-in-up">
+          <div class="hero-card-main">
+            <div class="hero-card-row">
+              <span class="hero-card-num" id="pendingCount">0</span>
+              <span class="hero-card-unit">件待取</span>
+            </div>
+            <p class="hero-card-sub" id="pendingHint">暂无待取快递</p>
+            <a href="javascript:void(0)" class="hero-card-cta" id="heroCta">
+              查看待取
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+          <svg class="hero-card-deco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
 
-        <!-- 筛选 chips -->
-        <div class="filter-chips anim-fade-in-up stagger-1" id="filterChips" style="margin-top:12px;"></div>
+        <!-- 快捷操作网格（原首页「校园取件」功能迁入） -->
+        <div class="quick-grid">
+          <a href="scan.html" class="quick-action quick-action--primary anim-fade-in-up stagger-1">
+            <div class="quick-action-icon quick-action-icon--primary">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+            </div>
+            <span class="quick-action-label quick-action-label--primary">扫码取件</span>
+          </a>
+          <a href="scan.html" class="quick-action anim-fade-in-up stagger-2">
+            <div class="quick-action-icon" style="background:#DCFCE7;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <span class="quick-action-label">本地导入</span>
+          </a>
+          <a href="track.html" class="quick-action anim-fade-in-up stagger-3">
+            <div class="quick-action-icon" style="background:#FFEDD5;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            </div>
+            <span class="quick-action-label">查快递</span>
+          </a>
+          <a href="records.html" class="quick-action anim-fade-in-up stagger-4">
+            <div class="quick-action-icon" style="background:#EDE9FE;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <span class="quick-action-label">取件记录</span>
+          </a>
+        </div>
+
+        <!-- 常用取件点（原首页区块迁入） -->
+        <div style="margin-top:20px;" class="anim-fade-in-up stagger-3">
+          <div class="section-header">
+            <span class="section-title">常用取件点</span>
+            <a href="map.html" class="section-link">查看地图
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </a>
+          </div>
+          <div id="pointsList" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;"></div>
+        </div>
+
+        <!-- 常用浴室（原首页区块迁入） -->
+        <div id="bathroomCard" style="margin-top:16px;margin-bottom:4px;"></div>
+
+        <!-- 全部快递 -->
+        <div style="margin-top:20px;" class="anim-fade-in-up stagger-4">
+          <div class="section-header">
+            <span class="section-title">全部快递</span>
+          </div>
+          <!-- 搜索栏 -->
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="searchInput" placeholder="搜索快递公司/单号/取件点">
+          </div>
+
+          <!-- 筛选 chips -->
+          <div class="filter-chips" id="filterChips" style="margin-top:12px;"></div>
+        </div>
 
         <!-- 快递列表 -->
-        <div id="pkgList" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;"></div>
+        <div id="pkgList" style="margin-top:14px;display:flex;flex-direction:column;gap:12px;"></div>
       </div>
     </main>
     <!-- 固定 tab bar —— 以下代码完全不可修改 -->
@@ -61,6 +133,7 @@
     </nav>
   </div>
   <script src="config.js"></script>
+  <script src="campus-data.js"></script>
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
@@ -97,9 +170,95 @@
                 Storage._write(Storage.KEYS.packages, localList);
               }
             });
-            renderList();
+            loadPackages();
+            renderBanner();
+            renderPoints();
           }
         });
+      }
+
+      // ---- 待取横幅（原首页逻辑迁入） ----
+      function renderBanner() {
+        var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; });
+        document.getElementById('pendingCount').textContent = pending.length;
+        var urgent = pending.filter(function (p) {
+          if (!p.expiresIn) return false;
+          var m = p.expiresIn.match(/(\d+)/);
+          return m && parseInt(m[1]) <= 24;
+        });
+        var hint = document.getElementById('pendingHint');
+        if (urgent.length > 0) {
+          hint.textContent = '其中 ' + urgent.length + ' 件将在 24 小时内到期';
+        } else if (pending.length > 0) {
+          hint.textContent = '暂无紧急待取件，可安排时间取件';
+        } else {
+          hint.textContent = '当前没有待取快递，放松一下吧';
+        }
+      }
+
+      // 横幅 CTA：切到「待取」筛选
+      document.getElementById('heroCta').addEventListener('click', function () {
+        App.state.filter = 'pending';
+        document.querySelectorAll('.chip[data-filter]').forEach(function (c) {
+          c.classList.toggle('active', c.dataset.filter === 'pending');
+        });
+        loadPackages();
+        listEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+
+      // ---- 常用取件点（原首页逻辑迁入） ----
+      function renderPoints() {
+        var points = Storage.getPickupPoints().slice(0, 3);
+        var html = '';
+        points.forEach(function (pp, i) {
+          var typeLabel = pp.type === 'station' ? '驿站' : '快递柜';
+          var typeColor = pp.type === 'station' ? 'var(--color-primary)' : 'var(--color-accent)';
+          var typeBg = pp.type === 'station' ? 'var(--color-primary-light)' : 'var(--color-accent-light)';
+          html += '<a href="map.html" class="card card--clickable anim-fade-in-up stagger-' + (i + 1) + '" style="min-width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
+              '<span style="font-size:14px;font-weight:600;line-height:1.4;">' + pp.name + '</span>' +
+              '<span class="badge" style="background:' + typeBg + ';color:' + typeColor + ';flex-shrink:0;">' + typeLabel + '</span>' +
+            '</div>' +
+            '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-sub);">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+              '<span>' + pp.distance + ' · ' + pp.walkTime + '</span>' +
+            '</div>';
+          if (pp.pendingCount > 0) {
+            html += '<div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-warning);font-weight:600;">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' +
+              '<span>' + pp.pendingCount + ' 件待取</span>' +
+            '</div>';
+          } else {
+            html += '<div style="font-size:12px;color:var(--color-text-hint);">暂无待取件</div>';
+          }
+          html += '</a>';
+        });
+        document.getElementById('pointsList').innerHTML = html;
+      }
+
+      // ---- 常用浴室卡片（原首页区块迁入；无数据则不显示） ----
+      function renderBathroomCard() {
+        var wrap = document.getElementById('bathroomCard');
+        var bath = Storage.getDefaultBathroom();
+        if (!bath) { wrap.innerHTML = ''; return; }
+        wrap.innerHTML =
+          '<a href="bathroom.html" class="card card--clickable anim-fade-in-up" style="display:flex;align-items:center;gap:12px;padding:14px 16px;">' +
+            '<div style="width:42px;height:42px;border-radius:14px;background:#E0F2FE;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🛁</div>' +
+            '<div style="flex:1;min-width:0;">' +
+              '<div style="font-size:15px;font-weight:700;color:var(--color-text);">' + bath.name + '</div>' +
+              '<div style="font-size:12px;color:var(--color-text-hint);margin-top:3px;display:flex;align-items:center;gap:8px;">' +
+                '<span style="display:inline-flex;align-items:center;gap:3px;">🕐 ' + (bath.hours || '开放时间以现场为准') + '</span>' +
+                '<span style="display:inline-flex;align-items:center;gap:3px;">📏 约' + (bath.distance || '--') + 'm</span>' +
+              '</div>' +
+            '</div>' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-hint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '</a>';
+      }
+
+      // 未读消息红点
+      function renderBadge() {
+        var badge = document.getElementById('msgBadge');
+        if (badge) badge.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
       }
 
       // 渲染筛选 chips
@@ -185,11 +344,20 @@
       function refresh() {
         App.state.keyword = searchInput.value.trim();
         loadPackages();
+        renderBanner();
+        renderPoints();
+        renderBathroomCard();
+        renderBadge();
+        App.toastSuccess('已刷新');
         return Promise.resolve();
       }
 
       renderChips();
       loadPackages();
+      renderBanner();
+      renderPoints();
+      renderBathroomCard();
+      renderBadge();
       App.initPullToRefresh(mainContent, refresh);
     })();
   </script>
