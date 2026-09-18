@@ -8,8 +8,16 @@ var DEMO_DATA = {
     name: "张同学",
     studentId: "2025000001",
     phone: "138****0000",
-    campus: "演示校区 · 兰苑 5号楼",
+    campus: "涵江校区 · 兰苑 5号楼",
+    campusId: "hanjiang",
     dormitory: "兰苑 5号楼",
+    dorm: {
+      campusId: "hanjiang",
+      areaId: "lanyuan",
+      areaName: "兰苑",
+      building: "5号楼",
+      room: "302室"
+    },
     boundPhone: false,
     avatar: null,
     packageCount: 6,
