@@ -524,7 +524,7 @@ check('scan.html 主线程只做抓帧，预处理走 Worker', scanSrc.indexOf("
 check('Worker 不可用时回退主线程同步预处理', scanSrc.indexOf('binarizeCanvasSync') !== -1);
 
 // 7.7 动画 GPU 化与列表分片
-check('扫码线动画使用 transform（不触发 Layout/Paint）', scanSrc.indexOf('translateY(230px)') !== -1 && scanSrc.indexOf('top: calc(100% - 6px)') === -1);
+check('扫描框改四角呼吸灯（cornerBreath，旧绿色扫描线已移除）', scanSrc.indexOf('@keyframes cornerBreath') !== -1 && scanSrc.indexOf('translateY(230px)') === -1);
 const cssSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
 // 关键帧体含一层嵌套（0%/from/to 选择器），需嵌套感知正则
 const kfBlocks = cssSrc.match(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*\s*[^{}]*\}/g) || [];
@@ -1351,7 +1351,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('jobs.html 含我的投递分区', jobsSrc.indexOf('我的投递') !== -1);
   check('jobs.html 含校园求职墙（legacy 求职意向展示）',
     jobsSrc.indexOf('求职墙') !== -1 && jobsSrc.indexOf('lifeGetResume') !== -1);
-  check('jobs.html 含内置种子虚拟岗位（8 个）', (jobsSrc.match(/id: 'J\d+'/g) || []).length >= 8);
+  check('jobs.html 含内置种子虚拟岗位（≥20 个）', (jobsSrc.match(/id: 'J\d+'/g) || []).length >= 20);
 
   // 14.9 storage.js 生活模块数据层
   check('storage.js KEYS 含 lifeDB', /life:\s*'lifeDB'/.test(fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8')));
@@ -1416,7 +1416,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 升级为 v3', /var VERSION = 'v3'/.test(swSrc));
+  check('sw.js VERSION 升级为 v4', /var VERSION = 'v4'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1467,16 +1467,21 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('settings.html 已移除问题反馈入口', setSrc2.indexOf('feedback.html') === -1);
   check('profile.html 展示结构化宿舍（getUserDorm）', profSrc3.indexOf('getUserDorm') !== -1);
 
-  // 15.4 个人空间 myhome.html
+  // 15.4 个人空间 myhome.html（极简纯展示：编辑能力已下沉 profile-edit.html）
   check('myhome.html 存在', fs.existsSync(path.join(ROOT, 'myhome.html')));
   const myhomeSrc = fs.existsSync(path.join(ROOT, 'myhome.html'))
     ? fs.readFileSync(path.join(ROOT, 'myhome.html'), 'utf8') : '';
-  check('myhome.html 含相册（lifeGetAlbum/lifeAddPhotos/lifeRemovePhoto）',
-    myhomeSrc.indexOf('lifeGetAlbum') !== -1 && myhomeSrc.indexOf('lifeAddPhotos') !== -1 &&
-    myhomeSrc.indexOf('lifeRemovePhoto') !== -1);
-  check('myhome.html 含头像编辑（avatarSheet）', myhomeSrc.indexOf('avatarSheet') !== -1);
-  check('myhome.html 含资料修改（saveUserDorm）', myhomeSrc.indexOf('saveUserDorm') !== -1);
-  check('myhome.html 相册图可发帖（forum.html?compose=1）', myhomeSrc.indexOf('forum.html?compose=1') !== -1);
+  check('myhome.html 纯展示型（mh-hero 大头像+名字焦点）',
+    myhomeSrc.indexOf('mh-hero') !== -1 && myhomeSrc.indexOf('编辑资料') !== -1 &&
+    myhomeSrc.indexOf('profile-edit.html') !== -1);
+  check('myhome.html 快递动态数据化（statPending/statIncoming）',
+    myhomeSrc.indexOf('statPending') !== -1 && myhomeSrc.indexOf('statIncoming') !== -1 &&
+    myhomeSrc.indexOf('packages.html?filter=incoming') !== -1);
+  check('myhome.html 相册改为入口卡（mh-album，不再内联网格）',
+    myhomeSrc.indexOf('mh-album') !== -1 && myhomeSrc.indexOf('album-grid') === -1);
+  check('myhome.html 无内联编辑表单（avatarSheet/inpName/saveUserDorm 已移除）',
+    myhomeSrc.indexOf('avatarSheet') === -1 && myhomeSrc.indexOf('inpName') === -1 &&
+    myhomeSrc.indexOf('saveUserDorm') === -1);
 
   // 15.5 相册存储层
   check('storage.js 含相册 API（lifeGetAlbum/lifeAddPhotos/lifeRemovePhoto）',
@@ -1513,6 +1518,96 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   // 15.9 浴室入口移至首页
   check('index.html 含浴室入口卡片（bathroom.html）', idxSrc4.indexOf('bathroom.html') !== -1);
   check('packages.html 已移除浴室卡', pkgSrc4.indexOf('bathroomCard') === -1);
+
+  // ===== [16] 本轮优化：课程导入/攒钱DIY/论坛头像/扫码沉浸式/jobs蓝色/极简主页/快递降噪/AI图标/暗色对比度 =====
+  console.log('\n[16] 本轮九块优化');
+
+  // 16.1 课程表 XLS/JSON 统一导入管线
+  const scheduleSrc2 = fs.readFileSync(path.join(ROOT, 'schedule.html'), 'utf8');
+  check('schedule.html 使用 XLSX 库解析表格', scheduleSrc2.indexOf('xlsx.full.min.js') !== -1);
+  check('schedule.html 含 extractWeeks 周次提取', scheduleSrc2.indexOf('function extractWeeks') !== -1);
+
+  // 16.2 攒钱目标 DIY（图标字段 + 更新 API）
+  const storageSrc5 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const savingsSrc2 = fs.readFileSync(path.join(ROOT, 'savings.html'), 'utf8');
+  check('storage.js 含 lifeUpdateGoal 局部更新', storageSrc5.indexOf('lifeUpdateGoal:') !== -1);
+  check('storage.js lifeAddGoal 支持 icon 字段', /lifeAddGoal[\s\S]{0,600}icon/.test(storageSrc5));
+  check('savings.html 含 DIY 图标选择器（goalIconGrid/GOAL_ICONS）',
+    savingsSrc2.indexOf('goalIconGrid') !== -1 && savingsSrc2.indexOf('GOAL_ICONS') !== -1);
+
+  // 16.3 论坛头像与个人中心同源
+  const forumSrc3 = fs.readFileSync(path.join(ROOT, 'forum.html'), 'utf8');
+  check('storage.js 发帖/评论快照 authorAvatar',
+    storageSrc5.indexOf('authorAvatar: u.avatar') !== -1);
+  check('forum.html avatarOf 读取 authorAvatar',
+    forumSrc3.indexOf('function avatarOf') !== -1 && forumSrc3.indexOf('authorAvatar') !== -1);
+
+  // 16.4 扫码沉浸式重构
+  const scanSrc2 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  check('scan.html 全屏扫描舞台 scan-stage', scanSrc2.indexOf('scan-stage') !== -1);
+  check('scan.html 四角呼吸灯（scan-corner + cornerBreath 1.5s）',
+    scanSrc2.indexOf('scan-corner') !== -1 && scanSrc2.indexOf('cornerBreath 1.5s') !== -1);
+  check('scan.html 成功对勾动画 + 震动反馈',
+    scanSrc2.indexOf('checkPop') !== -1 && scanSrc2.indexOf('vibrate') !== -1);
+  check('scan.html 3 秒慢提示浮现（slowHint/startSlowHints，无常驻提示）',
+    scanSrc2.indexOf('id="slowHint"') !== -1 && scanSrc2.indexOf('startSlowHints') !== -1 &&
+    scanSrc2.indexOf('scan-engine-hint') !== -1);
+  check('scan.html 左上角退出返回首页', /scan-nav[\s\S]{0,500}index\.html/.test(scanSrc2));
+  check('styles.css 扫码页底部导航毛玻璃（blur(20px)）',
+    cssSrc.indexOf('body[data-page="scan"] .tab-bar') !== -1 &&
+    /body\[data-page="scan"\] \.tab-bar[\s\S]{0,400}blur\(20px\)/.test(cssSrc));
+
+  // 16.5 jobs 蓝色体系 + 简历照片/导出/导入/20+ 岗位
+  const jobsSrc3 = fs.readFileSync(path.join(ROOT, 'jobs.html'), 'utf8');
+  check('jobs.html 橙色零残留',
+    ['F97316', 'EA580C', 'FB923C', 'FFEDD5', 'f97316', 'ea580c']
+      .every(hex => jobsSrc3.indexOf(hex) === -1));
+  check('jobs.html 蓝色主色体系（#3B82F6/#2563EB/#60A5FA/#22D3EE）',
+    ['#3B82F6', '#2563EB', '#60A5FA', '#22D3EE'].every(hex => jobsSrc3.toUpperCase().indexOf(hex) !== -1));
+  check('jobs.html 证件照上传（rzPhotoInput + compressImage）',
+    jobsSrc3.indexOf('rzPhotoInput') !== -1 && jobsSrc3.indexOf('compressImage') !== -1);
+  check('jobs.html 简历导出 Word/PDF/Markdown/JSON',
+    ['exportResumeWord', 'exportResumePdf', 'exportResumeMarkdown', 'exportResumeJson']
+      .every(fn => jobsSrc3.indexOf(fn) !== -1));
+  check('jobs.html 支持简历 JSON 导入预填（importResumeInput/openResumeWizard）',
+    jobsSrc3.indexOf('importResumeInput') !== -1 && /openResumeWizard\s*\(\s*prefill/.test(jobsSrc3));
+  check('jobs.html 空字段显示「未填写」', jobsSrc3.indexOf('未填写') !== -1);
+  check('storage.js lifeSaveResume 白名单含 photo',
+    /lifeSaveResume[\s\S]{0,700}photo:/.test(storageSrc5));
+
+  // 16.6 myhome 纯展示 + profile-edit 编辑/相册分离
+  const myhomeSrc2 = fs.readFileSync(path.join(ROOT, 'myhome.html'), 'utf8');
+  const peSrc2 = fs.readFileSync(path.join(ROOT, 'profile-edit.html'), 'utf8');
+  check('myhome.html 编辑入口跳 profile-edit.html', myhomeSrc2.indexOf("href='profile-edit.html'") !== -1 || myhomeSrc2.indexOf('href="profile-edit.html"') !== -1);
+  check('profile-edit.html 承载相册管理（album-grid/btnImportPhoto/lifeRemovePhoto）',
+    peSrc2.indexOf('album-grid') !== -1 && peSrc2.indexOf('btnImportPhoto') !== -1 &&
+    peSrc2.indexOf('lifeRemovePhoto') !== -1);
+  check('profile-edit.html 相册发帖深链（compose=1&img=）', peSrc2.indexOf('compose=1&img=') !== -1);
+  check('profile-edit.html 头像/照片走 compressImage', peSrc2.indexOf('compressImage') !== -1);
+
+  // 16.7 packages 极简降噪 + 一键取件 + 深链筛选
+  const pkgSrc5 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  check('packages.html 卡片默认隐藏物流单号', pkgSrc5.indexOf('物流单号') === -1);
+  check('packages.html 待取件一键取件（quickPickup → API.confirmPickup）',
+    pkgSrc5.indexOf('window.quickPickup') !== -1 && pkgSrc5.indexOf('API.confirmPickup') !== -1);
+  check('packages.html 支持 ?filter= 深链',
+    pkgSrc5.indexOf("new URLSearchParams(location.search).get('filter')") !== -1);
+  check('packages.html 快捷入口单色调（is-neutral）',
+    (pkgSrc5.match(/is-neutral/g) || []).length >= 3);
+
+  // 16.8 分享入口移除 + 设置 AI 图标 + 暗色蓝色提亮 + 图片懒加载
+  const profSrc4 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const setSrc3 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+  check('profile.html 已移除「分享我的作品」入口与死代码',
+    profSrc4.indexOf('分享我的作品') === -1 && profSrc4.indexOf('showShareModal') === -1);
+  check('settings.html 显示/性能选项 AI 渐变图标（ai-ico + aiGrad）',
+    setSrc3.indexOf('class="ai-ico"') !== -1 && setSrc3.indexOf('id="aiGrad"') !== -1 &&
+    (setSrc3.match(/class="ai-ico"/g) || []).length === 7);
+  check('settings.html emoji 选项已替换（无 🌓🌙⚙️🔋🚀）',
+    ['🌓', '🌙', '⚙️', '🔋', '🚀'].every(e => setSrc3.indexOf(e) === -1));
+  check('styles.css 暗色蓝色文字提亮 20%（#629BF8，含系统暗色）',
+    (cssSrc.match(/--color-primary-text: #629BF8/g) || []).length >= 2);
+  check('forum.html 长列表图片懒加载', forumSrc3.indexOf('loading="lazy"') !== -1);
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

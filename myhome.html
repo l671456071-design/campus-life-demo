@@ -12,32 +12,35 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    .mh-avatar-wrap { position:relative; width:76px; height:76px; margin:0 auto; transition:transform .15s; cursor:pointer; }
-    .mh-avatar-wrap:active { transform:scale(.95); }
-    .mh-avatar-badge { position:absolute; right:0; bottom:0; width:24px; height:24px; border-radius:50%; background:#fff; color:var(--color-primary); display:flex; align-items:center; justify-content:center; box-shadow:var(--shadow-sm); }
-    .mh-field { margin-bottom:12px; }
-    .mh-field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
-    .mh-field input, .mh-field select { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
-    .mh-field input:focus, .mh-field select:focus { border-color:var(--color-primary); }
-    .mh-row { display:flex; gap:10px; }
-    .mh-row .mh-field { flex:1; }
-    .album-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-    .album-item { position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1/1; background:var(--color-surface-alt); }
-    .album-item img { width:100%; height:100%; object-fit:cover; display:block; }
-    .album-acts { position:absolute; left:0; right:0; bottom:0; display:flex; }
-    .album-acts button { flex:1; border:none; font-size:11px; padding:6px 0; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; }
-    .album-acts button + button { border-left:1px solid rgba(255,255,255,.2); }
-    .avatar-sheet-backdrop { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
-    .avatar-sheet-backdrop.show { opacity:1; pointer-events:auto; }
-    .avatar-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:80vh; overflow-y:auto; }
-    .avatar-sheet-backdrop.show .avatar-sheet { transform:translateY(0); }
-    .avatar-sheet-title { font-size:16px; font-weight:800; text-align:center; margin-bottom:14px; }
-    .avatar-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px; }
-    .avatar-grid-item { width:52px; height:52px; border-radius:50%; background:var(--color-surface-alt); display:flex; align-items:center; justify-content:center; font-size:26px; margin:0 auto; cursor:pointer; border:2.5px solid transparent; }
-    .avatar-grid-item.selected { border-color:var(--color-primary); }
-    .avatar-sheet-btn { display:block; width:100%; text-align:center; padding:12px 0; border-radius:12px; border:none; background:var(--color-surface-alt); color:var(--color-text); font-size:14px; font-weight:600; margin-top:8px; cursor:pointer; }
-    .avatar-sheet-btn.danger { color:var(--color-danger); }
-    .avatar-sheet-btn:active { opacity:.7; }
+    /* ===== 极简纯展示型主页：单焦点 · 大留白 · 单色调 ===== */
+    .mh-hero { text-align:center; padding:34px 16px 8px; }
+    .mh-hero-avatar { width:96px; height:96px; margin:0 auto; }
+    .mh-hero-name { font-size:22px; font-weight:800; color:var(--color-text); margin-top:16px; letter-spacing:.5px; }
+    .mh-hero-id { font-size:12px; color:var(--color-text-hint); margin-top:5px; font-family:var(--font-mono); }
+    .mh-hero-dorm { font-size:12.5px; color:var(--color-text-sub); margin-top:6px; }
+    .mh-edit-btn { display:inline-flex; align-items:center; gap:6px; margin-top:20px; border:1px solid var(--color-primary); color:var(--jb-edit,var(--color-primary)); background:transparent; border-radius:99px; padding:9px 26px; font-size:14px; font-weight:600; transition:all .2s; }
+    .mh-edit-btn:active { background:rgba(59,130,246,.1); }
+
+    .mh-wrap { padding:0 16px; }
+    .mh-section { margin-top:26px; }
+
+    /* 快递动态：两列大数字，无框呼吸感 */
+    .mh-stat { display:flex; align-items:stretch; padding:20px 8px; }
+    .mh-stat-cell { flex:1; text-align:center; text-decoration:none; display:block; }
+    .mh-stat-cell + .mh-stat-cell { border-left:1px solid var(--color-border-light); }
+    .mh-stat-num { font-size:32px; font-weight:800; color:var(--color-primary); line-height:1.1; font-family:var(--font-mono); }
+    .mh-stat-label { font-size:12.5px; color:var(--color-text-sub); margin-top:7px; }
+    .mh-stat-cell:active .mh-stat-num { opacity:.65; }
+
+    /* 相册入口：单行，点进编辑页管理 */
+    .mh-album { display:flex; align-items:center; gap:12px; padding:14px 16px; text-decoration:none; }
+    .mh-album:active { background:var(--color-surface-alt); }
+    .mh-album-cover { width:52px; height:52px; border-radius:14px; object-fit:cover; background:var(--color-surface-alt); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; overflow:hidden; }
+    .mh-album-cover img { width:100%; height:100%; object-fit:cover; }
+    .mh-album-main { flex:1; min-width:0; }
+    .mh-album-title { font-size:15px; font-weight:700; color:var(--color-text); }
+    .mh-album-sub { font-size:12px; color:var(--color-text-hint); margin-top:3px; }
+    .mh-album-arrow { color:var(--color-text-hint); flex-shrink:0; }
   </style>
 </head>
 <body data-page="myhome">
@@ -53,65 +56,52 @@
       <div class="header-right" style="width:32px;"></div>
     </header>
 
-    <main class="app-content" id="mainContent" style="padding-bottom:32px;">
-      <!-- 头像与身份 -->
-      <div class="card anim-fade-in-up" style="background:linear-gradient(135deg,#2563EB,#1D4ED8); color:#fff; padding:22px 16px 18px; margin:16px; text-align:center; position:relative; overflow:hidden;">
-        <svg style="position:absolute; right:-14px; top:-14px; width:80px; height:80px; opacity:0.1;" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
-        <div class="mh-avatar-wrap" onclick="openAvatarSheet()" role="button" aria-label="更换头像">
-          <span id="avatarPreview" style="display:block;"></span>
-          <span class="mh-avatar-badge">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-          </span>
-        </div>
-        <div style="font-size:17px; font-weight:800; margin-top:10px;" id="mhName">校园用户</div>
-        <div style="font-size:12px; opacity:.9; margin-top:3px; font-family:var(--font-mono);" id="mhId">ID：--</div>
-      </div>
+    <main class="app-content" style="padding-bottom:calc(32px + env(safe-area-inset-bottom));">
+      <!-- 本屏唯一视觉焦点：身份 -->
+      <section class="mh-hero anim-fade-in-up">
+        <div class="mh-hero-avatar" id="avatarPreview"></div>
+        <div class="mh-hero-name" id="mhName">校园用户</div>
+        <div class="mh-hero-id" id="mhId">ID：--</div>
+        <div class="mh-hero-dorm" id="mhDorm"></div>
+        <a href="profile-edit.html" class="mh-edit-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          编辑资料
+        </a>
+      </section>
 
-      <!-- 修改个人信息 -->
-      <div style="padding:0 16px;">
-        <div class="section-header"><span class="section-title">修改个人信息</span></div>
-        <div class="card" style="padding:16px;">
-          <div class="mh-field"><label>姓名</label><input type="text" id="inpName" maxlength="12" placeholder="你的名字"></div>
-          <div class="mh-field"><label>校区</label><select id="selCampus"></select></div>
-          <div class="mh-row">
-            <div class="mh-field"><label>片区</label><select id="selArea"></select></div>
-            <div class="mh-field"><label>楼栋</label><select id="selBuilding"></select></div>
+      <div class="mh-wrap">
+        <!-- 快递动态：数据化 -->
+        <section class="mh-section anim-fade-in-up stagger-1">
+          <div class="section-header"><span class="section-title">快递动态</span></div>
+          <div class="card mh-stat">
+            <a class="mh-stat-cell" href="packages.html">
+              <div class="mh-stat-num" id="statPending">0</div>
+              <div class="mh-stat-label">待取件</div>
+            </a>
+            <a class="mh-stat-cell" href="packages.html?filter=incoming">
+              <div class="mh-stat-num" id="statIncoming">0</div>
+              <div class="mh-stat-label">运输中</div>
+            </a>
           </div>
-          <div class="mh-field"><label>房间号（选填）</label><input type="text" id="inpRoom" maxlength="10" placeholder="例如 302"></div>
-          <button class="btn btn-primary btn-block" id="btnSaveProfile">保存资料</button>
-        </div>
+        </section>
 
-        <!-- 我的相册 -->
-        <div class="section-header" style="margin-top:20px;">
-          <span class="section-title">我的相册</span>
-          <span class="text-sub" style="font-size:11px;" id="albumCount"></span>
-        </div>
-        <div class="card" style="padding:14px;">
-          <div style="display:flex; gap:10px; margin-bottom:12px;">
-            <button class="btn btn-primary" style="flex:1;" id="btnImport">导入照片</button>
-            <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
-          </div>
-          <div id="albumGrid" class="album-grid"></div>
-          <div style="font-size:11px; color:var(--color-text-hint); margin-top:10px;">照片压缩后仅保存在本机（上限 30 张），可一键发布到自己的帖子上</div>
-        </div>
+        <!-- 相册入口（管理功能在编辑页） -->
+        <section class="mh-section anim-fade-in-up stagger-2">
+          <div class="section-header"><span class="section-title">我的相册</span></div>
+          <a class="card mh-album" href="profile-edit.html#album">
+            <div class="mh-album-cover" id="albumCover">🖼️</div>
+            <div class="mh-album-main">
+              <div class="mh-album-title">照片墙</div>
+              <div class="mh-album-sub" id="albumSub">还没有照片</div>
+            </div>
+            <svg class="mh-album-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        </section>
       </div>
     </main>
   </div>
 
-  <!-- 更换头像 -->
-  <div class="avatar-sheet-backdrop" id="avatarSheet" onclick="if(event.target===this)closeAvatarSheet()">
-    <div class="avatar-sheet">
-      <div class="avatar-sheet-title">更换头像</div>
-      <div class="avatar-grid" id="avatarGrid"></div>
-      <button class="avatar-sheet-btn" onclick="triggerUpload()">从相册上传图片</button>
-      <button class="avatar-sheet-btn danger" onclick="resetAvatar()">恢复默认头像</button>
-      <button class="avatar-sheet-btn" onclick="closeAvatarSheet()">取消</button>
-    </div>
-  </div>
-  <input type="file" id="avatarFileInput" accept="image/*" style="display:none;">
-
   <script src="config.js"></script>
-  <script src="campus-data.js"></script>
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
@@ -119,200 +109,55 @@
   <script src="api-client.js"></script>
   <script src="app.js"></script>
   <script>
-    var AVATAR_EMOJIS = ['🙂', '😎', '🤓', '😺', '🐶', '🦊', '🐼', '🌟', '🚀', '🏀', '🎮', '🎧', '📚', '🍜', '🌙'];
-    var draftAvatar = null;
-
-    function esc(s) {
-      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-      });
-    }
-
-    // ---- 身份卡片 ----
+    // ---- 纯展示渲染：头像 / 名字 / ID / 宿舍 ----
     function renderIdentity() {
       var user = Storage.getUser();
-      draftAvatar = user.avatar || null;
-      document.getElementById('avatarPreview').innerHTML = App.avatarHtml(user, 76, '#fff', '#2563EB');
+      document.getElementById('avatarPreview').innerHTML = App.avatarHtml(user, 96);
       document.getElementById('mhName').textContent = user.name || '校园用户';
       document.getElementById('mhId').textContent = 'ID：' + Storage.getUserId();
-    }
-
-    // ---- 资料表单（校区 / 片区 / 楼栋三级联动）----
-    function fillSelect(id, list, placeholder) {
-      var el = document.getElementById(id);
-      el.innerHTML = '<option value="">' + placeholder + '</option>' + list.map(function (x) {
-        return '<option value="' + esc(x.id || x) + '">' + esc(x.name || x) + '</option>';
-      }).join('');
-    }
-
-    function initProfileForm() {
-      var campuses = Storage.getCampusAreas();
-      fillSelect('selCampus', campuses, '选择校区');
       var dorm = Storage.getUserDorm();
-      var user = Storage.getUser();
-      document.getElementById('inpName').value = user.name || '';
-      if (dorm && dorm.campusId) {
-        document.getElementById('selCampus').value = dorm.campusId;
-        loadAreas(dorm.campusId);
-        if (dorm.areaId) {
-          document.getElementById('selArea').value = dorm.areaId;
-          loadBuildings(dorm.areaId);
-          if (dorm.building) document.getElementById('selBuilding').value = dorm.building;
-        }
-        if (dorm.room) document.getElementById('inpRoom').value = dorm.room;
+      var parts = [];
+      if (dorm) {
+        if (dorm.areaName) parts.push(dorm.areaName);
+        if (dorm.building) parts.push(dorm.building);
+        if (dorm.room) parts.push(dorm.room + '室');
       }
-      document.getElementById('selCampus').addEventListener('change', function () {
-        loadAreas(this.value);
-        document.getElementById('selBuilding').innerHTML = '<option value="">选择楼栋</option>';
-      });
-      document.getElementById('selArea').addEventListener('change', function () {
-        loadBuildings(this.value);
-      });
+      document.getElementById('mhDorm').textContent = parts.join(' · ');
     }
 
-    function loadAreas(campusId) {
-      var areas = campusId ? Storage.getAreasByCampus(campusId) : [];
-      fillSelect('selArea', areas, '选择片区');
+    // ---- 快递动态数字 ----
+    function renderStats() {
+      var pkgs = Storage.getPackages();
+      var pending = pkgs.filter(function (p) { return p.status === 'pending'; }).length;
+      var incoming = pkgs.filter(function (p) { return p.status === 'incoming'; }).length;
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statIncoming').textContent = incoming;
     }
 
-    function loadBuildings(areaId) {
-      var buildings = areaId ? Storage.getBuildingsByArea(
-        document.getElementById('selCampus').value, areaId) : [];
-      fillSelect('selBuilding', buildings, '选择楼栋');
-    }
-
-    document.getElementById('btnSaveProfile').addEventListener('click', function () {
-      var name = document.getElementById('inpName').value.trim();
-      if (!name) { App.toast('请填写姓名'); return; }
-      var campusId = document.getElementById('selCampus').value;
-      var areaId = document.getElementById('selArea').value;
-      var building = document.getElementById('selBuilding').value;
-      var room = document.getElementById('inpRoom').value.trim();
-
-      var user = Storage.getUser();
-      user.name = name;
-      user.avatar = draftAvatar;
-      user.campusId = campusId;
-      Storage.saveUser(user);
-
-      if (areaId && building) {
-        var areaName = '';
-        Storage.getAreasByCampus(campusId).forEach(function (a) { if (a.id === areaId) areaName = a.name; });
-        Storage.saveUserDorm({ campusId: campusId, areaId: areaId, areaName: areaName, building: building, room: room });
-      } else {
-        user.dorm = null;
-        user.dormitory = '';
-        var campusName = '';
-        Storage.getCampusAreas().forEach(function (c) { if (c.id === campusId) campusName = c.name; });
-        user.campus = campusName;
-        Storage.saveUser(user);
-      }
-      renderIdentity();
-      App.toastSuccess('资料已保存');
-    });
-
-    // ---- 头像 ----
-    function openAvatarSheet() {
-      var user = Storage.getUser();
-      var cur = (user.avatar && user.avatar.type === 'emoji') ? user.avatar.emoji : null;
-      document.getElementById('avatarGrid').innerHTML = AVATAR_EMOJIS.map(function (e) {
-        return '<div class="avatar-grid-item' + (e === cur ? ' selected' : '') + '" data-emoji="' + e + '">' + e + '</div>';
-      }).join('');
-      document.querySelectorAll('.avatar-grid-item').forEach(function (el) {
-        el.addEventListener('click', function () {
-          draftAvatar = { type: 'emoji', emoji: this.dataset.emoji, bg: '#E0E7FF' };
-          applyAvatar();
-          closeAvatarSheet();
-        });
-      });
-      document.getElementById('avatarSheet').classList.add('show');
-    }
-    function closeAvatarSheet() { document.getElementById('avatarSheet').classList.remove('show'); }
-    function triggerUpload() { document.getElementById('avatarFileInput').click(); }
-    function resetAvatar() {
-      draftAvatar = null;
-      applyAvatar();
-      closeAvatarSheet();
-    }
-    function applyAvatar() {
-      var user = Storage.getUser();
-      user.avatar = draftAvatar;
-      Storage.saveUser(user);
-      document.getElementById('avatarPreview').innerHTML = App.avatarHtml(user, 76, '#fff', '#2563EB');
-      App.toastSuccess('头像已更新');
-    }
-    document.getElementById('avatarFileInput').addEventListener('change', function () {
-      var file = this.files[0];
-      if (!file) return;
-      App.compressImage(file, 400, 0.8).then(function (dataUrl) {
-        draftAvatar = { type: 'image', data: dataUrl };
-        applyAvatar();
-        closeAvatarSheet();
-      }).catch(function () { App.toast('图片处理失败，请换一张试试'); });
-      this.value = '';
-    });
-
-    // ---- 相册 ----
-    function renderAlbum() {
+    // ---- 相册入口：首图 + 数量 ----
+    function renderAlbumEntry() {
       var album = Storage.lifeGetAlbum();
-      document.getElementById('albumCount').textContent = album.length + '/30';
-      var grid = document.getElementById('albumGrid');
-      if (!album.length) {
-        grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:18px 0;color:var(--color-text-hint);font-size:12.5px;">还没有照片，点上方「导入照片」添加</div>';
-        return;
+      var cover = document.getElementById('albumCover');
+      var sub = document.getElementById('albumSub');
+      if (album.length) {
+        cover.innerHTML = '<img src="' + album[0].src + '" alt="相册封面" loading="lazy">';
+        sub.textContent = album.length + ' / 30 张照片';
+      } else {
+        cover.innerHTML = '🖼️';
+        sub.textContent = '还没有照片';
       }
-      grid.innerHTML = album.map(function (p) {
-        return '<div class="album-item"><img src="' + p.src + '" alt="照片">' +
-          '<div class="album-acts">' +
-            '<button data-publish="' + p.id + '">发帖</button>' +
-            '<button data-del="' + p.id + '">删除</button>' +
-          '</div></div>';
-      }).join('');
-      grid.querySelectorAll('[data-publish]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          location.href = 'forum.html?compose=1&img=' + encodeURIComponent(this.dataset.publish);
-        });
-      });
-      grid.querySelectorAll('[data-del]').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          Storage.lifeRemovePhoto(this.dataset.del);
-          renderAlbum();
-          App.toastSuccess('已删除');
-        });
-      });
     }
-
-    document.getElementById('btnImport').addEventListener('click', function () {
-      document.getElementById('photoInput').click();
-    });
-    document.getElementById('photoInput').addEventListener('change', function () {
-      var files = Array.prototype.slice.call(this.files || []);
-      if (!files.length) return;
-      if (files.length > 9) files = files.slice(0, 9);
-      App.toast('正在压缩并保存 ' + files.length + ' 张照片…');
-      Promise.all(files.map(function (f) { return App.compressImage(f, 900, 0.72); }))
-        .then(function (urls) {
-          var res = Storage.lifeAddPhotos(urls);
-          if (res.success) {
-            App.toastSuccess('已导入 ' + res.added + ' 张照片');
-            if (res.full) App.toast('相册已满 30 张，先删几张吧');
-            renderAlbum();
-          } else App.toast(res.message || '导入失败');
-        })
-        .catch(function () { App.toast('部分照片处理失败'); });
-      this.value = '';
-    });
 
     renderIdentity();
-    initProfileForm();
-    renderAlbum();
+    renderStats();
+    renderAlbumEntry();
     App.showGuide('myhome', {
       emoji: '🏠',
-      title: '个人主页 · 新手指引',
+      title: '个人空间 · 新手指引',
       items: [
-        '点头像可换成表情或上传图片',
-        '下方表单修改姓名与宿舍信息',
-        '相册导入照片后可发布到自己的帖子上',
+        '这里是纯展示主页，点「编辑资料」修改头像与信息',
+        '快递动态实时统计待取件与运输中数量，点数字可直达',
+        '相册只保留入口，照片管理在编辑页中进行',
       ],
     });
   </script>

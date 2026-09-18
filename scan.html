@@ -12,319 +12,234 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    /* ===== Scan Page Styles ===== */
-    .scan-toolbar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 12px 20px 8px;
-    }
-    .scan-tool-btn {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      background: rgba(30, 41, 59, 0.08);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--color-text);
-      transition: background 0.2s, color 0.2s, transform 0.15s;
-      border: none;
-    }
-    .scan-tool-btn:active { background: rgba(30, 41, 59, 0.18); transform: scale(0.92); }
-    .scan-tool-btn svg { width: 22px; height: 22px; }
-    .scan-tool-btn.active { color: #F59E0B; background: var(--color-warning-light); }
-
-    .scan-area {
-      background: #1E293B;
-      border-radius: 16px;
-      min-height: 50vh;
-      margin: 0 16px;
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-    .scan-area::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: radial-gradient(circle at 50% 45%, rgba(37,99,235,0.08) 0%, transparent 60%);
-      pointer-events: none;
-    }
+    /* ===== 全屏沉浸式扫码 ===== */
+    .scan-stage { position:fixed; inset:0; background:#0F172A; overflow:hidden; z-index:1; }
+    .scan-stage.hidden { display:none; }
     .scan-video {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      background: #1E293B;
+      position:absolute; inset:0; width:100%; height:100%;
+      object-fit:cover; background:#0F172A;
     }
+
+    /* 沉浸式透明导航（左上退出 + 简洁标题） */
+    .scan-nav {
+      position:absolute; top:0; left:0; right:0; z-index:8;
+      display:flex; align-items:center; gap:10px;
+      padding:calc(env(safe-area-inset-top) + 8px) 14px 16px;
+      background:linear-gradient(to bottom, rgba(2,6,23,.62), rgba(2,6,23,0));
+    }
+    .scan-nav-side { display:flex; gap:8px; align-items:center; }
+    .scan-nav-title { flex:1; text-align:center; color:#fff; font-size:16px; font-weight:600; letter-spacing:.5px; }
+    .scan-nav-btn {
+      width:40px; height:40px; border-radius:50%;
+      background:rgba(15,23,42,.42);
+      -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+      border:none; color:#fff;
+      display:flex; align-items:center; justify-content:center;
+      transition:background .2s, transform .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .scan-nav-btn:active { transform:scale(.92); }
+    .scan-nav-btn svg { width:22px; height:22px; }
+    .scan-nav-btn.active { color:#34D399; background:rgba(16,185,129,.24); }
+
+    /* 识别区：垂直居中上移，不被底部元素遮挡 */
+    .scan-center {
+      position:absolute; left:0; right:0; top:45%; transform:translateY(-50%);
+      display:flex; flex-direction:column; align-items:center; z-index:3; padding:0 24px;
+    }
+    .scan-frame {
+      width:min(66vw,248px); height:min(66vw,248px);
+      position:relative; border-radius:8px;
+      box-shadow:0 0 0 9999px rgba(2,6,23,.52);  /* 四周压暗、中心透明 */
+      -webkit-tap-highlight-color:transparent;
+      transition:transform .25s;
+    }
+
+    /* 四角：2px 白色圆角 + 品牌绿呼吸灯（1.5s 循环） */
+    .scan-corner {
+      position:absolute; width:26px; height:26px;
+      border:2px solid #fff;
+      animation:cornerBreath 1.5s ease-in-out infinite;
+    }
+    .scan-corner--tl { top:0; left:0; border-right:none; border-bottom:none; border-radius:8px 0 0 0; animation-delay:0s; }
+    .scan-corner--tr { top:0; right:0; border-left:none; border-bottom:none; border-radius:0 8px 0 0; animation-delay:.18s; }
+    .scan-corner--br { bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 8px 0; animation-delay:.36s; }
+    .scan-corner--bl { bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 8px; animation-delay:.54s; }
+    @keyframes cornerBreath {
+      0%, 100% { box-shadow:0 0 3px rgba(52,211,153,.35); }
+      50% { box-shadow:0 0 12px rgba(52,211,153,.95), 0 0 24px rgba(52,211,153,.45); }
+    }
+
+    /* 识别成功：四角变绿 + 框内 0.3s 对勾缩放 */
+    .scan-frame--success { transform:scale(1.05); }
+    .scan-frame--success .scan-corner {
+      border-color:#34D399; animation:none;
+      box-shadow:0 0 16px rgba(52,211,153,.9);
+    }
+    .scan-check {
+      position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+      opacity:0; pointer-events:none;
+    }
+    .scan-check svg {
+      width:58%; height:58%; color:#34D399;
+      filter:drop-shadow(0 0 10px rgba(52,211,153,.95));
+      transform:scale(.3);
+    }
+    .scan-frame--success .scan-check { opacity:1; }
+    .scan-frame--success .scan-check svg {
+      animation:checkPop .3s cubic-bezier(.34,1.56,.64,1) forwards;
+    }
+    @keyframes checkPop { to { transform:scale(1); } }
 
     .scan-tip {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 13px;
-      text-align: center;
-      margin-bottom: 24px;
-      padding: 0 24px;
-      line-height: 1.5;
-      position: relative;
-      z-index: 2;
+      color:rgba(255,255,255,.88); font-size:13.5px; text-align:center;
+      margin-top:26px; padding:0 12px; line-height:1.55;
+      text-shadow:0 1px 4px rgba(0,0,0,.5);
+      position:relative; z-index:2;
     }
 
-    .scan-frame {
-      width: 240px;
-      height: 240px;
-      position: relative;
-      z-index: 2;
-      -webkit-tap-highlight-color: transparent;
-      transition: transform 0.25s;
+    /* 模式切换：玻璃胶囊 */
+    .mode-switch {
+      display:inline-flex; align-items:center; gap:6px;
+      margin-top:14px; padding:7px 14px; border-radius:999px;
+      background:rgba(255,255,255,.12);
+      -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.24); color:#fff;
+      font-size:12.5px; font-weight:600;
+      transition:background .35s, border-color .35s, transform .25s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .mode-switch:active { transform:scale(.94); }
+    .mode-switch svg { width:14px; height:14px; transition:transform .35s cubic-bezier(.34,1.56,.64,1); }
+    .mode-switch.mode-import {
+      background:rgba(16,185,129,.24); border-color:rgba(52,211,153,.5); color:#A7F3D0;
+    }
+    .mode-switch.mode-import svg { transform:rotate(180deg); }
+
+    /* 模式提示横幅：浮于扫描框下的玻璃小条 */
+    .mode-banner {
+      margin-top:10px; max-width:86%;
+      padding:7px 13px; border-radius:10px;
+      font-size:12px; line-height:1.5; text-align:center;
+      background:rgba(15,23,42,.5);
+      -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+      color:rgba(255,255,255,.78); border:1px solid rgba(255,255,255,.12);
+      transition:background .35s, color .35s, border-color .35s;
+    }
+    .mode-banner.mode-import {
+      background:rgba(6,78,59,.55); color:#A7F3D0; border-color:rgba(52,211,153,.35);
     }
 
-    /* OCR 识别成功：绿色识别框 */
-    .scan-frame--success .scan-corner { border-color: #10B981; box-shadow: 0 0 10px rgba(16,185,129,0.8); }
-    .scan-frame--success { transform: scale(1.05); }
-    .scan-frame--success .scan-line { background: #fff; box-shadow: 0 0 12px #10B981; }
-
-    .scan-corner {
-      position: absolute;
-      width: 28px;
-      height: 28px;
-      border: 2px solid #fff;
+    /* 停留 3s 未识别：浮现的半透明提示条（自动消失） */
+    .scan-hint {
+      margin-top:14px;
+      display:inline-flex; align-items:center; gap:5px;
+      background:rgba(15,23,42,.72);
+      -webkit-backdrop-filter:blur(12px); backdrop-filter:blur(12px);
+      border:1px solid rgba(255,255,255,.12); color:#E2E8F0;
+      font-size:13px; padding:9px 16px; border-radius:999px;
+      opacity:0; transform:translateY(6px); pointer-events:none;
+      transition:opacity .3s, transform .3s;
     }
-    .scan-corner--tl { top: 0; left: 0; border-right: none; border-bottom: none; border-radius: 8px 0 0 0; }
-    .scan-corner--tr { top: 0; right: 0; border-left: none; border-bottom: none; border-radius: 0 8px 0 0; }
-    .scan-corner--bl { bottom: 0; left: 0; border-right: none; border-top: none; border-radius: 0 0 0 8px; }
-    .scan-corner--br { bottom: 0; right: 0; border-left: none; border-top: none; border-radius: 0 0 8px 0; }
+    .scan-hint.show { opacity:1; transform:none; pointer-events:auto; }
+    .scan-hint b { color:#93C5FD; font-weight:600; }
+    .scan-hint:active { opacity:.85; }
 
-    .scan-line {
-      position: absolute;
-      left: 4px;
-      right: 4px;
-      height: 2px;
-      background: #10B981;
-      box-shadow: 0 0 8px #10B981, 0 0 16px rgba(16, 185, 129, 0.5);
-      animation: scanLine 2.5s ease-in-out infinite;
-      top: 4px;
-      border-radius: 2px;
-      will-change: transform;   /* GPU 合成层：动画不触发 Layout/Paint */
-    }
-    @keyframes scanLine {
-      0% { transform: translateY(0); }
-      50% { transform: translateY(230px); }
-      100% { transform: translateY(0); }
-    }
+    /* 旧引擎标识：不再常驻展示（3s 慢提示兜底） */
+    .scan-engine-hint { display:none !important; }
 
-    .scan-engine-hint {
-      position: absolute;
-      bottom: 10px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.35);
-      z-index: 2;
-    }
-
+    /* 底部手动输入按钮：上移 + 全面屏安全区 */
     .scan-bottom {
-      padding: 24px 16px 16px;
-      text-align: center;
+      position:absolute; left:0; right:0; z-index:6; text-align:center;
+      bottom:calc(104px + env(safe-area-inset-bottom));
     }
+    .scan-manual-btn {
+      display:inline-flex; align-items:center; gap:7px;
+      background:rgba(255,255,255,.14);
+      -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+      border:1px solid rgba(255,255,255,.28); color:#fff;
+      font-size:14.5px; font-weight:600; padding:13px 24px; border-radius:999px;
+      box-shadow:0 6px 20px rgba(0,0,0,.28);
+      transition:transform .15s;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .scan-manual-btn:active { transform:scale(.96); }
+    .scan-manual-btn svg { width:17px; height:17px; }
+    .scan-demo-tip { margin-top:12px; font-size:12px; color:rgba(255,255,255,.75); line-height:1.8; }
+    .scan-demo-tip b { color:#93C5FD; }
+
+    /* 无相机权限页的文字链接 */
     .manual-link {
-      color: var(--color-primary);
-      font-size: 14px;
-      text-decoration: underline;
-      padding: 10px 12px;
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      -webkit-tap-highlight-color: transparent;
+      color:var(--color-primary);
+      font-size:14px;
+      text-decoration:underline;
+      padding:10px 12px;
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      -webkit-tap-highlight-color:transparent;
     }
-    .manual-link:active { opacity: 0.6; }
-    .manual-link svg { width: 16px; height: 16px; }
+    .manual-link:active { opacity:.6; }
+    .manual-link svg { width:16px; height:16px; }
 
     /* Permission Denied View */
     .permission-denied {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 60vh;
-      padding: 40px 24px;
-      text-align: center;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      min-height:80vh; padding:40px 24px; text-align:center;
     }
     .permission-denied-icon {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: var(--color-danger-light);
-      color: var(--color-danger);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
+      width:80px; height:80px; border-radius:50%;
+      background:var(--color-danger-light); color:var(--color-danger);
+      display:flex; align-items:center; justify-content:center; margin-bottom:20px;
     }
-    .permission-denied-icon svg { width: 40px; height: 40px; }
-    .permission-denied-title {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--color-text);
-      margin-bottom: 8px;
-    }
-    .permission-denied-desc {
-      font-size: 14px;
-      color: var(--color-text-sub);
-      margin-bottom: 28px;
-      line-height: 1.6;
-    }
-    .permission-denied-actions {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-    }
+    .permission-denied-icon svg { width:40px; height:40px; }
+    .permission-denied-title { font-size:18px; font-weight:600; color:var(--color-text); margin-bottom:8px; }
+    .permission-denied-desc { font-size:14px; color:var(--color-text-sub); margin-bottom:28px; line-height:1.6; }
+    .permission-denied-actions { display:flex; flex-direction:column; align-items:center; gap:16px; }
 
     /* Success Overlay */
     .success-overlay {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(135deg, #10B981, #059669);
-      z-index: 500;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      text-align: center;
+      position:fixed; inset:0;
+      background:linear-gradient(135deg,#10B981,#059669);
+      z-index:500; display:none;
+      flex-direction:column; align-items:center; justify-content:center;
+      padding:24px; text-align:center;
     }
-    .success-overlay.show {
-      display: flex;
-      animation: fadeIn 0.3s;
-    }
+    .success-overlay.show { display:flex; animation:fadeIn .3s; }
     .success-overlay-icon {
-      width: 80px;
-      height: 80px;
-      color: #fff;
-      margin-bottom: 20px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.2);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      animation: popIn 0.5s 0.15s both;
+      width:80px; height:80px; color:#fff; margin-bottom:20px;
+      border-radius:50%; background:rgba(255,255,255,.2);
+      display:flex; align-items:center; justify-content:center;
+      animation:popIn .5s .15s both;
     }
-    .success-overlay-icon svg { width: 44px; height: 44px; }
-    .success-overlay-title {
-      font-size: 24px;
-      font-weight: 700;
-      color: #fff;
-      margin-bottom: 20px;
-      animation: fadeInUp 0.4s 0.3s both;
-    }
+    .success-overlay-icon svg { width:44px; height:44px; }
+    .success-overlay-title { font-size:24px; font-weight:700; color:#fff; margin-bottom:20px; animation:fadeInUp .4s .3s both; }
     .success-overlay-info {
-      background: rgba(255, 255, 255, 0.15);
-      border-radius: 12px;
-      padding: 16px 20px;
-      margin-bottom: 32px;
-      width: 100%;
-      max-width: 300px;
-      animation: fadeInUp 0.4s 0.45s both;
+      background:rgba(255,255,255,.15); border-radius:12px;
+      padding:16px 20px; margin-bottom:32px; width:100%; max-width:300px;
+      animation:fadeInUp .4s .45s both;
     }
-    .success-overlay-info-row {
-      display: flex;
-      justify-content: space-between;
-      color: #fff;
-      font-size: 14px;
-      padding: 5px 0;
-    }
-    .success-overlay-info-label { opacity: 0.8; }
-    .success-overlay-info-value { font-weight: 600; }
+    .success-overlay-info-row { display:flex; justify-content:space-between; color:#fff; font-size:14px; padding:5px 0; }
+    .success-overlay-info-label { opacity:.8; }
+    .success-overlay-info-value { font-weight:600; }
     .success-overlay-btn {
-      background: #fff;
-      color: #059669;
-      padding: 14px 48px;
-      border-radius: 12px;
-      font-size: 16px;
-      font-weight: 700;
-      border: none;
-      cursor: pointer;
-      animation: fadeInUp 0.4s 0.6s both;
+      background:#fff; color:#059669; padding:14px 48px; border-radius:12px;
+      font-size:16px; font-weight:700; border:none; cursor:pointer;
+      animation:fadeInUp .4s .6s both;
     }
-    .success-overlay-btn:active { transform: scale(0.96); }
+    .success-overlay-btn:active { transform:scale(.96); }
 
     /* Manual Input */
     .manual-input-field {
-      width: 100%;
-      padding: 14px 16px;
-      border: 1.5px solid var(--color-border);
-      border-radius: 12px;
-      font-size: 16px;
-      font-family: var(--font-mono);
-      text-align: center;
-      letter-spacing: 1px;
-      outline: none;
-      transition: border-color 0.2s;
-      background: var(--color-surface-alt);
-      color: var(--color-text);
-      box-sizing: border-box;
+      width:100%; padding:14px 16px;
+      border:1.5px solid var(--color-border); border-radius:12px;
+      font-size:16px; font-family:var(--font-mono); text-align:center;
+      letter-spacing:1px; outline:none; transition:border-color .2s;
+      background:var(--color-surface-alt); color:var(--color-text); box-sizing:border-box;
     }
-    .manual-input-field:focus { border-color: var(--color-primary); background: var(--color-surface); }
-    .manual-input-field::placeholder { color: var(--color-text-hint); font-family: var(--font-body); letter-spacing: 0; font-size: 14px; }
-    .manual-input-hint {
-      font-size: 12px;
-      color: var(--color-text-hint);
-      text-align: center;
-      margin-top: 10px;
-    }
-
-    /* ===== 模式切换按钮（沉浸式平滑过渡） ===== */
-    .mode-switch {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      background: rgba(37, 99, 235, 0.08);
-      border: 1px solid rgba(37, 99, 235, 0.2);
-      color: var(--color-primary);
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                  color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                  border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
-                  transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .mode-switch:active { transform: scale(0.94); }
-    .mode-switch svg { width: 14px; height: 14px; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    /* 导入模式高亮 */
-    .mode-switch.mode-import {
-      background: rgba(245, 158, 11, 0.12);
-      border-color: rgba(245, 158, 11, 0.35);
-      color: #B45309;
-    }
-    .mode-switch.mode-import svg { transform: rotate(180deg); }
-
-    /* 模式提示横幅 */
-    .mode-banner {
-      margin: 0 16px 8px;
-      padding: 8px 12px;
-      border-radius: 10px;
-      font-size: 12px;
-      text-align: center;
-      background: rgba(37, 99, 235, 0.06);
-      color: var(--color-primary);
-      border: 1px dashed rgba(37, 99, 235, 0.25);
-      transition: background 0.35s, color 0.35s, border-color 0.35s;
-    }
-    .mode-banner.mode-import {
-      background: rgba(245, 158, 11, 0.08);
-      color: #B45309;
-      border-color: rgba(245, 158, 11, 0.35);
-    }
+    .manual-input-field:focus { border-color:var(--color-primary); background:var(--color-surface); }
+    .manual-input-field::placeholder { color:var(--color-text-hint); font-family:var(--font-body); letter-spacing:0; font-size:14px; }
+    .manual-input-hint { font-size:12px; color:var(--color-text-hint); text-align:center; margin-top:10px; }
 
     /* ===== 底部抽屉（导入确认） ===== */
     .import-sheet {
@@ -442,52 +357,61 @@
 </head>
 <body data-page="scan">
   <div class="app-shell">
-    <header class="app-header">
-      <div class="header-left"></div>
-      <div class="header-title">扫码取件</div>
-      <div class="header-right"></div>
-    </header>
-    <main class="app-content">
-      <!-- Scan View：真实摄像头扫码 -->
-      <div id="scanView" class="hidden">
-        <div class="scan-toolbar anim-fade-in-up stagger-1">
-          <button class="scan-tool-btn" id="flashBtn" onclick="toggleFlash()" aria-label="闪光灯">
-            <svg id="flashIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </button>
-          <!-- 模式切换按钮：取件模式 ↔ 导入本地模式（平滑过渡） -->
-          <button class="mode-switch" id="modeSwitch" onclick="toggleScanMode()" aria-label="切换扫码模式">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-            <span id="modeLabel">取件模式</span>
-          </button>
-          <button class="scan-tool-btn" onclick="openAlbum()" aria-label="相册识别">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-          </button>
+    <main class="app-content" style="padding-top:0;">
+      <!-- 全屏沉浸式扫码舞台 -->
+      <div id="scanView" class="scan-stage hidden">
+        <video id="scanVideo" class="scan-video" autoplay muted playsinline></video>
+
+        <!-- 沉浸式透明导航：左上退出 + 简洁标题 -->
+        <div class="scan-nav">
+          <a href="index.html" class="scan-nav-btn" aria-label="退出扫码">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </a>
+          <div class="scan-nav-title">扫码取件</div>
+          <div class="scan-nav-side">
+            <button class="scan-nav-btn" id="flashBtn" onclick="toggleFlash()" aria-label="闪光灯">
+              <svg id="flashIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </button>
+            <button class="scan-nav-btn" onclick="openAlbum()" aria-label="相册识别">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            </button>
+          </div>
         </div>
 
-        <!-- 模式提示横幅 -->
-        <div class="mode-banner anim-fade-in-up" id="modeBanner">
-          <span id="modeBannerText">当前为「取件模式」：扫描已到站快递的取件码完成取件</span>
-        </div>
-
-        <div class="scan-area anim-fade-in-up stagger-2">
-          <video id="scanVideo" class="scan-video" autoplay muted playsinline></video>
-          <div class="scan-tip" id="scanTip">正在启动摄像头…</div>
+        <!-- 识别区：扫描框居中上移 -->
+        <div class="scan-center anim-fade-in-up">
           <div class="scan-frame" id="scanFrame">
             <div class="scan-corner scan-corner--tl"></div>
             <div class="scan-corner scan-corner--tr"></div>
             <div class="scan-corner scan-corner--bl"></div>
             <div class="scan-corner scan-corner--br"></div>
-            <div class="scan-line"></div>
+            <div class="scan-check">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
           </div>
-          <div class="scan-engine-hint" id="engineHint"></div>
+          <div class="scan-tip" id="scanTip">正在启动摄像头…</div>
+          <!-- 模式切换：取件模式 ↔ 导入本地模式 -->
+          <button class="mode-switch" id="modeSwitch" onclick="toggleScanMode()" aria-label="切换扫码模式">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span id="modeLabel">取件模式</span>
+          </button>
+          <div class="mode-banner" id="modeBanner">
+            <span id="modeBannerText">当前为「取件模式」：扫描已到站快递的取件码完成取件</span>
+          </div>
+          <!-- 停留 3s 未识别成功时浮现（自动消失） -->
+          <button type="button" class="scan-hint" id="slowHint" onclick="showManualInput()">
+            暂时没有识别到？<b>手动输入取件码</b>
+          </button>
         </div>
 
-        <div class="scan-bottom anim-fade-in-up stagger-3">
-          <a href="javascript:void(0)" class="manual-link" onclick="showManualInput()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+        <!-- 底部手动输入：上移并适配全面屏 -->
+        <div class="scan-bottom">
+          <button type="button" class="scan-manual-btn" onclick="showManualInput()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
             手动输入取件码
-          </a>
+          </button>
         </div>
+        <div class="scan-engine-hint" id="engineHint"></div>
       </div>
 
       <!-- Permission Denied View -->
@@ -502,9 +426,10 @@
             <button class="btn btn-primary btn-lg" onclick="retryCamera()">重新尝试</button>
             <button class="btn btn-outline" onclick="goToSettings()">如何开启权限</button>
             <a href="javascript:void(0)" class="manual-link" onclick="showManualInput()">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20v14H2z"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
               手动输入取件码
             </a>
+            <a href="index.html" class="manual-link" style="text-decoration:none;">返回首页</a>
           </div>
         </div>
       </div>
@@ -675,6 +600,8 @@
       importSelectedShort: '其他',
       importSelectedType: 'station',
       importCode: '',
+      slowTimer: null,
+      slowHideTimer: null,
     };
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -696,9 +623,9 @@
           var codes = pending.slice(0, 3).map(function (p) { return p.pickupCode; });
           if (codes.length) {
             var tip = document.createElement('div');
-            tip.style.cssText = 'margin-top:10px;font-size:12px;color:var(--color-text-sub);line-height:1.8;';
-            tip.innerHTML = '演示提示：点「手动输入取件码」，输入 <b style="color:var(--color-primary);">' +
-              codes.join('</b> / <b style="color:var(--color-primary);">') + '</b> 即可体验完整取件流程';
+            tip.className = 'scan-demo-tip';
+            tip.innerHTML = '演示提示：点「手动输入取件码」，输入 <b>' +
+              codes.join('</b> / <b>') + '</b> 即可体验完整取件流程';
             var bottom = document.querySelector('.scan-bottom');
             if (bottom) bottom.appendChild(tip);
           }
@@ -708,15 +635,40 @@
       startCamera();
     });
 
-    // ---------- 1. 摄像头 ----------
+    // ---------- 1. 摄像头（兼容 Safari/华为/小米/OPPO/Chrome 等浏览器） ----------
+    function cameraGetUserMedia(constraints) {
+      // 标准 API（Chrome / Edge / Safari 14.3+ / 主流国产浏览器内核）
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        return navigator.mediaDevices.getUserMedia(constraints);
+      }
+      // 旧版 WebView 前缀兜底（老款安卓系统浏览器）
+      var legacy = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+      if (legacy) {
+        return new Promise(function (resolve, reject) {
+          legacy.call(navigator, constraints, resolve, reject);
+        });
+      }
+      return Promise.reject(new Error('NO_MEDIA_API'));
+    }
+
+    function attachVideoStream(stream) {
+      var v = SCAN.video;
+      try {
+        v.srcObject = stream;
+      } catch (e) {
+        // 极旧内核只支持 createObjectURL
+        v.src = (window.URL && URL.createObjectURL) ? URL.createObjectURL(stream) : stream;
+      }
+    }
+
     async function startCamera() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      if (!navigator.mediaDevices && !(navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia)) {
         showDeniedView(deniedHintText('当前浏览器不支持摄像头调用'));
         return;
       }
       document.getElementById('scanTip').textContent = '正在启动摄像头…';
       try {
-        SCAN.stream = await navigator.mediaDevices.getUserMedia({
+        SCAN.stream = await cameraGetUserMedia({
           video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false,
         });
@@ -725,12 +677,13 @@
         showDeniedView(deniedHintText(reason));
         return;
       }
-      SCAN.video.srcObject = SCAN.stream;
+      attachVideoStream(SCAN.stream);
       try { await SCAN.video.play(); } catch (e) { /* autoplay 由 muted+playsinline 保证 */ }
       showScanView();
       document.getElementById('scanTip').textContent = '将取件码对准扫描框，支持二维码与面单数字';
       initDetector();
       startDetectLoop();
+      startSlowHints();
     }
 
     function retryCamera() {
@@ -744,10 +697,30 @@
         SCAN.stream.getTracks().forEach(function (t) { t.stop(); });
         SCAN.stream = null;
       }
-      SCAN.video.srcObject = null;
+      try { SCAN.video.srcObject = null; } catch (e) { SCAN.video.removeAttribute('src'); }
       SCAN.torchOn = false;
       var btn = document.getElementById('flashBtn');
       if (btn) btn.classList.remove('active');
+    }
+
+    // ---------- 1.5 停留 3s 未识别：半透明提示条浮现，自动消失，之后周期性轻提醒 ----------
+    function startSlowHints() {
+      stopSlowHints();
+      SCAN.slowTimer = setTimeout(showSlowHint, 3000);
+    }
+    function showSlowHint() {
+      if (!SCAN.scanning) return;
+      var el = document.getElementById('slowHint');
+      if (!el) return;
+      el.classList.add('show');
+      SCAN.slowHideTimer = setTimeout(function () { el.classList.remove('show'); }, 3500);
+      SCAN.slowTimer = setTimeout(showSlowHint, 12000);
+    }
+    function stopSlowHints() {
+      clearTimeout(SCAN.slowTimer);
+      clearTimeout(SCAN.slowHideTimer);
+      var el = document.getElementById('slowHint');
+      if (el) el.classList.remove('show');
     }
 
     // ---------- 2. 二维码识别引擎 ----------
@@ -785,11 +758,12 @@
       requestAnimationFrame(detectFrame);
     }
 
-    function pauseScan() { SCAN.scanning = false; }
+    function pauseScan() { SCAN.scanning = false; stopSlowHints(); }
 
     function resumeScan() {
       if (!SCAN.stream) { retryCamera(); return; }
       startDetectLoop();
+      startSlowHints();
     }
 
     function detectFrame(ts) {
@@ -901,7 +875,7 @@
         return true;
       } catch (e) {
         SCAN.ocrLoading = false;
-        document.getElementById('scanTip').textContent = '当前浏览器暂不支持自动识别，请手动输入取件码';
+        // 不弹常驻提示：3s 慢提示会引导用户手动输入
         return false;
       }
     }
@@ -1068,11 +1042,11 @@
       // empty：无有效文字，静默继续
     }
 
-    // 绿色识别框闪烁
+    // 绿色识别框 + 框内对勾（0.3s）
     function flashSuccessFrame() {
       var frame = document.getElementById('scanFrame');
       frame.classList.add('scan-frame--success');
-      setTimeout(function () { frame.classList.remove('scan-frame--success'); }, 1200);
+      setTimeout(function () { frame.classList.remove('scan-frame--success'); }, 800);
     }
 
     // ---------- 3. 扫码结果 → 本地快递数据 ----------

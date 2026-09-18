@@ -187,6 +187,15 @@
       color: var(--color-text-sub);
       margin-bottom: 0;
     }
+
+    /* 相册管理 */
+    .album-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+    .album-item { position:relative; border-radius:12px; overflow:hidden; aspect-ratio:1/1; background:var(--color-surface-alt); }
+    .album-item img { width:100%; height:100%; object-fit:cover; display:block; }
+    .album-acts { position:absolute; left:0; right:0; bottom:0; display:flex; }
+    .album-acts button { flex:1; border:none; font-size:11px; padding:6px 0; background:rgba(0,0,0,.55); color:#fff; cursor:pointer; }
+    .album-acts button + button { border-left:1px solid rgba(255,255,255,.2); }
+    .album-empty { grid-column:1/-1; text-align:center; padding:18px 0; color:var(--color-text-hint); font-size:12.5px; }
   </style>
 </head>
 <body data-page="profile-edit">
@@ -221,10 +230,6 @@
             <input class="form-input" id="inputName" type="text" maxlength="12" placeholder="请输入姓名">
           </div>
           <div class="form-item">
-            <div class="form-label">学号</div>
-            <input class="form-input" id="inputStudentId" type="text" inputmode="numeric" maxlength="20" placeholder="请输入学号">
-          </div>
-          <div class="form-item">
             <div class="form-label">校区</div>
             <div class="form-select-wrap">
               <select class="form-select" id="inputCampus" onchange="onCampusChange()"></select>
@@ -253,10 +258,6 @@
             <div class="form-label">房间号</div>
             <input class="form-input" id="inputRoom" type="text" maxlength="10" placeholder="如：215室" style="text-align:right;">
           </div>
-          <div class="form-item">
-            <div class="form-label">手机号</div>
-            <div class="form-readonly" id="phoneDisplay">未绑定</div>
-          </div>
         </div>
 
         <div class="local-tip anim-fade-in-up stagger-2">
@@ -265,6 +266,20 @@
         </div>
 
         <button class="btn btn-primary btn-block btn-lg anim-fade-in-up stagger-3" id="saveBtn" onclick="saveProfile()">保存</button>
+
+        <!-- 我的相册（从主页相册入口跳到此处 #album） -->
+        <div id="albumSection" style="margin-top:28px; scroll-margin-top:76px;">
+          <div class="section-header">
+            <span class="section-title">我的相册</span>
+            <span class="text-sub" style="font-size:11px;" id="albumCount"></span>
+          </div>
+          <div class="card" style="padding:14px;">
+            <button class="btn btn-primary" style="width:100%;" id="btnImportPhoto">导入照片</button>
+            <input type="file" id="photoInput" accept="image/*" multiple style="display:none;">
+            <div id="albumGrid" class="album-grid"></div>
+            <div style="font-size:11px; color:var(--color-text-hint); margin-top:10px; line-height:1.6;">照片压缩后仅保存在本机（上限 30 张），可一键发布到自己的帖子上</div>
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -311,6 +326,7 @@
       App.initTheme();
       loadProfile();
       renderAvatarGrid();
+      renderAlbum();
     });
 
     function loadProfile() {
@@ -318,8 +334,6 @@
       draftAvatar = user.avatar || null;
 
       document.getElementById('inputName').value = user.name || '';
-      document.getElementById('inputStudentId').value = user.studentId || '';
-      document.getElementById('phoneDisplay').textContent = user.phone || '未绑定';
 
       // 填充校区下拉（从 campus-data.js）
       var campusSel = document.getElementById('inputCampus');
@@ -418,7 +432,7 @@
       if (e.target === this) closeAvatarSheet();
     });
 
-    // ---- 本地图片上传：压缩为 200px JPEG base64，只存 localStorage ----
+    // ---- 本地图片上传：压缩后只存 localStorage ----
     function triggerUpload() {
       document.getElementById('avatarFileInput').click();
     }
@@ -431,36 +445,12 @@
         App.toast('请选择图片文件');
         return;
       }
-      var reader = new FileReader();
-      reader.onload = function () {
-        var img = new Image();
-        img.onload = function () {
-          var MAX = 200;
-          var scale = Math.min(1, MAX / Math.max(img.width, img.height));
-          var w = Math.max(1, Math.round(img.width * scale));
-          var h = Math.max(1, Math.round(img.height * scale));
-          var canvas = document.createElement('canvas');
-          canvas.width = w;
-          canvas.height = h;
-          var ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#fff';
-          ctx.fillRect(0, 0, w, h);
-          ctx.drawImage(img, 0, 0, w, h);
-          var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          if (dataUrl.length > 500 * 1024) {
-            App.toast('图片过大，请换一张');
-            return;
-          }
-          draftAvatar = { type: 'image', data: dataUrl };
-          renderAvatarPreview();
-          closeAvatarSheet();
-          App.toastSuccess('头像已选择，记得保存');
-        };
-        img.onerror = function () { App.toast('图片读取失败'); };
-        img.src = reader.result;
-      };
-      reader.onerror = function () { App.toast('图片读取失败'); };
-      reader.readAsDataURL(file);
+      App.compressImage(file, 400, 0.8).then(function (dataUrl) {
+        draftAvatar = { type: 'image', data: dataUrl };
+        renderAvatarPreview();
+        closeAvatarSheet();
+        App.toastSuccess('头像已选择，记得保存');
+      }).catch(function () { App.toast('图片处理失败，请换一张试试'); });
     });
 
     // 姓名改动时，默认头像（首字）实时更新
@@ -469,7 +459,6 @@
     // ---- 保存：只写 localStorage，不调用任何后端接口 ----
     function saveProfile() {
       var name = document.getElementById('inputName').value.trim();
-      var studentId = document.getElementById('inputStudentId').value.trim();
       var campusId = document.getElementById('inputCampus').value;
       var areaId = document.getElementById('inputArea').value;
       var building = document.getElementById('inputBuilding').value;
@@ -479,14 +468,9 @@
         App.toast('请填写姓名');
         return;
       }
-      if (studentId && !/^[0-9]{4,20}$/.test(studentId)) {
-        App.toast('学号应为 4-20 位数字');
-        return;
-      }
 
       var user = Storage.getUser();
       user.name = name;
-      user.studentId = studentId;
       user.avatar = draftAvatar;
       user.campusId = campusId;
 
@@ -519,7 +503,66 @@
       }
 
       App.toastSuccess('已保存');
-      setTimeout(function () { location.href = 'profile.html'; }, 600);
+      setTimeout(function () { location.href = 'myhome.html'; }, 600);
+    }
+
+    // ---- 我的相册（导入 / 发帖 / 删除）----
+    function renderAlbum() {
+      var album = Storage.lifeGetAlbum();
+      document.getElementById('albumCount').textContent = album.length + '/30';
+      var grid = document.getElementById('albumGrid');
+      if (!album.length) {
+        grid.innerHTML = '<div class="album-empty">还没有照片，点上方「导入照片」添加</div>';
+        return;
+      }
+      grid.innerHTML = album.map(function (p) {
+        return '<div class="album-item"><img src="' + p.src + '" alt="照片" loading="lazy">' +
+          '<div class="album-acts">' +
+            '<button data-publish="' + p.id + '">发帖</button>' +
+            '<button data-del="' + p.id + '">删除</button>' +
+          '</div></div>';
+      }).join('');
+      grid.querySelectorAll('[data-publish]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          location.href = 'forum.html?compose=1&img=' + encodeURIComponent(this.dataset.publish);
+        });
+      });
+      grid.querySelectorAll('[data-del]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          Storage.lifeRemovePhoto(this.dataset.del);
+          renderAlbum();
+          App.toastSuccess('已删除');
+        });
+      });
+    }
+
+    document.getElementById('btnImportPhoto').addEventListener('click', function () {
+      document.getElementById('photoInput').click();
+    });
+    document.getElementById('photoInput').addEventListener('change', function () {
+      var files = Array.prototype.slice.call(this.files || []);
+      this.value = '';
+      if (!files.length) return;
+      if (files.length > 9) files = files.slice(0, 9);
+      App.toast('正在压缩并保存 ' + files.length + ' 张照片…');
+      Promise.all(files.map(function (f) { return App.compressImage(f, 900, 0.72); }))
+        .then(function (urls) {
+          var res = Storage.lifeAddPhotos(urls);
+          if (res.success) {
+            App.toastSuccess('已导入 ' + res.added + ' 张照片');
+            if (res.full) App.toast('相册已满 30 张，先删几张吧');
+            renderAlbum();
+          } else App.toast(res.message || '导入失败');
+        })
+        .catch(function () { App.toast('部分照片处理失败'); });
+    });
+
+    // 从主页相册入口跳入时，滚动到相册区
+    if (location.hash === '#album') {
+      setTimeout(function () {
+        var target = document.getElementById('albumSection');
+        if (target && target.scrollIntoView) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     }
   </script>
 </body>

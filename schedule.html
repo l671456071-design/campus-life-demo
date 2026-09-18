@@ -79,11 +79,11 @@
   <div class="sheet-mask" id="sheetMask"></div>
   <div class="sheet" id="importSheet">
     <div class="sheet-title">导入课程表</div>
-    <div class="sheet-sub">支持贝蒂课程表 / 超级课程表导出的 JSON，或 Excel 课表（XLS / XLSX）。导入将覆盖当前课表。</div>
+    <div class="sheet-sub">Excel 课表（XLS / XLSX）与贝蒂 JSON 自动识别、统一归一化导入，将覆盖当前课表。矩阵课表按「节次 × 星期」精确匹配。</div>
     <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
     <input type="file" id="importXlsFile" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+    <button class="btn btn-primary btn-block btn-lg" id="btnPickXls" style="margin-bottom:10px;">选择 XLS / XLSX 表格课表</button>
     <button class="btn btn-outline btn-block" id="btnPickFile" style="margin-bottom:12px;">选择 JSON 文件（贝蒂课程表）</button>
-    <button class="btn btn-outline btn-block" id="btnPickXls" style="margin-bottom:12px;border-color:#16A34A;color:#16A34A;">选择 XLS / XLSX 表格文件</button>
     <div class="field">
       <label>或粘贴课表 JSON</label>
       <textarea id="importText" placeholder='[{"courseName":"高等数学","weekday":1,"start":1,"end":2,"room":"文201","teacher":"王老师"}]'></textarea>
@@ -215,28 +215,209 @@
           var name = pick(c, ['courseName', 'name', 'course', 'kcmc', 'title', 'course_name']);
           if (!name) return;
           var sec = parseSections(c);
-          courses.push({
-            name: String(name).slice(0, 20),
-            teacher: String(pick(c, ['teacher', 'teacherName', 'jsxm', 'teacher_name'])).slice(0, 10),
-            position: String(pick(c, ['room', 'position', 'classroom', 'jasm', 'jddm', 'location', 'address'])).slice(0, 20),
+          courses.push(makeCourse({
+            name: name,
+            teacher: pick(c, ['teacher', 'teacherName', 'jsxm', 'teacher_name']),
+            position: pick(c, ['room', 'position', 'classroom', 'jasm', 'jddm', 'location', 'address']),
             weekday: parseDay(pick(c, ['weekday', 'day', 'week', 'xqj', 'dayOfWeek']) || 1),
             start: sec.start,
             end: sec.end,
-            weeks: String(pick(c, ['weeks', 'weekDesc', 'weekText', 'zcd', 'weekRange']) || '1-16周').slice(0, 14) || '1-16周',
-            color: COLORS[courses.length % COLORS.length],
-          });
+            weeks: pick(c, ['weeks', 'weekDesc', 'weekText', 'zcd', 'weekRange']) || '1-16周'
+          }));
         });
+        courses = dedupeCourses(courses);
         if (!courses.length) return { error: '课程字段无法识别，请检查文件内容' };
-        return { courses: courses };
+        return { courses: courses, mode: 'JSON' };
       }
 
-      // ---- XLS / XLSX 表格课表解析（SheetJS 本地库 libs/xlsx/，无在线依赖）----
-      // 列名兼容：课程/名称、星期/礼拜/周、节次/时间、教室/地点/位置、教师/老师；无表头时按 [课程,星期,节次,地点,教师] 顺序
+      // ============ XLS / XLSX 表格课表解析（与 JSON 共用统一归一化管线）============
+      // 自动识别两种真实课表布局：
+      //   A. 矩阵型（教务系统/超星/WPS 导出最常见）：行=节次、列=周一..周日，单元格内多行
+      //      「课程名 / (1-2节)1-16周 / 教室 / 老师」
+      //   B. 列表型：每行一门课，列=课程名/星期/节次/地点/教师
+      // 原则：先定位星期表头，再做行列语义映射；单元格按固定位置拆分，不做启发式猜测；
+      //       标签行/空单元格/无结构文本一律过滤，保证「周几有什么才导入什么」。
+      var CN_NUM = { '一':1,'二':2,'两':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9,'十一':11,'十二':12 };
+      var GROUP_ROW_RE = /^(上午|下午|晚上|早晨|早上|中午|午休|傍晚|夜间|晚上)/;
+      var LABEL_CELL_RE = /^(星期[一二三四五六日天]?|周[一二三四五六日天]?|礼拜[一二三四五六日天]?|上午|下午|晚上|午休|节次|小节|时间|备注|—|–|-|\s|　)*$/;
+
+      function cn2num(s) {
+        if (/^\d+$/.test(s)) return parseInt(s, 10);
+        if (s === '十') return 10;
+        return CN_NUM[s] !== undefined ? CN_NUM[s] : NaN;
+      }
+
+      // 统一课程对象（与手动加课/JSON 同一 Schema）
+      function makeCourse(c) {
+        var st = Math.min(12, Math.max(1, parseInt(c.start, 10) || 1));
+        var en = Math.min(12, Math.max(st, parseInt(c.end, 10) || st));
+        return {
+          id: 'C' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+          name: String(c.name || '').trim().slice(0, 20),
+          teacher: String(c.teacher || '').trim().slice(0, 10),
+          position: String(c.position || '').trim().slice(0, 20),
+          weekday: Math.min(7, Math.max(1, parseInt(c.weekday, 10) || 1)),
+          start: st, end: en,
+          weeks: String(c.weeks || '1-16周').trim().slice(0, 14) || '1-16周',
+          color: c.color || ''
+        };
+      }
+
+      // 去重：同名同天同节次不同周次/地点/老师 不合并
+      function dedupeCourses(list) {
+        var seen = {}, out = [];
+        list.forEach(function (c) {
+          var key = [c.name, c.weekday, c.start, c.end, c.weeks, c.position, c.teacher].join('|');
+          if (!seen[key]) { seen[key] = 1; out.push(c); }
+        });
+        out.forEach(function (c, i) { if (!c.color) c.color = COLORS[i % COLORS.length]; });
+        return out;
+      }
+
+      // 解析节次区间：「(1-2节)」「第3节」「1,2节」「第一-二节」
+      function extractSections(text, fallback) {
+        var t = String(text || '');
+        var range = t.match(/(\d{1,2})\s*[-–~至到,，、]\s*(\d{1,2})\s*节?/);
+        if (range) {
+          var s = +range[1], e = +range[2];
+          if (s >= 1 && s <= 12 && e >= s && e <= 12) return { start: s, end: e };
+        }
+        var cn = t.match(/第?([一二两三四五六七八九十]{1,3})\s*[-–~至到、，,]\s*([一二两三四五六七八九十]{1,3})\s*节?/);
+        if (cn) {
+          var a = cn2num(cn[1]), b = cn2num(cn[2]);
+          if (a >= 1 && b >= a && b <= 12) return { start: a, end: b };
+        }
+        var one = t.match(/第?\s*(\d{1,2})\s*节/);
+        if (one) { var n = +one[1]; if (n >= 1 && n <= 12) return { start: n, end: n }; }
+        var cno = t.match(/第\s*([一二三四五六七八九十]{1,3})\s*节/);
+        if (cno) { var m = cn2num(cno[1]); if (m >= 1 && m <= 12) return { start: m, end: m }; }
+        return fallback ? { start: fallback, end: fallback } : null;
+      }
+
+      // 解析周次：「1-16周」「1-8周,10-16周」「第5周」（必须以「周」结尾，避免吞掉「1-2节」）
+      function extractWeeks(text) {
+        var t = String(text || ''), segs = [], m;
+        var re = /(\d{1,2})\s*[-–~至到]\s*(\d{1,2})\s*周/g;
+        while ((m = re.exec(t))) {
+          var a = +m[1], b = +m[2];
+          if (a >= 1 && b >= a && b <= 30) segs.push(a + '-' + b + '周');
+        }
+        if (!segs.length) {
+          var single = t.match(/第?\s*(\d{1,2})\s*周/);
+          if (single) segs.push(+single[1] + '周');
+        }
+        return segs.join(',');
+      }
+
+      // 行首（节次列）→ 节次序号：「1」「第1节」「第一节」「08:00」
+      function rowSection(raw) {
+        var t = String(raw == null ? '' : raw).trim();
+        if (!t) return null;
+        var n = t.match(/^第?\s*(\d{1,2})\s*节?/);
+        if (n && +n[1] >= 1 && +n[1] <= 12) return +n[1];
+        var cn = t.match(/^第?\s*([一二三四五六七八九十]{1,3})\s*节?/);
+        if (cn) { var c = cn2num(cn[1]); if (c >= 1) return c; }
+        var tm = t.match(/(\d{1,2}):(\d{2})/);
+        if (tm) {
+          var mins = (+tm[1]) * 60 + (+tm[2]);
+          for (var i = 0; i < LESSON_TIMES.length; i++) {
+            var p = LESSON_TIMES[i].split(':');
+            var pm = (+p[0]) * 60 + (+p[1]);
+            if (mins >= pm - 25 && mins <= pm + 30) return i + 1;
+          }
+        }
+        if (/^\d{1,2}$/.test(t) && +t >= 1 && +t <= 12) return +t;
+        return null;
+      }
+
+      function isJunkCell(text) {
+        var t = String(text == null ? '' : text).trim();
+        if (!t || t.length < 2) return true;
+        if (LABEL_CELL_RE.test(t)) return true;
+        if (GROUP_ROW_RE.test(t) && t.length <= 2) return true;
+        return false;
+      }
+
+      // 单元格 → 多门课文本块（一个格子里可能有 2+ 门课，以节次行为锚点切分）
+      function splitCellCourses(text) {
+        var lines = String(text == null ? '' : text).replace(/\r/g, '\n')
+          .split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!lines.length) return [];
+        var anchors = [];
+        lines.forEach(function (ln, i) { if (extractSections(ln, null)) anchors.push(i); });
+        if (!anchors.length) return [lines.join('\n')]; // 无节次信息：整块交兜底逻辑
+        var blocks = [];
+        anchors.forEach(function (ai, k) {
+          var nameLine = ai - 1 >= 0 ? lines[ai - 1] : '';
+          // 向后最多取 2 行（地点、老师），且不吞掉下一门课的名称行
+          var tailEnd = k + 1 < anchors.length ? Math.min(anchors[k + 1] - 1, ai + 2) : ai + 2;
+          var tail = lines.slice(ai + 1, tailEnd + 1);
+          blocks.push([nameLine, lines[ai]].concat(tail).filter(Boolean).join('\n'));
+        });
+        return blocks;
+      }
+
+      // 单门课块解析（固定位置：名称 / 节次+周次 / 地点 / 老师）
+      function parseCourseBlock(block, day, fallbackSec) {
+        var t = String(block || '').trim();
+        if (isJunkCell(t)) return null;
+        var parts;
+        if (t.indexOf('/') !== -1 || t.indexOf('／') !== -1) {
+          parts = t.replace(/／/g, '/').split('/');
+        } else {
+          parts = t.split('\n');
+        }
+        parts = parts.map(function (s) { return s.trim(); }).filter(Boolean);
+        if (!parts.length) return null;
+
+        var name = parts[0].split('@')[0].replace(/[【\[（(].*$/, '').trim();
+        if (!name || name.length < 2) return null;
+        if (/星期|节次|周次|课程名?称?|^上午$|^下午$|^晚上$/.test(name)) return null;
+
+        var sec = null, weeks = '';
+        var secIdx = -1;
+        for (var i = 1; i < parts.length; i++) {
+          var secHit = extractSections(parts[i], null);
+          var weekHit = extractWeeks(parts[i]);
+          if (secHit || weekHit || /节/.test(parts[i]) || /周/.test(parts[i])) {
+            if (secHit) sec = secHit;
+            if (weekHit) weeks = weekHit;
+            secIdx = i;
+            break;
+          }
+        }
+        if (!sec) {
+          // 名称行内嵌节次，如「高等数学(1-2节)」
+          var inline = extractSections(name, null);
+          if (inline) {
+            sec = inline;
+            name = name.replace(/\(?\d{1,2}\s*[-–~,，、至到]?\s*\d{0,2}\s*节?\)?/, '').trim();
+          }
+        }
+        if (!sec && fallbackSec) sec = { start: fallbackSec, end: fallbackSec };
+        if (!sec || !name) return null;
+
+        var rest = secIdx >= 1 ? parts.slice(secIdx + 1) : parts.slice(1);
+        var location = rest[0] || '';
+        var teacher = (rest[1] || '').replace(/老师$/, '');
+        // 只剩一个短中文/英文片段时优先视为老师名
+        if (rest.length === 1 && /^[一-龥A-Za-z·]{2,6}$/.test(rest[0])) {
+          teacher = rest[0].replace(/老师$/, '');
+          location = '';
+        }
+        if (!weeks) weeks = extractWeeks(t) || '1-16周';
+
+        return makeCourse({
+          name: name, teacher: teacher, position: location,
+          weekday: day, start: sec.start, end: Math.max(sec.end, sec.start), weeks: weeks
+        });
+      }
+
+      // ---- 列表型辅助 ----
       function findHeaderRow(rows) {
         for (var i = 0; i < Math.min(rows.length, 8); i++) {
-          var r = rows[i] || [];
-          var joined = r.map(function (c) { return String(c == null ? '' : c); }).join('|');
-          if (/课程|名称|星期|节次|地点|教室|教师|老师/.test(joined)) return i;
+          var joined = (rows[i] || []).map(function (c) { return String(c == null ? '' : c); }).join('|');
+          if (/课程|名称|科目|星期|节次|地点|教室|教师|老师|周次/.test(joined)) return i;
         }
         return -1;
       }
@@ -249,49 +430,118 @@
         }
         return -1;
       }
-      function parseXlsxRows(rows) {
-        if (!rows || !rows.length) return { error: '表格是空的' };
+      function parseDayHeaderCell(txt) {
+        var t = String(txt == null ? '' : txt);
+        var m = t.match(/(?:星期|礼拜|周)\s*([一二三四五六日天1-7])/);
+        if (m) {
+          var map = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7,'天':7 };
+          if (map[m[1]]) return map[m[1]];
+          var n = parseInt(m[1], 10);
+          return n === 0 ? 7 : n;
+        }
+        if (/mon/i.test(t)) return 1;
+        if (/tue/i.test(t)) return 2;
+        if (/wed/i.test(t)) return 3;
+        if (/thu/i.test(t)) return 4;
+        if (/fri/i.test(t)) return 5;
+        if (/sat/i.test(t)) return 6;
+        if (/sun/i.test(t)) return 7;
+        return 0;
+      }
+
+      // 找星期表头行（≥3 个星期列）→ {row, colDay: {day: col}}
+      function findDayHeader(rows) {
+        for (var r = 0; r < Math.min(rows.length, 12); r++) {
+          var row = rows[r] || [], map = {};
+          for (var c = 0; c < row.length; c++) {
+            var d = parseDayHeaderCell(row[c]);
+            if (d && map[d] === undefined) map[d] = c;
+          }
+          if (Object.keys(map).length >= 3) return { row: r, colDay: map };
+        }
+        return null;
+      }
+
+      // A. 矩阵解析：行=节次、列=周几
+      function parseMatrix(rows, hdr) {
+        var courses = [], seq = 0, cols = hdr.colDay;
+        for (var r = hdr.row + 1; r < rows.length; r++) {
+          var row = rows[r] || [];
+          var hasText = row.some(function (x) { return String(x == null ? '' : x).trim() !== ''; });
+          if (!hasText) continue;
+          var firstCol = String(row[0] == null ? '' : row[0]).trim();
+          var secFromRow = rowSection(firstCol);
+          var isGroup = GROUP_ROW_RE.test(firstCol);
+          if (secFromRow) seq = secFromRow;
+          else if (!isGroup) seq += 1;
+          Object.keys(cols).forEach(function (day) {
+            var text = String(row[cols[day]] == null ? '' : row[cols[day]]).trim();
+            if (isJunkCell(text)) return;
+            splitCellCourses(text).forEach(function (b) {
+              var fb = secFromRow || (isGroup ? null : seq);
+              var course = parseCourseBlock(b, parseInt(day, 10), fb);
+              if (course) courses.push(course);
+            });
+          });
+        }
+        return courses;
+      }
+
+      // B. 列表解析：每行一门课
+      function parseListRows(rows) {
         var hRow = findHeaderRow(rows);
         var header = hRow >= 0 ? rows[hRow] : [];
         var dataStart = hRow >= 0 ? hRow + 1 : 0;
-        var iName = hRow >= 0 ? colIdx(header, ['课程', '名称', '课名']) : 0;
-        var iDay  = hRow >= 0 ? colIdx(header, ['星期', '礼拜']) : 1;
-        var iSec  = hRow >= 0 ? colIdx(header, ['节次', '节', '时间']) : 2;
-        var iRoom = hRow >= 0 ? colIdx(header, ['教室', '地点', '位置']) : 3;
-        var iTch  = hRow >= 0 ? colIdx(header, ['教师', '老师']) : 4;
+        var iName = hRow >= 0 ? colIdx(header, ['课程名', '课程', '名称', '课名', '科目']) : 0;
+        var iDay  = hRow >= 0 ? colIdx(header, ['星期', '礼拜', '周几', '星期几']) : 1;
+        var iSec  = hRow >= 0 ? colIdx(header, ['开始节', '节次', '上课节', '节', '时间']) : 2;
+        var iEnd  = hRow >= 0 ? colIdx(header, ['结束节', '下课节']) : -1;
+        var iWeek = hRow >= 0 ? colIdx(header, ['周次', '上课周']) : -1;
+        var iRoom = hRow >= 0 ? colIdx(header, ['教室', '上课地点', '地点', '位置', '地址']) : 3;
+        var iTch  = hRow >= 0 ? colIdx(header, ['教师', '老师', '授课', '任课']) : 4;
         if (iName < 0) iName = 0;
+        // 表头存在但首列不像课程列时，不按列表模式猜测
+        if (hRow >= 0 && !/课程|名称|科目|课名/.test(String(header[iName] || ''))) return [];
         var courses = [];
         for (var r = dataStart; r < rows.length; r++) {
           var row = rows[r] || [];
-          var name = row[iName];
-          if (name === undefined || name === null || String(name).trim() === '') continue;
-          var secRaw = String(iSec >= 0 ? (row[iSec] || '') : '');
-          var secParsed = parseSections({ start: secRaw || 1 });
-          // 「08:00」类时间格式自动映射节次
-          var tm = secRaw.match(/(\d{1,2}):(\d{2})/);
-          if (tm && secRaw.indexOf('节') === -1) {
-            var mins = parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10);
-            var idx = 0;
-            for (var t = 0; t < LESSON_TIMES.length; t++) {
-              var pt = LESSON_TIMES[t].split(':');
-              var pm = parseInt(pt[0], 10) * 60 + parseInt(pt[1], 10);
-              if (mins >= pm - 20) idx = t;
+          var name = String(row[iName] == null ? '' : row[iName]).trim();
+          if (!name || /^(课程名?称?|科目|星期|礼拜|周几|节次|时间|地点|教室|位置|教师|老师|周次|上午|下午|晚上|早晨|早上|中午|午休|傍晚|备注)$/.test(name)) continue;
+          var day = iDay >= 0 ? parseDay(row[iDay] || 1) : 1;
+          var sec = extractSections(iSec >= 0 ? String(row[iSec] || '') : '', { start: 1, end: 1 });
+          if (iSec >= 0 && !sec) {
+            var tm = String(row[iSec] || '').match(/(\d{1,2}):(\d{2})/);
+            if (tm) {
+              var mins = (+tm[1]) * 60 + (+tm[2]), idx = 0;
+              for (var t = 0; t < LESSON_TIMES.length; t++) {
+                var p = LESSON_TIMES[t].split(':');
+                var pm = (+p[0]) * 60 + (+p[1]);
+                if (mins >= pm - 20) idx = t;
+              }
+              sec = { start: idx + 1, end: idx + 1 };
             }
-            secParsed = { start: idx + 1, end: idx + 1 };
           }
-          courses.push({
-            name: String(name).trim().slice(0, 20),
-            teacher: String(iTch >= 0 ? (row[iTch] || '') : '').trim().slice(0, 10),
-            position: String(iRoom >= 0 ? (row[iRoom] || '') : '').trim().slice(0, 20),
-            weekday: parseDay((iDay >= 0 ? row[iDay] : '') || 1),
-            start: secParsed.start,
-            end: secParsed.end,
-            weeks: '1-16周',
-            color: COLORS[courses.length % COLORS.length],
-          });
+          var endVal = (iEnd >= 0 && parseInt(row[iEnd], 10) >= sec.start) ? parseInt(row[iEnd], 10) : sec.end;
+          var weeks = iWeek >= 0 ? (extractWeeks(String(row[iWeek] || '')) || '1-16周') : '1-16周';
+          courses.push(makeCourse({
+            name: name,
+            teacher: iTch >= 0 ? String(row[iTch] || '').trim() : '',
+            position: iRoom >= 0 ? String(row[iRoom] || '').trim() : '',
+            weekday: day, start: sec.start, end: endVal, weeks: weeks
+          }));
         }
-        if (!courses.length) return { error: '表格里没有识别到课程，请检查列名（课程/星期/节次/地点/教师）' };
-        return { courses: courses };
+        return courses;
+      }
+
+      function parseXlsxRows(rows) {
+        if (!rows || !rows.length) return { error: '表格是空的' };
+        var hdr = findDayHeader(rows);
+        var courses = hdr ? parseMatrix(rows, hdr) : parseListRows(rows);
+        courses = dedupeCourses(courses);
+        if (!courses.length) {
+          return { error: '未识别到真实课程：请确认是「节次×星期」矩阵课表，或含课程名/星期/节次列的列表' };
+        }
+        return { courses: courses, matrix: !!hdr };
       }
       var sheetJsLoading = false;
       function loadSheetJs(cb) {
@@ -307,7 +557,7 @@
         };
         document.head.appendChild(s);
       }
-      function showPreview(res) {
+      function showPreview(res, sourceLabel) {
         var pv = document.getElementById('importPreview');
         if (res.error) {
           pv.style.display = 'block';
@@ -316,11 +566,22 @@
           pv.textContent = '⚠ ' + res.error;
           pendingImport = null;
         } else {
+          pendingImport = res.courses;
+          var dist = [0, 0, 0, 0, 0, 0, 0];
+          res.courses.forEach(function (c) { dist[c.weekday - 1]++; });
+          var distText = dist.map(function (n, i) { return n ? ('周' + DAYS[i] + ' ' + n + '门') : ''; })
+            .filter(Boolean).join(' · ');
+          var sample = res.courses.slice(0, 3).map(function (c) { return c.name; }).join('、');
+          var modeText = res.matrix ? '矩阵课表' : (res.mode === 'JSON' ? 'JSON 课表' : '列表课表');
           pv.style.display = 'block';
           pv.style.background = 'var(--color-primary-lighter)';
-          pv.style.color = 'var(--color-primary)';
-          pv.textContent = '✓ 识别到 ' + res.courses.length + ' 门课程，点击下方按钮导入';
-          pendingImport = res.courses;
+          pv.style.color = 'var(--color-text)';
+          pv.innerHTML =
+            '<div style="font-weight:700;color:var(--color-primary);">✓ ' + (sourceLabel || '') +
+              '识别到 ' + res.courses.length + ' 门课程（' + modeText + '）</div>' +
+            '<div style="margin-top:4px;line-height:1.7;color:var(--color-text-sub);">' + distText + '</div>' +
+            '<div style="margin-top:2px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' +
+              sample + (res.courses.length > 3 ? ' 等' : '') + '</div>';
         }
       }
 
@@ -395,7 +656,7 @@
         var text = document.getElementById('importText').value.trim();
         var pv = document.getElementById('importPreview');
         if (!text) { pv.style.display = 'none'; pendingImport = null; return; }
-        showPreview(parseSchedule(text));
+        showPreview(parseSchedule(text), 'JSON ');
       }
 
       // XLS / XLSX 导入
@@ -415,7 +676,7 @@
               var wb = XLSX.read(e.target.result, { type: 'array' });
               var ws = wb.Sheets[wb.SheetNames[0]];
               var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-              showPreview(parseXlsxRows(rows));
+              showPreview(parseXlsxRows(rows), '表格');
             } catch (err) {
               showPreview({ error: '文件解析失败：' + (err && err.message ? err.message : '格式不正确') });
             }

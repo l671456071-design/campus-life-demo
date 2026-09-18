@@ -126,9 +126,24 @@
       font-weight: 600;
     }
     .theme-option-icon {
-      font-size: 20px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: center;
     }
+    .ai-ico {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #3B82F6, #22D3EE);
+      box-shadow: 0 4px 10px rgba(59, 130, 246, .25);
+    }
+    .ai-ico svg { width: 17px; height: 17px; stroke: #fff; }
+    .theme-option.active .ai-ico { box-shadow: 0 0 0 2px var(--color-primary), 0 4px 12px rgba(59, 130, 246, .35); }
+    .group-title-ai { display: flex; align-items: center; gap: 7px; }
+    .group-title-ai svg { width: 16px; height: 16px; flex-shrink: 0; }
 
     .settings-footer {
       text-align: center;
@@ -191,27 +206,31 @@
         </div>
 
         <!-- 外观设置 -->
+        <svg width="0" height="0" style="position:absolute;"><defs><linearGradient id="aiGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs></svg>
         <div class="settings-group anim-fade-in-up stagger-2">
-          <div class="settings-group-title">外观设置</div>
+          <div class="settings-group-title group-title-ai">
+            <svg viewBox="0 0 24 24" fill="url(#aiGrad)"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9z"/><path d="M19 3l.7 2 .3 1 1 .3 2 .7-2 .7-1 .3-.3 1-.7 2-.7-2-.3-1-1-.3-2-.7 2-.7 1-.3.3-1z"/></svg>
+            外观设置
+          </div>
           <div class="settings-card">
             <div style="padding: 14px 16px 10px;">
               <div class="settings-item-title" style="font-size:14px;">显示模式</div>
             </div>
             <div class="theme-options">
               <div class="theme-option" data-theme="auto" onclick="setTheme('auto')">
-                <div class="theme-option-icon">🌓</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18V3z"/><path d="M12 3a9 9 0 0 1 0 18"/></svg></span></div>
                 <div>跟随系统</div>
               </div>
               <div class="theme-option" data-theme="light" onclick="setTheme('light')">
-                <div class="theme-option-icon">☀️</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.4M12 19.1v2.4M2.5 12h2.4M19.1 12h2.4M5 5l1.7 1.7M17.3 17.3L19 19M19 5l-1.7 1.7M6.7 17.3L5 19"/></svg></span></div>
                 <div>浅色模式</div>
               </div>
               <div class="theme-option" data-theme="dark" onclick="setTheme('dark')">
-                <div class="theme-option-icon">🌙</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg></span></div>
                 <div>深色模式</div>
               </div>
               <div class="theme-option" data-theme="yaolan" onclick="setTheme('yaolan')">
-                <div class="theme-option-icon" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0 auto 4px;border-radius:50%;background:linear-gradient(135deg,#0A6EFF,#5EA0FF);color:#fff;font-size:13px;font-weight:700;">蓝</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.8S5.8 9.2 5.8 14a6.2 6.2 0 0 0 12.4 0c0-4.8-6.2-11.2-6.2-11.2z"/></svg></span></div>
                 <div>耀蓝模式</div>
               </div>
             </div>
@@ -220,7 +239,10 @@
 
         <!-- 性能模式 -->
         <div class="settings-group anim-fade-in-up stagger-3">
-          <div class="settings-group-title">性能模式</div>
+          <div class="settings-group-title group-title-ai">
+            <svg viewBox="0 0 24 24" fill="url(#aiGrad)"><path d="M13 2L4 13.5h6.5L10 22l9-11.5h-6.5z"/></svg>
+            性能模式
+          </div>
           <div class="settings-card">
             <div style="padding: 14px 16px 10px;">
               <div class="settings-item-title" style="font-size:14px;">渲染与识别性能</div>
@@ -228,15 +250,15 @@
             </div>
             <div class="theme-options">
               <div class="theme-option" data-perf="auto" onclick="setPerfMode('auto')">
-                <div class="theme-option-icon">⚙️</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5 5 1.7-5 1.7L12 16.5l-1.7-5.1-5-1.7 5-1.7z"/><path d="M18.5 14.5l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span></div>
                 <div>自动</div>
               </div>
               <div class="theme-option" data-perf="saver" onclick="setPerfMode('saver')">
-                <div class="theme-option-icon">🔋</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-7.2 5.3-12.2 14-13-.8 8.7-5.8 14-13 14-1 0-1-.3-1-1z"/><path d="M5 19c2.2-4.2 5.2-7.2 9-9"/></svg></span></div>
                 <div>省电</div>
               </div>
               <div class="theme-option" data-perf="perf" onclick="setPerfMode('perf')">
-                <div class="theme-option-icon">🚀</div>
+                <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13c-1.5 0-2-1-2-2 3.5-.5 6-3 6.5-6.5 1 .2 2 .7 2 2"/><path d="M13 21l8-10h-6l1-6-8 10h6z"/></svg></span></div>
                 <div>高性能</div>
               </div>
             </div>

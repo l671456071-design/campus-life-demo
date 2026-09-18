@@ -13,32 +13,44 @@
   <script src="theme-init.js"></script>
   <style>
     .sav-hero { background:linear-gradient(135deg,#F59E0B,#D97706); border-radius:20px; padding:20px; color:#fff; position:relative; overflow:hidden; }
-    .sav-hero-label { font-size:12px; opacity:0.85; }
-    .sav-hero-num { font-size:32px; font-weight:800; margin-top:4px; font-family:var(--font-mono); }
+    .sav-hero-label { font-size:13px; opacity:0.85; }
+    .sav-hero-num { font-size:34px; font-weight:800; margin-top:4px; font-family:var(--font-mono); }
     .sav-hero-row { display:flex; gap:18px; margin-top:14px; }
     .sav-hero-item { font-size:12px; opacity:0.92; }
-    .sav-hero-item b { display:block; font-size:16px; margin-top:2px; font-family:var(--font-mono); }
+    .sav-hero-item b { display:block; font-size:17px; margin-top:2px; font-family:var(--font-mono); }
     .sav-hero-deco { position:absolute; right:-14px; bottom:-18px; width:120px; height:120px; opacity:0.14; }
 
-    .goal-card { padding:14px 16px; }
-    .goal-top { display:flex; justify-content:space-between; align-items:center; }
-    .goal-name { font-size:15px; font-weight:700; color:var(--color-text); }
-    .goal-amount { font-size:13px; color:var(--color-text-sub); font-family:var(--font-mono); }
-    .goal-bar { height:8px; border-radius:99px; background:var(--color-surface-alt); margin-top:10px; overflow:hidden; }
+    .goal-card { padding:16px 18px; }
+    .goal-top { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .goal-idwrap { display:flex; gap:12px; align-items:center; flex:1; min-width:0; }
+    .goal-icon { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; }
+    .goal-main { flex:1; min-width:0; }
+    .goal-name { font-size:17px; font-weight:700; color:var(--color-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .goal-amount { font-size:14px; color:var(--color-text-sub); font-family:var(--font-mono); margin-top:2px; }
+    .goal-edit { border:none; background:transparent; color:var(--color-text-hint); font-size:13px; padding:6px 8px; flex-shrink:0; }
+    .goal-edit:active { color:var(--color-primary); }
+    .goal-bar { height:9px; border-radius:99px; background:var(--color-surface-alt); margin-top:12px; overflow:hidden; }
     .goal-bar-fill { height:100%; border-radius:99px; transition:width .35s ease; }
-    .goal-meta { display:flex; justify-content:space-between; margin-top:7px; font-size:12px; color:var(--color-text-hint); }
-    .goal-done { font-size:11px; color:#16A34A; font-weight:700; }
+    .goal-meta { display:flex; justify-content:space-between; margin-top:8px; font-size:13px; color:var(--color-text-hint); }
+    .goal-done { font-size:12px; color:#16A34A; font-weight:700; }
 
     .ledger-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--color-border-light); }
     .ledger-item:last-child { border-bottom:none; }
-    .ledger-ico { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+    .ledger-ico { width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
     .ledger-info { flex:1; min-width:0; }
-    .ledger-cat { font-size:14px; font-weight:600; color:var(--color-text); }
+    .ledger-cat { font-size:15px; font-weight:600; color:var(--color-text); }
     .ledger-note { font-size:12px; color:var(--color-text-hint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .ledger-amt { font-size:15px; font-weight:700; font-family:var(--font-mono); }
+    .ledger-amt { font-size:16px; font-weight:700; font-family:var(--font-mono); }
     .ledger-amt.in { color:#16A34A; }
     .ledger-amt.out { color:var(--color-danger); }
     .ledger-time { font-size:11px; color:var(--color-text-hint); margin-top:2px; text-align:right; }
+
+    /* DIY 选择器 */
+    .diy-grid { display:flex; flex-wrap:wrap; gap:9px; }
+    .diy-ico { width:42px; height:42px; border-radius:12px; border:2px solid transparent; background:var(--color-surface-alt); font-size:20px; display:flex; align-items:center; justify-content:center; padding:0; }
+    .diy-ico.on { border-color:var(--color-primary); }
+    .diy-color { width:32px; height:32px; border-radius:50%; border:2px solid transparent; padding:0; position:relative; }
+    .diy-color.on { border-color:var(--color-surface); box-shadow:0 0 0 2px var(--color-primary); }
 
     /* 底部抽屉表单 */
     .sheet-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
@@ -130,9 +142,17 @@
     <button class="btn btn-primary btn-block btn-lg" id="ledgerSubmit">保存</button>
   </div>
 
-  <!-- 新目标抽屉 -->
+  <!-- 新目标 / DIY 编辑抽屉 -->
   <div class="sheet" id="goalSheet">
-    <div class="sheet-title">新建攒钱目标</div>
+    <div class="sheet-title" id="goalSheetTitle">新建攒钱目标</div>
+    <div class="field">
+      <label>选个图标</label>
+      <div class="diy-grid" id="goalIconGrid"></div>
+    </div>
+    <div class="field">
+      <label>卡片颜色</label>
+      <div class="diy-grid" id="goalColorGrid"></div>
+    </div>
     <div class="field">
       <label>目标名称</label>
       <input type="text" id="goalName" placeholder="例如：换一台新手机" maxlength="20">
@@ -165,9 +185,13 @@
     (function () {
       var INCOME_CATS = ['兼职工资', '实习工资', '奖助学金', '生活费', '二手转让', '其他收入'];
       var EXPENSE_CATS = ['餐饮', '学习', '购物', '交通', '娱乐', '其他支出'];
-      var GOAL_COLORS = ['#0A6EFF', '#F59E0B', '#16A34A', '#7C3AED', '#EF4444'];
+      var GOAL_COLORS = ['#0A6EFF', '#3B82F6', '#22D3EE', '#16A34A', '#F59E0B', '#7C3AED', '#EF4444', '#EC4899'];
+      var GOAL_ICONS = ['🎯','📱','💻','📚','✈️','🎮','👟','🎧','🚲','🎁','💍','🏠','📷','🍜','💊','💰'];
       var ledgerType = 'income';
       var depositGoalId = null;
+      var editingGoalId = null;
+      var pickIcon = GOAL_ICONS[0];
+      var pickColor = GOAL_COLORS[0];
 
       var mask = document.getElementById('sheetMask');
       var ledgerSheet = document.getElementById('ledgerSheet');
@@ -195,6 +219,12 @@
         document.getElementById('savExpense').textContent = fmt(expense);
         document.getElementById('savSaved').textContent = fmt(saved);
 
+        function hexTint(hex, alpha) {
+          var h = String(hex || '#0A6EFF').replace('#', '');
+          if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+          var n = parseInt(h, 16);
+          return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
+        }
         // 目标
         var gh = '';
         if (!data.goals.length) {
@@ -203,10 +233,15 @@
         data.goals.forEach(function (g) {
           var pct = Math.min(100, Math.round(g.saved / g.target * 100));
           var done = g.saved >= g.target;
+          var color = g.color || '#0A6EFF';
+          var icon = g.icon || '🎯';
           gh += '<div class="card goal-card anim-fade-in-up">' +
-            '<div class="goal-top"><span class="goal-name">' + g.name + (done ? ' 🎉' : '') + '</span>' +
-            '<span class="goal-amount">' + fmt(g.saved) + ' / ' + fmt(g.target) + '</span></div>' +
-            '<div class="goal-bar"><div class="goal-bar-fill" style="width:' + pct + '%;background:' + g.color + ';"></div></div>' +
+            '<div class="goal-top"><div class="goal-idwrap">' +
+            '<div class="goal-icon" style="background:' + hexTint(color, 0.15) + ';">' + icon + '</div>' +
+            '<div class="goal-main"><div class="goal-name">' + g.name + (done ? ' 🎉' : '') + '</div>' +
+            '<div class="goal-amount">' + fmt(g.saved) + ' / ' + fmt(g.target) + ' 元</div></div></div>' +
+            '<button type="button" class="goal-edit" data-edit="' + g.id + '" aria-label="DIY编辑卡片">✎ 编辑</button></div>' +
+            '<div class="goal-bar"><div class="goal-bar-fill" style="width:' + pct + '%;background:' + color + ';"></div></div>' +
             '<div class="goal-meta"><span>' + pct + '%</span>' +
             (done ? '<span class="goal-done">已达成</span>' : '<a href="javascript:void(0)" class="section-link" data-goal="' + g.id + '">存一笔</a>') +
             '</div></div>';
@@ -218,6 +253,12 @@
             document.getElementById('depositTitle').textContent = '存入「' + (data.goals.find(function (g) { return g.id === depositGoalId; }) || {}).name + '」';
             document.getElementById('depositAmount').value = '';
             openSheet(depositSheet);
+          });
+        });
+        document.querySelectorAll('[data-edit]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var target = data.goals.find(function (g) { return g.id === btn.dataset.edit; });
+            if (target) openGoalSheet(target);
           });
         });
 
@@ -261,10 +302,36 @@
         setType('expense'); document.getElementById('ledgerAmount').value = ''; document.getElementById('ledgerNote').value = '';
         openSheet(ledgerSheet);
       });
-      document.getElementById('btnAddGoal').addEventListener('click', function () {
-        document.getElementById('goalName').value = ''; document.getElementById('goalTarget').value = '';
+      function renderPickers() {
+        document.getElementById('goalIconGrid').innerHTML = GOAL_ICONS.map(function (ic) {
+          return '<button type="button" class="diy-ico' + (ic === pickIcon ? ' on' : '') + '" data-icon="' + ic + '">' + ic + '</button>';
+        }).join('');
+        document.getElementById('goalColorGrid').innerHTML = GOAL_COLORS.map(function (c) {
+          return '<button type="button" class="diy-color' + (c === pickColor ? ' on' : '') + '" data-color="' + c + '" style="background:' + c + ';" aria-label="选择颜色"></button>';
+        }).join('');
+        document.querySelectorAll('[data-icon]').forEach(function (b) {
+          b.addEventListener('click', function () { pickIcon = this.dataset.icon; renderPickers(); });
+        });
+        document.querySelectorAll('[data-color]').forEach(function (b) {
+          b.addEventListener('click', function () { pickColor = this.dataset.color; renderPickers(); });
+        });
+      }
+
+      // goal 为空 = 新建；传入目标 = DIY 编辑
+      function openGoalSheet(goal) {
+        var goals = Storage.lifeGetSavings().goals;
+        editingGoalId = goal ? goal.id : null;
+        pickIcon = goal ? (goal.icon || '🎯') : GOAL_ICONS[0];
+        pickColor = goal ? (goal.color || '#0A6EFF') : GOAL_COLORS[goals.length % GOAL_COLORS.length];
+        document.getElementById('goalSheetTitle').textContent = goal ? 'DIY 编辑卡片' : '新建攒钱目标';
+        document.getElementById('goalSubmit').textContent = goal ? '保存修改' : '创建目标';
+        document.getElementById('goalName').value = goal ? goal.name : '';
+        document.getElementById('goalTarget').value = goal ? goal.target : '';
+        renderPickers();
         openSheet(goalSheet);
-      });
+      }
+
+      document.getElementById('btnAddGoal').addEventListener('click', function () { openGoalSheet(null); });
 
       document.getElementById('ledgerSubmit').addEventListener('click', function () {
         var amount = parseFloat(document.getElementById('ledgerAmount').value);
@@ -282,10 +349,15 @@
       document.getElementById('goalSubmit').addEventListener('click', function () {
         var name = document.getElementById('goalName').value.trim();
         var target = parseFloat(document.getElementById('goalTarget').value);
-        var goals = Storage.lifeGetSavings().goals;
-        var res = Storage.lifeAddGoal({ name: name, target: target, color: GOAL_COLORS[goals.length % GOAL_COLORS.length] });
-        if (res.success) { closeAll(); App.toastSuccess('目标已创建'); render(); }
-        else App.toast(res.message || '创建失败');
+        if (!name) { App.toast('给目标起个名字吧'); return; }
+        var res;
+        if (editingGoalId) {
+          res = Storage.lifeUpdateGoal(editingGoalId, { name: name, target: target, color: pickColor, icon: pickIcon });
+        } else {
+          res = Storage.lifeAddGoal({ name: name, target: target, color: pickColor, icon: pickIcon });
+        }
+        if (res.success) { closeAll(); App.toastSuccess(editingGoalId ? '卡片已更新' : '目标已创建'); render(); }
+        else App.toast(res.message || '保存失败');
       });
 
       document.getElementById('depositSubmit').addEventListener('click', function () {

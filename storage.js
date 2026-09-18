@@ -936,11 +936,31 @@ var Storage = {
       target: Math.round(goal.target * 100) / 100,
       saved: 0,
       color: goal.color || '#0A6EFF',
+      icon: goal.icon || '🎯',
       createdAt: Date.now(),
     };
     data.savings.goals.push(g);
     this._saveLife(data);
     return { success: true, goal: g };
+  },
+
+  // DIY 更新攒钱卡片（名称/颜色/图标/目标金额）
+  lifeUpdateGoal: function (goalId, patch) {
+    if (!patch) return { success: false, message: '无更新内容' };
+    var data = this._life();
+    for (var i = 0; i < data.savings.goals.length; i++) {
+      if (data.savings.goals[i].id === goalId) {
+        var g = data.savings.goals[i];
+        if (patch.name) g.name = String(patch.name).slice(0, 20);
+        if (patch.color) g.color = String(patch.color);
+        if (patch.icon) g.icon = String(patch.icon);
+        if (patch.target > 0) g.target = Math.round(patch.target * 100) / 100;
+        if (g.saved > g.target) g.saved = g.target;
+        this._saveLife(data);
+        return { success: true, goal: g };
+      }
+    }
+    return { success: false, message: '目标不存在' };
   },
 
   lifeContributeGoal: function (goalId, amount) {
@@ -999,13 +1019,15 @@ var Storage = {
   lifeAddPost: function (post) {
     if (!post || !post.title || !post.content) return { success: false, message: '标题和内容不能为空' };
     var data = this._life();
+    var u = this.getUser() || {};
     var item = {
       id: 'F' + Date.now(),
       board: post.board || 'talk',
       title: post.title,
       content: post.content,
       image: post.image || '',
-      author: post.author || '我',
+      author: post.author || u.name || '我',
+      authorAvatar: u.avatar || null,
       likes: 0,
       liked: false,
       comments: [],
@@ -1035,7 +1057,8 @@ var Storage = {
     var data = this._life();
     for (var i = 0; i < data.forum.posts.length; i++) {
       if (data.forum.posts[i].id === id) {
-        var c = { author: '我', text: text, time: this.formatNow() };
+        var u = this.getUser() || {};
+        var c = { author: u.name || '我', authorAvatar: u.avatar || null, text: text, time: this.formatNow() };
         data.forum.posts[i].comments.push(c);
         this._saveLife(data);
         return { success: true, comment: c };
@@ -1174,6 +1197,7 @@ var Storage = {
       experience: resume.experience || '',
       skills: resume.skills || '',
       intro: resume.intro || '',
+      photo: resume.photo || '',
       completedAt: resume.completedAt || Date.now(),
     };
     this._saveLife(data);

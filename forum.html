@@ -51,9 +51,10 @@
     .detail-content { font-size:14px; color:var(--color-text); line-height:1.75; margin-top:10px; white-space:pre-wrap; }
     .detail-actions { display:flex; gap:10px; margin:16px 0 6px; }
     .detail-actions .btn { flex:1; }
-    .cmt { padding:11px 0; border-top:1px solid var(--color-border-light); }
-    .cmt-top { font-size:13px; font-weight:600; color:var(--color-text); }
-    .cmt-top time { font-weight:400; color:var(--color-text-hint); font-size:11px; margin-left:8px; }
+    .cmt { display:flex; gap:9px; padding:11px 0; border-top:1px solid var(--color-border-light); }
+    .cmt-body { flex:1; min-width:0; }
+    .cmt-top { font-size:13px; font-weight:600; color:var(--color-text); display:flex; align-items:center; gap:8px; }
+    .cmt-top time { font-weight:400; color:var(--color-text-hint); font-size:11px; }
     .cmt-text { font-size:13px; color:var(--color-text-sub); margin-top:4px; line-height:1.55; }
     .cmt-input-row { display:flex; gap:8px; margin-top:14px; }
     .cmt-input-row input { flex:1; border:1.5px solid var(--color-border); border-radius:99px; padding:10px 15px; font-size:13px; background:var(--color-surface); color:var(--color-text); outline:none; }
@@ -169,6 +170,12 @@
         });
       }
 
+      // 头像与个人中心保持一致：本人帖子/评论实时取当前头像，历史内容用发帖时快照
+      function avatarOf(entry, size) {
+        if (entry && entry.mine) return App.avatarHtml(Storage.getUser(), size, '#7C3AED', '#fff');
+        return App.avatarHtml({ name: entry ? entry.author : '用', avatar: entry ? entry.authorAvatar : null }, size, '#7C3AED', '#fff');
+      }
+
       function renderPosts() {
         var posts = Storage.lifeGetPosts().filter(function (p) {
           return currentBoard === 'all' || p.board === currentBoard;
@@ -180,13 +187,13 @@
         posts.forEach(function (p, i) {
           var b = boardMap[p.board] || boardMap.talk;
           html += '<a href="javascript:void(0)" class="card card--clickable post-card anim-fade-in-up stagger-' + Math.min(i + 1, 5) + '" data-post="' + p.id + '">' +
-            '<div class="post-top"><div class="post-avatar">' + esc(p.author.charAt(0)) + '</div>' +
+            '<div class="post-top">' + avatarOf(p, 32) +
             '<div><div class="post-author">' + esc(p.author) + (p.mine ? '（我）' : '') + '</div>' +
             '<div class="post-time">' + timeAgo(p.createdAt) + '</div></div>' +
             '<span class="post-tag" style="color:' + b.color + ';background:' + b.bg + ';">' + b.label + '</span></div>' +
             '<div class="post-title">' + esc(p.title) + '</div>' +
             '<div class="post-content">' + esc(p.content) + '</div>' +
-            (p.image ? '<img class="post-img" src="' + p.image + '" alt="帖子配图">' : '') +
+            (p.image ? '<img class="post-img" src="' + p.image + '" alt="帖子配图" loading="lazy" decoding="async">' : '') +
             '<div class="post-foot">' +
             '<span class="' + (p.liked ? 'liked' : '') + '">❤ ' + p.likes + '</span>' +
             '<span>💬 ' + p.comments.length + '</span></div></a>';
@@ -215,7 +222,7 @@
           return;
         }
         box.innerHTML = album.map(function (ph) {
-          return '<img src="' + ph.src + '" data-img="' + ph.id + '" alt="相册照片"' +
+          return '<img src="' + ph.src + '" data-img="' + ph.id + '" alt="相册照片" loading="lazy" decoding="async"' +
             (pickedImg === ph.src ? ' class="on"' : '') + '>';
         }).join('');
         box.querySelectorAll('img[data-img]').forEach(function (img) {
@@ -274,16 +281,17 @@
         if (!p) { closeAll(); return; }
         var b = boardMap[p.board] || boardMap.talk;
         var cmtHtml = p.comments.map(function (c) {
-          return '<div class="cmt"><div class="cmt-top">' + esc(c.author) + (c.time ? '<time>' + esc(c.time) + '</time>' : '') + '</div>' +
-            '<div class="cmt-text">' + esc(c.text) + '</div></div>';
+          return '<div class="cmt">' + avatarOf(c.mine ? { author: c.author, mine: true } : c, 28) +
+            '<div class="cmt-body"><div class="cmt-top">' + esc(c.author) + (c.time ? '<time>' + esc(c.time) + '</time>' : '') + '</div>' +
+            '<div class="cmt-text">' + esc(c.text) + '</div></div></div>';
         }).join('');
         document.getElementById('detailBody').innerHTML =
-          '<div class="detail-head"><div class="post-avatar">' + esc(p.author.charAt(0)) + '</div>' +
+          '<div class="detail-head">' + avatarOf(p, 40) +
           '<div><div class="post-author">' + esc(p.author) + (p.mine ? '（我）' : '') + '</div>' +
           '<div class="post-time">' + timeAgo(p.createdAt) + ' · <span style="color:' + b.color + ';">' + b.label + '</span></div></div></div>' +
           '<div class="detail-title">' + esc(p.title) + '</div>' +
           '<div class="detail-content">' + esc(p.content) + '</div>' +
-          (p.image ? '<img class="post-img" src="' + p.image + '" alt="帖子配图">' : '') +
+          (p.image ? '<img class="post-img" src="' + p.image + '" alt="帖子配图" loading="lazy" decoding="async">' : '') +
           '<div class="detail-actions">' +
             '<button class="btn btn-outline btn-sm" id="detailLike">' + (p.liked ? '❤ 已赞 ' : '♡ 点赞 ') + p.likes + '</button>' +
             '<button class="btn btn-outline btn-sm" id="detailCmtCount">💬 ' + p.comments.length + ' 条回复</button>' +

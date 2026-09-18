@@ -65,6 +65,7 @@
 /* ===== Dark Mode ===== */
 [data-theme="dark"] {
   --color-primary: #3B82F6;
+  --color-primary-text: #629BF8; /* 蓝色文字提亮 20%，深底上满足 WCAG AA */
   --color-primary-hover: #60A5FA;
   --color-primary-light: #1E3A5F;
   --color-primary-lighter: #172554;
@@ -143,6 +144,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]):not([data-theme="yaolan"]) {
     --color-primary: #3B82F6;
+    --color-primary-text: #629BF8; /* 蓝色文字提亮 20%，深底上满足 WCAG AA */
     --color-primary-hover: #60A5FA;
     --color-primary-light: #1E3A5F;
     --color-primary-lighter: #172554;
@@ -367,6 +369,31 @@ img { max-width: 100%; display: block; }
 }
 :root:not([data-theme="light"]) .tab-item:active {
   background: rgba(255, 255, 255, 0.06);
+}
+
+/* ===== 扫码全屏页：tab 栏浮在摄像头画面上 ===== */
+body[data-page="scan"] .tab-bar {
+  background: rgba(15, 23, 42, 0.55);
+  -webkit-backdrop-filter: saturate(160%) blur(20px);
+  backdrop-filter: saturate(160%) blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 32px rgba(2, 6, 23, 0.45);
+}
+body[data-page="scan"] .tab-item { color: rgba(255, 255, 255, 0.68); }
+body[data-page="scan"] .tab-item.active { color: #fff; }
+body[data-page="scan"] .tab-scan-btn {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+body[data-page="scan"] .tab-item--center.active .tab-scan-btn {
+  background: linear-gradient(135deg, #34D399, #059669);
+  box-shadow:
+    0 10px 32px rgba(16, 185, 129, 0.55),
+    0 0 0 4px rgba(255, 255, 255, 0.16),
+    0 0 20px rgba(255, 255, 255, 0.55);
+}
+body[data-page="scan"] .tab-item--center.active .tab-label {
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.85);
 }
 
 /* ===== Cards ===== */
@@ -1031,3 +1058,17 @@ img { max-width: 100%; display: block; }
   justify-content: center;
   margin-top: 1px;
 }
+
+/* 蓝色文字统一走 --color-primary-text：暗色自动提亮 20%（WCAG AA），浅色回退主色 */
+.section-link,
+.text-primary,
+.btn-ghost,
+.badge-primary,
+.status-incoming,
+.pickup-code-value,
+.stat-value,
+.pkg-code-value,
+.pkg-code-copy,
+.quick-action-label--primary,
+.tab-item.active,
+.guide-no { color: var(--color-primary-text, var(--color-primary)); }

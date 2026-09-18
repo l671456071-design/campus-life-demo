@@ -441,7 +441,7 @@ var App = {
     var base = 'width:' + size + 'px;height:' + size + 'px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;';
     var avatar = user && user.avatar;
     if (avatar && avatar.type === 'image' && avatar.data) {
-      return '<span style="' + base + '"><img src="' + avatar.data + '" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></span>';
+      return '<span style="' + base + '"><img src="' + avatar.data + '" alt="" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"></span>';
     }
     if (avatar && avatar.type === 'emoji' && avatar.emoji) {
       return '<span style="' + base + 'background:' + (avatar.bg || '#E0E7FF') + ';font-size:' + Math.round(size * 0.52) + 'px;line-height:1;">' + avatar.emoji + '</span>';

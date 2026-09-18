@@ -12,33 +12,47 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
+    /* ===== 实习工作 · 蓝色主色板（暗色优先，浅色自动适配） ===== */
+    :root {
+      --jb-blue: #3B82F6;
+      --jb-blue-deep: #2563EB;
+      --jb-blue-soft: #60A5FA;
+      --jb-cyan: #22D3EE;
+    }
+    [data-theme="light"] { --jb-chip-bg: #EFF6FF; --jb-chip-ink: #2563EB; --jb-salary: #0891B2; }
+    :root:not([data-theme="light"]) { --jb-chip-bg: rgba(59,130,246,.14); --jb-chip-ink: #60A5FA; --jb-salary: #22D3EE; }
+
     .job-card { padding:14px 16px; display:block; }
     .job-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
     .job-name { font-size:16px; font-weight:700; color:var(--color-text); line-height:1.4; }
-    .job-salary { font-size:15px; font-weight:800; color:#EA580C; font-family:var(--font-mono); flex-shrink:0; }
+    .job-salary { font-size:15px; font-weight:800; color:var(--jb-salary); font-family:var(--font-mono); flex-shrink:0; }
     .job-company { font-size:13px; color:var(--color-text-sub); margin-top:5px; }
     .job-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
     .job-tag { font-size:11px; padding:3px 9px; border-radius:99px; background:var(--color-surface-alt); color:var(--color-text-sub); }
-    .job-foot { display:flex; align-items:center; justify-content:space-between; margin-top:11px; padding-top:10px; border-top:1px solid var(--color-border-light); }
+    .job-tag.more { background:var(--jb-chip-bg); color:var(--jb-chip-ink); font-weight:600; }
+    /* 标签区与薪资行拉开 12px */
+    .job-foot { display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding-top:10px; border-top:1px solid var(--color-border-light); }
     .job-loc { font-size:12px; color:var(--color-text-hint); display:inline-flex; align-items:center; gap:4px; }
-    .job-applied-tag { font-size:11px; color:#16A34A; background:#DCFCE7; padding:3px 10px; border-radius:99px; font-weight:600; }
+    .job-applied-tag { font-size:11px; color:var(--color-success); background:var(--color-success-light); padding:3px 10px; border-radius:99px; font-weight:600; }
 
-    .fab { position:fixed; right:18px; bottom:calc(24px + env(safe-area-inset-bottom)); width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#F97316,#EA580C); color:#fff; border:none; box-shadow:0 8px 20px rgba(234,88,12,.4); z-index:20; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
-    .fab:active { transform:scale(.9); }
+    /* 悬浮按钮：蓝色渐变 + 全面屏安全区上移 */
+    .fab { position:fixed; right:18px; bottom:calc(24px + env(safe-area-inset-bottom)); width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#3B82F6,#2563EB); color:#fff; border:none; box-shadow:0 8px 20px rgba(37,99,235,.42); z-index:20; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+    .fab:active { transform:scale(.9); background:linear-gradient(135deg,#2563EB,#1D4ED8); }
 
-    /* 分区 tab */
+    /* 分区 tab：未选中深灰底，选中蓝色 */
     .sec-tabs { display:flex; gap:8px; padding:12px 16px 0; }
     .sec-tab { flex:1; border:none; background:var(--color-surface); color:var(--color-text-sub); font-size:13.5px; font-weight:600; padding:10px 0; border-radius:14px; box-shadow:var(--shadow-sm); cursor:pointer; transition:all .18s; }
-    .sec-tab.active { background:linear-gradient(135deg,#F97316,#EA580C); color:#fff; box-shadow:0 6px 14px rgba(234,88,12,.3); }
+    .sec-tab.active { background:#3B82F6; color:#fff; box-shadow:0 6px 14px rgba(59,130,246,.32); }
     .sec-tab .cnt { font-size:11px; opacity:.85; margin-left:3px; }
 
-    /* 简历分步向导 */
+    /* 简历分步向导：当前步蓝色发光，已完成蓝描边蓝勾 */
     .rz-progress { display:flex; align-items:center; margin:4px 6px 18px; }
     .rz-dot { width:26px; height:26px; border-radius:50%; background:var(--color-surface-alt); color:var(--color-text-hint); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .2s; }
-    .rz-dot.on { background:#F97316; color:#fff; }
-    .rz-dot.done { background:#FFEDD5; color:#EA580C; }
-    .rz-line { flex:1; height:3px; border-radius:2px; background:var(--color-surface-alt); margin:0 4px; }
-    .rz-line.done { background:#FB923C; }
+    .rz-dot.on { background:#3B82F6; color:#fff; box-shadow:0 0 12px rgba(59,130,246,.5); }
+    .rz-dot.done { background:transparent; border:1.5px solid #3B82F6; color:#60A5FA; }
+    .rz-line { flex:1; height:3px; border-radius:2px; background:rgba(255,255,255,.2); margin:0 4px; }
+    :root[data-theme="light"] .rz-line { background:rgba(15,23,42,.08); }
+    .rz-line.done { background:#3B82F6; }
     .rz-page { display:none; }
     .rz-page.show { display:block; }
     .rz-row { display:flex; gap:10px; }
@@ -46,21 +60,28 @@
     .rz-foot { display:flex; gap:10px; margin-top:8px; }
     .rz-foot .btn { flex:1; }
 
-    /* 投递状态 */
+    /* 证件照上传 */
+    .rz-photo { display:flex; align-items:center; gap:14px; margin-bottom:14px; }
+    .rz-photo-preview { width:72px; height:72px; border-radius:16px; object-fit:cover; border:1.5px solid var(--color-border); background:var(--color-surface-alt); flex-shrink:0; overflow:hidden; display:flex; align-items:center; justify-content:center; font-size:26px; color:var(--color-text-hint); }
+    .rz-photo-ops { display:flex; flex-direction:column; gap:7px; }
+    .rz-photo-btn { font-size:12.5px; color:var(--jb-blue-soft); background:var(--jb-chip-bg); border:none; border-radius:10px; padding:7px 14px; font-weight:600; }
+    .rz-photo-hint { font-size:11px; color:var(--color-text-hint); }
+
+    /* 投递状态（全部冷色系） */
     .app-card { padding:14px 16px; }
     .app-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
     .app-title { font-size:15px; font-weight:700; color:var(--color-text); }
     .app-company { font-size:12.5px; color:var(--color-text-sub); margin-top:3px; }
     .app-badge { font-size:11px; font-weight:700; padding:4px 10px; border-radius:99px; flex-shrink:0; }
-    .st-submitted { color:#52525B; background:var(--color-surface-alt); }
-    .st-viewed { color:#1D4ED8; background:#DBEAFE; }
-    .st-interview { color:#B45309; background:#FEF3C7; }
-    .st-offer { color:#15803D; background:#DCFCE7; }
-    .st-rejected { color:#DC2626; background:#FEE2E2; }
-    .st-withdrawn { color:#71717A; background:#E4E4E7; }
+    .st-submitted { color:var(--color-text-sub); background:var(--color-surface-alt); }
+    .st-viewed { color:#60A5FA; background:rgba(59,130,246,.15); }
+    .st-interview { color:var(--jb-cyan); background:rgba(34,211,238,.13); }
+    .st-offer { color:var(--color-success); background:var(--color-success-light); }
+    .st-rejected { color:var(--color-danger); background:var(--color-danger-light); }
+    .st-withdrawn { color:var(--color-text-hint); background:var(--color-surface-alt); }
     .app-timeline { margin-top:12px; padding:10px 12px; background:var(--color-surface-alt); border-radius:12px; }
     .app-tl-item { display:flex; align-items:center; gap:8px; font-size:12px; color:var(--color-text-sub); padding:3px 0; }
-    .app-tl-dot { width:7px; height:7px; border-radius:50%; background:#FB923C; flex-shrink:0; }
+    .app-tl-dot { width:7px; height:7px; border-radius:50%; background:#3B82F6; flex-shrink:0; }
     .app-tl-item time { margin-left:auto; color:var(--color-text-hint); font-size:11px; }
     .app-withdraw { margin-top:10px; width:100%; border:1.5px solid var(--color-border); background:none; color:var(--color-text-sub); font-size:12.5px; padding:8px 0; border-radius:10px; cursor:pointer; }
     .app-withdraw:active { background:var(--color-surface-alt); }
@@ -72,22 +93,49 @@
     .sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:16px; }
     .field { margin-bottom:12px; }
     .field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
-    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
-    .field input:focus, .field select:focus, .field textarea:focus { border-color:#F97316; }
-    .field textarea { resize:vertical; min-height:90px; }
+    .field label .req { color:#3B82F6; font-weight:700; margin-left:2px; }
+    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; height:48px; padding:0 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; transition:border-color .2s, box-shadow .2s; }
+    .field textarea { height:auto; padding:11px 13px; resize:vertical; min-height:90px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:#3B82F6; box-shadow:0 0 0 3px rgba(59,130,246,.16); }
+    /* 下拉框箭头右侧绝对定位，高度与输入框统一 */
+    .field select { appearance:none; -webkit-appearance:none; padding-right:34px; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; }
 
     .detail-name { font-size:20px; font-weight:800; color:var(--color-text); }
-    .detail-salary { font-size:18px; font-weight:800; color:#EA580C; font-family:var(--font-mono); margin-top:6px; }
+    .detail-salary { font-size:18px; font-weight:800; color:var(--jb-salary); font-family:var(--font-mono); margin-top:6px; }
     .detail-company { font-size:14px; color:var(--color-text-sub); margin-top:8px; }
     .detail-sec-title { font-size:14px; font-weight:700; color:var(--color-text); margin:18px 0 8px; }
     .detail-sec { font-size:13.5px; color:var(--color-text-sub); line-height:1.75; }
     .detail-sec li { margin-bottom:4px; }
 
+    /* 简历预览卡 */
     .resume-card { padding:13px 16px; }
     .resume-top { display:flex; justify-content:space-between; align-items:center; }
     .resume-name { font-size:15px; font-weight:700; color:var(--color-text); }
-    .resume-intent { font-size:12px; color:#F97316; background:#FFEDD5; padding:3px 10px; border-radius:99px; }
+    .resume-intent { font-size:12px; color:var(--jb-chip-ink); background:var(--jb-chip-bg); padding:3px 10px; border-radius:99px; }
     .resume-info { font-size:12px; color:var(--color-text-sub); margin-top:7px; line-height:1.6; }
+    .rz-avatar { width:48px; height:48px; border-radius:14px; background:linear-gradient(135deg,#3B82F6,#1D4ED8); color:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; flex-shrink:0; overflow:hidden; }
+    .rz-avatar img { width:100%; height:100%; object-fit:cover; }
+    .rz-edit-btn { border:1px solid #3B82F6; color:#60A5FA; background:none; }
+    .rz-empty { color:var(--color-text-hint); font-style:normal; }
+    .rz-tools { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:4px; }
+    .rz-tool { border:1px solid var(--color-border); background:var(--color-surface); color:var(--color-text); border-radius:12px; padding:10px 4px; font-size:12.5px; font-weight:600; display:flex; flex-direction:column; align-items:center; gap:5px; transition:all .2s; }
+    .rz-tool:active { background:var(--color-surface-alt); }
+    .rz-tool .ic { font-size:18px; }
+    .rz-tool.import { grid-column:span 3; color:#60A5FA; border-color:rgba(59,130,246,.45); background:rgba(59,130,246,.08); flex-direction:row; justify-content:center; }
+
+    /* 打印（导出 PDF）：只打印简历正文 */
+    #printArea { display:none; }
+    @media print {
+      body * { visibility:hidden !important; }
+      #printArea, #printArea * { visibility:visible !important; }
+      #printArea { display:block; position:absolute; left:0; top:0; width:100%; padding:18px; color:#0F172A; background:#fff; box-sizing:border-box; }
+      .pv-title { font-size:22px; font-weight:800; margin:0 0 4px; }
+      .pv-sub { color:#334155; font-size:13px; margin-bottom:12px; }
+      .pv-h { font-size:15px; font-weight:700; border-bottom:2px solid #3B82F6; padding-bottom:4px; margin:14px 0 6px; }
+      .pv-p { font-size:13px; line-height:1.8; color:#1E293B; white-space:pre-wrap; margin:0; }
+      .pv-photo { position:absolute; right:18px; top:18px; width:84px; height:104px; object-fit:cover; border-radius:8px; border:1px solid #CBD5E1; }
+      @page { margin:12mm; }
+    }
   </style>
 </head>
 <body data-page="jobs">
@@ -103,7 +151,7 @@
       <div class="header-right" style="width:32px;"></div>
     </header>
 
-    <main class="app-content" id="mainContent" style="padding-bottom:32px;">
+    <main class="app-content" id="mainContent" style="padding-bottom:calc(96px + env(safe-area-inset-bottom));">
       <div class="sec-tabs anim-fade-in-up" id="secTabs">
         <button class="sec-tab active" data-sec="jobs">职位</button>
         <button class="sec-tab" data-sec="applied">我的投递<span class="cnt" id="appliedCnt"></span></button>
@@ -145,7 +193,15 @@
     <div class="rz-progress" id="rzProgress"></div>
 
     <div class="rz-page show" data-page="1">
-      <div class="field"><label>姓名 *</label><input type="text" id="rzName" placeholder="真实姓名" maxlength="12"></div>
+      <div class="rz-photo">
+        <div class="rz-photo-preview" id="rzPhotoPreview">👤</div>
+        <div class="rz-photo-ops">
+          <button type="button" class="rz-photo-btn" id="rzPhotoBtn">上传证件照</button>
+          <span class="rz-photo-hint">建议正面免冠照，仅保存在本机</span>
+        </div>
+        <input type="file" id="rzPhotoInput" accept="image/*" style="display:none;">
+      </div>
+      <div class="field"><label>姓名 <span class="req">*</span></label><input type="text" id="rzName" placeholder="真实姓名" maxlength="12"></div>
       <div class="rz-row">
         <div class="field"><label>性别</label><select id="rzGender"><option value="">不填</option><option>男</option><option>女</option></select></div>
         <div class="field"><label>手机号</label><input type="tel" id="rzPhone" placeholder="方便 HR 联系" maxlength="11"></div>
@@ -154,7 +210,7 @@
     </div>
 
     <div class="rz-page" data-page="2">
-      <div class="field"><label>意向岗位 *</label><input type="text" id="rzIntent" placeholder="例如：前端开发实习生" maxlength="20"></div>
+      <div class="field"><label>意向岗位 <span class="req">*</span></label><input type="text" id="rzIntent" placeholder="例如：前端开发实习生" maxlength="20"></div>
       <div class="rz-row">
         <div class="field"><label>意向城市</label><input type="text" id="rzCity" placeholder="例如：厦门" maxlength="12"></div>
         <div class="field"><label>期望薪资</label><input type="text" id="rzSalary" placeholder="例如：150-200/天" maxlength="15"></div>
@@ -184,9 +240,14 @@
 
     <div class="rz-foot">
       <button class="btn btn-lg" id="rzPrev" style="background:var(--color-surface-alt);color:var(--color-text-sub);display:none;">上一步</button>
-      <button class="btn btn-primary btn-lg" id="rzNext" style="background:linear-gradient(135deg,#F97316,#EA580C);">下一步</button>
+      <button class="btn btn-primary btn-lg" id="rzNext" style="background:#3B82F6;transition:background .3s;">下一步</button>
     </div>
   </div>
+
+  <!-- 导入简历（JSON 备份文件） -->
+  <input type="file" id="importResumeInput" accept=".json,application/json" style="display:none;">
+  <!-- 导出 PDF 打印区 -->
+  <div id="printArea"></div>
 
   <script src="config.js"></script>
   <script src="mock.js"></script>
@@ -197,9 +258,9 @@
   <script src="app.js"></script>
   <script>
     (function () {
-      // 内置虚拟岗位（演示数据，本地浏览）
+      // 内置虚拟岗位（演示数据，本地浏览，职位与公司参照主流招聘平台风格）
       var JOBS = [
-        { id: 'J1', type: 'intern', name: '前端开发实习生', company: '云图科技（厦门）', city: '厦门 · 思明区', salary: '150-200/天', tags: ['React', 'Vue', '每周3天', '可转正'], desc: '参与校园产品 Web 端功能开发，与设计、后端同学配合完成需求迭代；表现优秀可获转正 offer。', req: ['熟悉 HTML/CSS/JavaScript', '了解 Vue 或 React 任一框架', '每周可到岗 3 天及以上，持续 3 个月'] },
+        { id: 'J1', type: 'intern', name: '前端开发实习生', company: '智链云科（厦门）', city: '厦门 · 思明区', salary: '150-200/天', tags: ['React', 'Vue', '每周3天', '可转正'], desc: '参与校园产品 Web 端功能开发，与设计、后端同学配合完成需求迭代；表现优秀可获转正 offer。', req: ['熟悉 HTML/CSS/JavaScript', '了解 Vue 或 React 任一框架', '每周可到岗 3 天及以上，持续 3 个月'] },
         { id: 'J2', type: 'intern', name: 'Java 后端实习生', company: '海翼软件', city: '厦门 · 软件园', salary: '180-220/天', tags: ['Java', 'MySQL', '餐补'], desc: '负责业务系统后端接口开发与维护，参与代码评审与技术方案讨论。', req: ['Java 基础扎实，了解 Spring Boot', '熟悉 MySQL 基本操作', '有项目经验者优先'] },
         { id: 'J3', type: 'campus', name: '2025 校园招聘 · 运营管培生', company: '澜庭电商集团', city: '福州 · 仓山区', salary: '6-9K/月', tags: ['校招', '五险一金', '应届生'], desc: '校招管培生项目，轮岗电商运营各环节，1 年培养为业务骨干。', req: ['2025 届本科及以上', '对电商运营有热情', '接受轮岗与挑战'] },
         { id: 'J4', type: 'parttime', name: '周末门店兼职', company: '甜茶奶茶（校园店）', city: '校内 · 三食堂旁', salary: '18/小时', tags: ['周末班', '日结', '就近'], desc: '负责点单、饮品制作与店内清洁，周末两天可排班。', req: ['认真负责，手脚麻利', '能连续排班一个月以上优先'] },
@@ -207,6 +268,20 @@
         { id: 'J6', type: 'parttime', name: '图书馆学生助理', company: '校图书馆', city: '校内 · 中心图书馆', salary: '15/小时', tags: ['环境安静', '工时灵活', '可看书'], desc: '负责图书上架、秩序维护与咨询引导，排班灵活，适合想边工作边学习的同学。', req: ['在校生，无挂科', '每周可提供 2 个半天'] },
         { id: 'J7', type: 'campus', name: '财务助理（校招）', company: '恒信会计师事务所', city: '莆田 · 城厢区', salary: '5.5-7K/月', tags: ['校招', '财会专业', '带薪培训'], desc: '协助审计项目组完成底稿编制、凭证抽查等工作，系统培训后独立带项目。', req: ['财会相关专业 2025 届', '细心、有责任心', '有初级会计证优先'] },
         { id: 'J8', type: 'intern', name: '新媒体运营实习生', company: '橙子校园 MCN', city: '厦门 · 集美区', salary: '100-150/天', tags: ['小红书', '文案', '弹性'], desc: '负责校园账号内容策划、文案撰写与数据复盘。', req: ['网感好，常刷小红书/抖音', '文字表达流畅', '会简单剪辑优先'] },
+        { id: 'J9', type: 'intern', name: '产品经理实习生', company: '星野互娱', city: '厦门 · 软件园二期', salary: '160-210/天', tags: ['C端产品', '需求分析', '导师带'], desc: '协助产品经理完成需求梳理、原型设计与数据跟进，参与版本迭代全流程。', req: ['逻辑清晰，文档能力好', '会用 Axure / Figma / 墨刀任一', '对游戏或社交产品有热情'] },
+        { id: 'J10', type: 'intern', name: '数据分析实习生', company: '数澜信息技术', city: '厦门 · 湖里区', salary: '170-230/天', tags: ['SQL', 'Python', '双休'], desc: '负责业务数据提取与报表搭建，输出专题分析支持运营决策。', req: ['熟练 SQL，了解 Python / Excel 透视', '统计学、数学、计算机相关专业优先'] },
+        { id: 'J11', type: 'intern', name: '测试开发实习生', company: '迅联网络科技', city: '福州 · 鼓楼区', salary: '150-200/天', tags: ['自动化', '接口测试', '可转正'], desc: '参与 Web/App 功能测试、接口自动化用例编写与 CI 流水线维护。', req: ['了解 Python 或 Java', '接触过 Postman / JMeter 优先', '每周 4 天，持续 3 个月以上'] },
+        { id: 'J12', type: 'intern', name: 'Python 爬虫实习生', company: '云栖数据服务', city: '远程', salary: '130-180/天', tags: ['可远程', '爬虫', '反爬'], desc: '负责公开数据采集脚本开发与维护，处理反爬与数据清洗。', req: ['熟悉 Python，了解 requests / Scrapy', '了解 XPath、正则与常见反爬策略', '认真对待代码规范'] },
+        { id: 'J13', type: 'intern', name: '短视频剪辑实习生', company: '光合传媒', city: '厦门 · 思明区', salary: '120-180/天', tags: ['PR/剪映', '双休', '作品导向'], desc: '负责抖音/视频号短视频剪辑、字幕包装与封面制作，配合编导完成日更。', req: ['熟练剪映或 PR，附作品', '节奏感好，懂网感表达', '能接受热点加急'] },
+        { id: 'J14', type: 'intern', name: '人力资源实习生', company: '华睿企业管理咨询', city: '厦门 · 思明区', salary: '120-150/天', tags: ['招聘方向', '五险一金氛围', '可留用'], desc: '协助招聘全流程：简历筛选、电话邀约、面试安排与入职跟进。', req: ['沟通主动，普通话标准', '人力资源、管理类专业优先', '每周到岗 3 天以上'] },
+        { id: 'J15', type: 'intern', name: '市场营销实习生', company: '浪潮新消费（厦门）', city: '厦门 · 集美区', salary: '130-170/天', tags: ['活动策划', '地推', '提成'], desc: '参与校园市场活动策划与执行，负责渠道对接、现场执行与效果复盘。', req: ['性格外向，执行力强', '有社团/活动组织经验优先', '能接受偶尔外勤'] },
+        { id: 'J16', type: 'intern', name: '客户成功实习生', company: '简道云智 SaaS', city: '远程 / 福州', salary: '110-160/天', tags: ['可远程', 'SaaS', '双休'], desc: '协助企业客户完成产品上手培训、问题答疑与使用回访，整理常见问题库。', req: ['耐心细致，表达清楚', '对 SaaS/数字化工具感兴趣', '打字速度快，表格熟练'] },
+        { id: 'J17', type: 'intern', name: '嵌入式软件实习生', company: '物联芯城（泉州）', city: '泉州 · 丰泽区', salary: '160-220/天', tags: ['C语言', '单片机', '硬件结合'], desc: '参与物联网终端固件开发：驱动调试、通信协议对接与功耗优化。', req: ['C 语言扎实，了解 STM32', '懂 UART/I2C/SPI 基本协议', '电子、自动化、计算机相关专业'] },
+        { id: 'J18', type: 'campus', name: '2025 校招 · 供应链管培生', company: '鲜朴生鲜科技', city: '福州 · 马尾区', salary: '6.5-8K/月', tags: ['校招', '包住宿', '快速晋升'], desc: '轮岗仓储、采购、配送调度三大模块，6 个月定岗为供应链基层管理者。', req: ['2025 届本科及以上，专业不限', '能吃苦，接受仓区一线轮岗', '认可零售行业'] },
+        { id: 'J19', type: 'intern', name: '行政前台实习生', company: '闽正律师事务所', city: '厦门 · 思明区', salary: '100-130/天', tags: ['环境好', '工作轻松', '法学生优先'], desc: '负责来访接待、文件收发、会议室管理与行政台账维护。', req: ['形象得体，做事细致', '熟练 Office', '法学专业可接触案卷流程'] },
+        { id: 'J20', type: 'parttime', name: '电商直播助理（晚班）', company: '集美直播电商基地', city: '厦门 · 集美区', salary: '25/小时', tags: ['晚班', '直播场控', '提成'], desc: '协助主播完成直播场控、商品上下架、弹幕互动与售后登记。', req: ['晚上 19:00-23:00 可排班', '反应快，熟悉淘宝/抖音直播', '有直播经验优先'] },
+        { id: 'J21', type: 'parttime', name: '一对一家教（初高中数学）', company: '学而家教育', city: '厦门 · 岛内各区', salary: '80-120/小时', tags: ['课酬高', '就近排课', '师范生优先'], desc: '为初高中学生提供数学一对一提分辅导，机构提供教案与学情支持。', req: ['数学单科 120+/150 或高考 110+', '表达耐心，有家教经验优先', '每周固定 2 次以上'] },
+        { id: 'J22', type: 'intern', name: '平面设计实习生', company: '锐见广告', city: '厦门 · 湖里区', salary: '110-150/天', tags: ['PS/AI', '品牌物料', '作品集'], desc: '负责品牌海报、社媒配图与线下物料设计，参与客户提案视觉支持。', req: ['熟练 Photoshop / Illustrator', '投递请附作品集', '手绘或三维能力加分'] },
       ];
       var TYPES = [
         { key: 'all', label: '全部' },
@@ -231,6 +306,14 @@
         return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
           return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
         });
+      }
+
+      // 标签最多显示 3 个，超出折叠为 +N
+      function tagsHtml(tags) {
+        tags = tags || [];
+        var shown = tags.slice(0, 3).map(function (t) { return '<span class="job-tag">' + esc(t) + '</span>'; });
+        if (tags.length > 3) shown.push('<span class="job-tag more">+' + (tags.length - 3) + '</span>');
+        return shown.join('');
       }
 
       // ---- 分区切换 ----
@@ -283,7 +366,7 @@
             '<div class="job-top"><div class="job-name">' + esc(j.name) + '</div>' +
             '<div class="job-salary">' + esc(j.salary) + '</div></div>' +
             '<div class="job-company">' + esc(j.company) + '</div>' +
-            '<div class="job-meta">' + j.tags.map(function (t) { return '<span class="job-tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+            '<div class="job-meta">' + tagsHtml(j.tags) + '</div>' +
             '<div class="job-foot"><span class="job-loc">' +
             '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
             esc(j.city) + '</span>' +
@@ -307,11 +390,11 @@
           '<div class="detail-name">' + esc(j.name) + '</div>' +
           '<div class="detail-salary">' + esc(j.salary) + '</div>' +
           '<div class="detail-company">' + esc(j.company) + ' · ' + esc(j.city) + '</div>' +
-          '<div class="job-meta" style="margin-top:12px;">' + j.tags.map(function (t) { return '<span class="job-tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+          '<div class="job-meta" style="margin-top:12px;">' + tagsHtml(j.tags) + '</div>' +
           '<div class="detail-sec-title">岗位描述</div><div class="detail-sec">' + esc(j.desc) + '</div>' +
           '<div class="detail-sec-title">任职要求</div><ul class="detail-sec" style="padding-left:18px;">' +
             j.req.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' +
-          '<button class="btn btn-block btn-lg" style="margin-top:20px;background:' + (applied ? '#16A34A' : '#F97316') + ';" id="applyBtn">' +
+          '<button class="btn btn-block btn-lg" style="margin-top:20px;background:' + (applied ? '#16A34A' : '#3B82F6') + ';transition:background .3s;" id="applyBtn">' +
             (applied ? '✓ 已投递（可在「我的投递」查看进度）' : '立即投递') + '</button>' +
           '<div style="font-size:11px;color:var(--color-text-hint);text-align:center;margin-top:10px;">投递前需先完成我的简历，投递后 HR 将依次查看简历、邀约面试</div>';
         openSheet(detailSheet);
@@ -374,6 +457,7 @@
       // ---- 我的简历（分步向导）----
       var RZ_STEPS = ['基本', '意向', '教育', '实践', '自评'];
       var rzStep = 1;
+      var rzPhoto = ''; // 证件照 dataURL
       var RZ_FIELDS = [
         ['rzName', 'rzGender', 'rzPhone', 'rzEmail'],
         ['rzIntent', 'rzCity', 'rzSalary'],
@@ -382,6 +466,11 @@
         ['rzSkills', 'rzIntro'],
       ];
       var RZ_REQUIRED = { rzName: '请填写姓名', rzIntent: '请填写意向岗位' };
+
+      function renderRzPhoto() {
+        var box = document.getElementById('rzPhotoPreview');
+        box.innerHTML = rzPhoto ? '<img src="' + rzPhoto + '" alt="证件照" style="width:100%;height:100%;object-fit:cover;">' : '👤';
+      }
 
       function renderRzProgress() {
         var html = '';
@@ -403,8 +492,8 @@
         renderRzProgress();
       }
 
-      function openResumeWizard() {
-        var r = Storage.lifeGetResume();
+      function openResumeWizard(prefill) {
+        var r = prefill || Storage.lifeGetResume();
         var vals = {
           rzName: r && r.name, rzGender: r && r.gender, rzPhone: r && r.phone, rzEmail: r && r.email,
           rzIntent: r && r.intent, rzCity: r && r.city, rzSalary: r && r.salary,
@@ -418,6 +507,8 @@
           el.value = vals[id] || '';
           if (el.tagName === 'SELECT' && !vals[id]) el.selectedIndex = 0;
         });
+        rzPhoto = (r && r.photo) || '';
+        renderRzPhoto();
         document.getElementById('rzTitle').textContent = r ? '编辑我的简历' : '创建我的简历';
         showRzStep(1);
         openSheet(resumeSheet);
@@ -431,8 +522,24 @@
           school: get('rzSchool'), major: get('rzMajor'), degree: get('rzDegree'),
           eduStart: get('rzEduStart'), eduEnd: get('rzEduEnd'),
           experience: get('rzExperience'), skills: get('rzSkills'), intro: get('rzIntro'),
+          photo: rzPhoto || '',
         };
       }
+
+      // 证件照：压缩到 400px JPEG，仅存本机
+      document.getElementById('rzPhotoBtn').addEventListener('click', function () {
+        document.getElementById('rzPhotoInput').click();
+      });
+      document.getElementById('rzPhotoInput').addEventListener('change', function () {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { App.toast('请选择图片文件'); return; }
+        App.compressImage(file, 400, 0.82).then(function (dataUrl) {
+          rzPhoto = dataUrl;
+          renderRzPhoto();
+        }).catch(function () { App.toast('图片处理失败，请换一张试试'); });
+        this.value = '';
+      });
 
       document.getElementById('btnResume').addEventListener('click', openResumeWizard);
       document.getElementById('rzPrev').addEventListener('click', function () {
@@ -468,24 +575,40 @@
             '<div style="font-size:34px;">📄</div>' +
             '<div style="font-size:15px;font-weight:700;margin-top:8px;">还没有简历</div>' +
             '<div style="font-size:12.5px;color:var(--color-text-sub);margin:6px 0 14px;">参照真实求职流程，先写好简历再投递<br>分 5 步即可完成，数据仅保存在本机</div>' +
-            '<button class="btn btn-primary btn-block" id="btnGoResume" style="background:linear-gradient(135deg,#F97316,#EA580C);">去创建简历</button></div>';
+            '<button class="btn btn-primary btn-block" id="btnGoResume" style="background:#3B82F6;">去创建简历</button>' +
+            '<button class="btn btn-block rz-tool import" id="btnImportResumeEmpty" style="margin-top:10px;">📥 导入简历文件（JSON 备份）</button></div>';
         } else {
-          var row = function (label, v) { return v ? '<div class="app-tl-item" style="padding:4px 0;"><span style="color:var(--color-text-hint);width:64px;flex-shrink:0;">' + label + '</span><span>' + esc(v) + '</span></div>' : ''; };
+          // 空字段统一显示「未填写」，避免孤立标点
+          var dash = function (v) { return v ? esc(v) : '<span class="rz-empty">未填写</span>'; };
+          var row = function (label, v) { return '<div class="app-tl-item" style="padding:4px 0;"><span style="color:var(--color-text-hint);width:64px;flex-shrink:0;">' + label + '</span><span>' + dash(v) + '</span></div>'; };
+          var edu = [r.school, r.major, r.degree].filter(Boolean).join(' · ') + ((r.eduStart || r.eduEnd) ? '（' + [r.eduStart, r.eduEnd].filter(Boolean).join('-') + '）' : '');
+          var block = function (title, v) {
+            return v ? '<div style="margin-top:10px;"><div style="font-size:13px;font-weight:700;">' + title + '</div><div style="font-size:12.5px;color:var(--color-text-sub);line-height:1.7;margin-top:4px;white-space:pre-wrap;">' + esc(v) + '</div></div>'
+                    : '<div style="margin-top:10px;"><div style="font-size:13px;font-weight:700;">' + title + '</div><div class="rz-empty" style="font-size:12.5px;margin-top:4px;">未填写</div></div>';
+          };
+          var avatar = r.photo
+            ? '<div class="rz-avatar"><img src="' + r.photo + '" alt="证件照"></div>'
+            : '<div class="rz-avatar">' + esc((r.name || '?').slice(0, 1)) + '</div>';
           html += '<div class="card" style="padding:16px;">' +
             '<div style="display:flex;align-items:center;gap:10px;">' +
-              '<div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;flex-shrink:0;">' + esc((r.name || '?').slice(0, 1)) + '</div>' +
+              avatar +
               '<div style="flex:1;min-width:0;"><div style="font-size:16px;font-weight:800;">' + esc(r.name) + '</div>' +
               '<div style="font-size:12px;color:var(--color-text-sub);margin-top:2px;">求职意向：' + esc(r.intent) + (r.salary ? ' · ' + esc(r.salary) : '') + '</div></div>' +
-              '<button class="btn btn-sm" id="btnEditResume" style="background:var(--color-surface-alt);color:var(--color-text-sub);">编辑</button>' +
+              '<button class="btn btn-sm rz-edit-btn" id="btnEditResume">编辑</button>' +
             '</div>' +
             '<div style="margin-top:12px;border-top:1px solid var(--color-border-light);padding-top:8px;">' +
-              row('电话', r.phone) + row('邮箱', r.email) + row('城市', r.city) +
-              row('教育', [r.school, r.major, r.degree].filter(Boolean).join(' · ') + ((r.eduStart || r.eduEnd) ? '（' + [r.eduStart, r.eduEnd].filter(Boolean).join('-') + '）' : '')) +
+              row('电话', r.phone) + row('邮箱', r.email) + row('城市', r.city) + row('教育', edu) +
             '</div>' +
-            (r.experience ? '<div style="margin-top:10px;"><div style="font-size:13px;font-weight:700;">实践经历</div><div style="font-size:12.5px;color:var(--color-text-sub);line-height:1.7;margin-top:4px;white-space:pre-wrap;">' + esc(r.experience) + '</div></div>' : '') +
-            (r.skills ? '<div style="margin-top:10px;"><div style="font-size:13px;font-weight:700;">技能特长</div><div style="font-size:12.5px;color:var(--color-text-sub);margin-top:4px;">' + esc(r.skills) + '</div></div>' : '') +
-            (r.intro ? '<div style="margin-top:10px;"><div style="font-size:13px;font-weight:700;">自我评价</div><div style="font-size:12.5px;color:var(--color-text-sub);line-height:1.7;margin-top:4px;">' + esc(r.intro) + '</div></div>' : '') +
-            '</div>';
+            block('实践经历', r.experience) + block('技能特长', r.skills) + block('自我评价', r.intro) +
+            '</div>' +
+            // 导出 / 导入工具
+            '<div class="rz-tools">' +
+              '<button class="rz-tool" data-rztool="word"><span class="ic">📝</span>导出 Word</button>' +
+              '<button class="rz-tool" data-rztool="pdf"><span class="ic">📄</span>导出 PDF</button>' +
+              '<button class="rz-tool" data-rztool="md"><span class="ic">📑</span>导出 Markdown</button>' +
+              '<button class="rz-tool import" data-rztool="json">💾 备份 / 导入 JSON 简历</button>' +
+            '</div>' +
+            '<div style="font-size:11px;color:var(--color-text-hint);text-align:center;margin-top:8px;line-height:1.6;">Word/PDF 可直接发给 HR；JSON 备份可在本机或新设备上「导入简历」还原</div>';
         }
         if (wall.length) {
           html += '<div class="section-header" style="margin-top:6px;"><span class="section-title">校园求职墙</span></div>';
@@ -501,7 +624,134 @@
         if (go) go.addEventListener('click', openResumeWizard);
         var edit = document.getElementById('btnEditResume');
         if (edit) edit.addEventListener('click', openResumeWizard);
+        var impEmpty = document.getElementById('btnImportResumeEmpty');
+        if (impEmpty) impEmpty.addEventListener('click', function () { document.getElementById('importResumeInput').click(); });
+        document.querySelectorAll('[data-rztool]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var act = this.dataset.rztool;
+            if (act === 'word') exportResumeWord();
+            else if (act === 'pdf') exportResumePdf();
+            else if (act === 'md') exportResumeMarkdown();
+            else if (act === 'json') {
+              if (window.confirm('点「确定」导出 JSON 备份文件；点「取消」改为从 JSON 文件导入简历')) {
+                exportResumeJson();
+              } else {
+                document.getElementById('importResumeInput').click();
+              }
+            }
+          });
+        });
       }
+
+      // ---- 简历导出 / 导入 ----
+      function downloadBlob(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 400);
+      }
+      function fileBase(r) { return (r.name || '我的简历').replace(/[\\/:*?"<>|\s]+/g, '_'); }
+      function resumeLines(r) {
+        var edu = [r.school, r.major, r.degree].filter(Boolean).join(' · ');
+        var yr = [r.eduStart, r.eduEnd].filter(Boolean).join('-');
+        if (edu && yr) edu += '（' + yr + '）';
+        return {
+          basic: [['性别', r.gender], ['电话', r.phone], ['邮箱', r.email], ['意向城市', r.city], ['期望薪资', r.salary]],
+          edu: edu,
+          exp: r.experience, skills: r.skills, intro: r.intro,
+        };
+      }
+
+      function exportResumeMarkdown() {
+        var r = Storage.lifeGetResume();
+        if (!r) return App.toast('请先创建简历');
+        var L = resumeLines(r);
+        var md = '# ' + r.name + '\n\n' +
+          '**求职意向：** ' + r.intent + (r.city ? ' ｜ ' + r.city : '') + (r.salary ? ' ｜ ' + r.salary : '') + '\n\n';
+        md += '## 基本信息\n\n';
+        L.basic.forEach(function (kv) { md += '- ' + kv[0] + '：' + (kv[1] || '未填写') + '\n'; });
+        md += '\n## 教育经历\n\n' + (L.edu || '未填写') + '\n\n';
+        md += '## 实践 / 项目经历\n\n' + (L.exp || '未填写') + '\n\n';
+        md += '## 技能特长\n\n' + (L.skills || '未填写') + '\n\n';
+        md += '## 自我评价\n\n' + (L.intro || '未填写') + '\n';
+        downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), fileBase(r) + '-简历.md');
+        App.toastSuccess('Markdown 已导出');
+      }
+
+      function resumePrintHtml(r) {
+        var L = resumeLines(r);
+        var escP = esc;
+        var basic = L.basic.filter(function (kv) { return kv[1]; }).map(function (kv) { return kv[0] + '：' + kv[1]; }).join('　');
+        var sec = function (h, v) { return '<div class="pv-h">' + h + '</div><p class="pv-p">' + escP(v || '未填写') + '</p>'; };
+        return (r.photo ? '<img class="pv-photo" src="' + r.photo + '" alt="" loading="lazy" decoding="async">' : '') +
+          '<div class="pv-title">' + esc(r.name) + '</div>' +
+          '<div class="pv-sub">求职意向：' + esc(r.intent) + (r.salary ? '　' + esc(r.salary) : '') + '</div>' +
+          '<div class="pv-h">基本信息</div><p class="pv-p">' + esc(basic || '未填写') + '</p>' +
+          sec('教育经历', L.edu) + sec('实践 / 项目经历', L.exp) + sec('技能特长', L.skills) + sec('自我评价', L.intro);
+      }
+
+      function exportResumePdf() {
+        var r = Storage.lifeGetResume();
+        if (!r) return App.toast('请先创建简历');
+        document.getElementById('printArea').innerHTML = resumePrintHtml(r);;
+        window.print();
+        App.toast('已调起打印，选择「存储为 PDF」即可保存');
+      }
+
+      function exportResumeWord() {
+        var r = Storage.lifeGetResume();
+        if (!r) return App.toast('请先创建简历');
+        var L = resumeLines(r);
+        var cell = function (v) { return v ? esc(v) : '未填写'; };
+        var photoHtml = r.photo
+          ? '<img src="' + r.photo + '" width="92" height="116" style="object-fit:cover;border:1px solid #CBD5E1;border-radius:6px;">'
+          : '';
+        var sec = function (h, v) {
+          return '<p style="font-size:14px;font-weight:bold;color:#1D4ED8;border-bottom:2px solid #3B82F6;padding-bottom:3px;margin:14px 0 6px;">' + h + '</p>' +
+            '<p style="font-size:12.5px;line-height:1.9;color:#1E293B;white-space:pre-wrap;margin:0;">' + cell(v) + '</p>';
+        };
+        var wordHtml =
+          '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+          '<head><meta charset="utf-8"><title>' + esc(r.name) + '的简历</title></head><body style="font-family:宋体,SimSun,serif;color:#0F172A;">' +
+          '<table style="width:100%;border-collapse:collapse;"><tr><td style="vertical-align:top;">' +
+            '<p style="font-size:22px;font-weight:bold;margin:0;">' + esc(r.name) + '</p>' +
+            '<p style="font-size:13px;color:#334155;margin:6px 0 0;">求职意向：' + esc(r.intent) + (r.salary ? '　' + esc(r.salary) : '') + '</p>' +
+          '</td><td style="width:100px;text-align:right;vertical-align:top;">' + photoHtml + '</td></tr></table>' +
+          sec('基本信息', [['性别', r.gender], ['电话', r.phone], ['邮箱', r.email], ['意向城市', r.city]].filter(function (kv) { return kv[1]; }).map(function (kv) { return kv[0] + '：' + kv[1]; }).join('　') || '') +
+          sec('教育经历', L.edu) + sec('实践 / 项目经历', L.exp) + sec('技能特长', L.skills) + sec('自我评价', L.intro) +
+          '</body></html>';
+        var blob = new Blob(['﻿', wordHtml], { type: 'application/msword' });
+        downloadBlob(blob, fileBase(r) + '-简历.doc');
+        App.toastSuccess('Word 已导出，可用 WPS / Word 打开');
+      }
+
+      function exportResumeJson() {
+        var r = Storage.lifeGetResume();
+        if (!r) return App.toast('请先创建简历');
+        var payload = { app: 'campus-life-resume', version: 1, exportedAt: new Date().toISOString(), data: r };
+        downloadBlob(new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' }), fileBase(r) + '-简历备份.json');
+        App.toastSuccess('JSON 备份已导出');
+      }
+
+      document.getElementById('importResumeInput').addEventListener('change', function () {
+        var file = this.files && this.files[0];
+        this.value = '';
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          var parsed = null;
+          try { parsed = JSON.parse(reader.result); } catch (e) { App.toast('文件不是有效的 JSON'); return; }
+          // 兼容 {data:{...}} 备份包裹与扁平简历对象
+          var data = parsed && parsed.data && typeof parsed.data === 'object' ? parsed.data : parsed;
+          if (!data || typeof data !== 'object') { App.toast('简历内容无法识别'); return; }
+          if (!data.name && !data.intent) { App.toast('文件中缺少姓名 / 意向岗位信息'); return; }
+          App.toastSuccess('已读入简历，请确认后点「完成简历」保存');
+          openResumeWizard(data);
+        };
+        reader.onerror = function () { App.toast('文件读取失败，请重试'); };
+        reader.readAsText(file, 'utf-8');
+      });
 
       document.getElementById('searchInput').addEventListener('input', function () {
         keyword = this.value.trim();
