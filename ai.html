@@ -623,6 +623,90 @@
       }
 
       // ---------- 发送流程 ----------
+      // 双引擎：需要读本机数据/页面动作的问题直接走本地规则引擎（带快捷按钮）；
+      // 开放域问题先请求同源后端 DeepSeek 代理（/api/ai/chat），
+      // 静态托管（如 GitHub Pages）无后端 / 超时 / 任何错误 → 静默回退本地引擎，页面永不白屏报错。
+      var LOCAL_FIRST_KWS = [
+        '快递', '取件', '包裹', '驿站', '快递柜', '取件码', '身份码', '物流',
+        '菜鸟', '顺丰', '京东', '圆通', '中通', '韵达', '极兔', '邮政', '申通', 'ems',
+        '导航', '地图', '怎么走', '路线', '附近',
+        '食堂', '图书馆', '体育馆', '操场', '田径', '南门', '东门', '西门', '信息楼',
+        '课程', '课表', '上课', '教室', '今天上什么', '明天上什么',
+        '浴室', '洗澡', '淋浴',
+        '节日', '倒计时', '放假',
+        '攒钱', '记账', '省钱', '工资',
+        '外卖', '吃什么', '吃啥', '饿',
+      ];
+
+      function isLocalIntent(q) {
+        var s = q.toLowerCase();
+        for (var i = 0; i < LOCAL_FIRST_KWS.length; i++) {
+          if (s.indexOf(LOCAL_FIRST_KWS[i]) !== -1) return true;
+        }
+        return false;
+      }
+
+      // 组装给云端的上下文摘要（只含非敏感的概览，不含单号/取件码）
+      function buildCloudContext() {
+        try {
+          var user = Storage.getUser();
+          var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; }).length;
+          var dorm = Storage.getUserDorm();
+          var loc = dorm ? (dorm.areaName + dorm.building) : (user.campus || '校园');
+          return '校区/位置：' + loc + '；待取快递数：' + pending + '；时间：' + new Date().toLocaleString('zh-CN');
+        } catch (e) { return ''; }
+      }
+
+      // 最近 6 轮本机对话作为云端上下文
+      function buildCloudHistory(q) {
+        var msgs = [];
+        try {
+          var history = Storage.aiGetChat().slice(-6);
+          history.forEach(function (m) {
+            msgs.push({ role: m.role === 'user' ? 'user' : 'assistant', content: String(m.text).slice(0, 800) });
+          });
+        } catch (e) {}
+        msgs.push({ role: 'user', content: q });
+        return msgs;
+      }
+
+      // 调云端代理；任何失败都 resolve(null)，由调用方回退，绝不抛错
+      var CLOUD_TIMEOUT_MS = 8000;
+      function askCloud(q) {
+        if (!('fetch' in window) || typeof AbortController === 'undefined') return Promise.resolve(null);
+        var controller = new AbortController();
+        var timer = setTimeout(function () { controller.abort(); }, CLOUD_TIMEOUT_MS);
+        return fetch('api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: buildCloudHistory(q), context: buildCloudContext() }),
+          signal: controller.signal,
+        }).then(function (res) {
+          if (!res.ok) return null;
+          var ct = res.headers.get('content-type') || '';
+          if (ct.indexOf('application/json') === -1) return null; // 静态托管 404 页等
+          return res.json();
+        }).then(function (json) {
+          return json && json.code === 0 && json.data && typeof json.data.text === 'string'
+            ? { text: json.data.text }
+            : null;
+        }).catch(function () {
+          return null; // 断网 / 超时 / 跨域失败：静默
+        }).finally(function () { clearTimeout(timer); });
+      }
+
+      function localReply(q) {
+        try { return reply(q); }
+        catch (e) { return { text: '我这边出了点小问题，稍后再试试～' }; }
+      }
+
+      function finishReply(r) {
+        typingEl.classList.remove('show');
+        Storage.aiAddChat({ role: 'ai', text: r.text, actions: r.actions || [] });
+        appendMessage({ role: 'ai', text: r.text, actions: r.actions || [] });
+        busy = false;
+      }
+
       var busy = false;
       function send(q) {
         q = (q || '').trim();
@@ -633,14 +717,18 @@
         inputEl.value = '';
         typingEl.classList.add('show');
         scrollBottom();
-        var r;
-        try { r = reply(q); } catch (e) { r = { text: '我这边出了点小问题，稍后再试试～' }; }
-        setTimeout(function () {
-          typingEl.classList.remove('show');
-          Storage.aiAddChat({ role: 'ai', text: r.text, actions: r.actions || [] });
-          appendMessage({ role: 'ai', text: r.text, actions: r.actions || [] });
-          busy = false;
-        }, 480 + Math.min(400, r.text.length * 4));
+
+        // 本机数据/功能意图：本地引擎直答（有数据、有快捷按钮）
+        if (isLocalIntent(q)) {
+          var r0 = localReply(q);
+          setTimeout(function () { finishReply(r0); }, 300 + Math.min(300, r0.text.length * 2));
+          return;
+        }
+
+        // 开放域：先云端，失败回退本地
+        askCloud(q).then(function (cloud) {
+          finishReply(cloud || localReply(q));
+        });
       }
 
       sendBtn.addEventListener('click', function () { send(inputEl.value); });

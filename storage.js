@@ -189,21 +189,22 @@ var Storage = {
       }
     }
     var now = Date.now();
+    var manual = data.source === 'manual';
     var pkg = {
-      id: 'LP' + now,                            // LP = Local Pkg 标识
+      id: (manual ? 'MP' : 'LP') + now,                      // MP = Manual Pkg / LP = Local scan Pkg
       company: data.company || '其他快递',
       shortName: data.shortName || (data.company || '其他').slice(0, 2),
       logoColor: data.logoColor || '#64748B',
-      trackingNo: data.trackingNo || '本地导入·' + data.pickupCode,
-      sender: data.sender || '扫描导入',
+      trackingNo: data.trackingNo || ('手动导入·' + data.pickupCode),
+      sender: data.sender || (manual ? '手动导入' : '扫描导入'),
       pickupPoint: data.pickupPoint || '校园驿站',
       pickupCode: data.pickupCode,
       status: 'pending',
       type: data.type || 'station',
       arrivesAt: this.formatNow(),
-      expiresIn: '72 小时',
-      estimatedTime: '已到站',
-      source: 'local-scan',                       // 标记来源：本地扫码导入
+      expiresIn: data.expiresIn || '72 小时',
+      estimatedTime: data.estimatedTime || '已到站',
+      source: manual ? 'manual-input' : 'local-scan',        // 标记来源：手动录入 / 本地扫码导入
       createdAt: now,
     };
     list.unshift(pkg);
@@ -213,8 +214,8 @@ var Storage = {
     messages.unshift({
       id: 'M' + now,
       type: 'pickup',
-      title: '已导入本地快递',
-      content: '已从快递架扫码导入【' + pkg.company + '】取件码 ' + pkg.pickupCode + '，可在「快递」列表查看。',
+      title: manual ? '已手动添加快递' : '已导入本地快递',
+      content: (manual ? '已手动添加【' : '已从快递架扫码导入【') + pkg.company + '】取件码 ' + pkg.pickupCode + '，可在「快递」列表查看。',
       time: '刚刚',
       read: false,
       icon: 'box',
@@ -222,6 +223,29 @@ var Storage = {
     });
     this._write(this.KEYS.messages, messages);
     return { success: true, pkg: pkg };
+  },
+
+  // ---- 全部快递数据清零 ----
+  // 清空 packages 列表 + 取件记录 + 快递类消息（pickup/warning），并把用户取件统计归零。
+  // 写入空数组（而非 remove）：种子只在 key === null 时播种，[] 不会导致 demo 数据复活，
+  // 清零后列表只保留用户之后手动导入的记录。
+  clearAllPackages: function () {
+    var before = {
+      packages: this.getPackages().length,
+      records: this.getRecords().length,
+    };
+    this._write(this.KEYS.packages, []);
+    this._write(this.KEYS.records, []);
+    // 快递类消息（取件提醒/逾期/取件成功）全部移除，系统类通知保留
+    var keptMessages = this.getMessages().filter(function (m) {
+      return m.type !== 'pickup' && m.type !== 'warning';
+    });
+    this._write(this.KEYS.messages, keptMessages);
+    // 用户累计取件数归零（个人中心统计）
+    var user = this.getUser();
+    user.pickedCount = 0;
+    this.saveUser(user);
+    return { success: true, cleared: before.packages + before.records };
   },
 
   // ---- 取件记录 ----
@@ -382,9 +406,13 @@ var Storage = {
     return user;
   },
 
-  // 获取所有浴室列表
+  // 获取所有浴室列表（merge 用户手动修改的本地覆盖：名称/楼层/营业时间）
   getBathrooms: function () {
-    return this.getCampusData().bathrooms || [];
+    var overrides = this._life().bathOverrides || {};
+    return (this.getCampusData().bathrooms || []).map(function (b) {
+      var ov = overrides[b.id];
+      return ov ? Object.assign({}, b, ov) : b;
+    });
   },
 
   // 按 ID 获取浴室
@@ -413,6 +441,33 @@ var Storage = {
           list[i].areaId === dorm.areaId) return list[i];
     }
     return null;
+  },
+
+  // 浴室手动改名 / 改楼层 / 改营业时间（本地覆盖，不动 campus-data.js 种子）
+  // patch: { name?, floor?, hours? }，传 null 可清除该浴室的全部覆盖
+  bathSaveOverride: function (bathroomId, patch) {
+    if (!bathroomId) return { success: false, message: '缺少浴室 ID' };
+    var data = this._life();
+    if (!data.bathOverrides) data.bathOverrides = {};
+    if (patch === null) {
+      delete data.bathOverrides[bathroomId];
+    } else {
+      var cur = data.bathOverrides[bathroomId] || {};
+      ['name', 'floor', 'hours'].forEach(function (k) {
+        if (Object.prototype.hasOwnProperty.call(patch, k)) {
+          var v = String(patch[k] == null ? '' : patch[k]).trim();
+          if (v) cur[k] = v.slice(0, 20);
+        }
+      });
+      data.bathOverrides[bathroomId] = cur;
+    }
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  bathGetOverride: function (bathroomId) {
+    var ov = (this._life().bathOverrides || {})[bathroomId];
+    return ov || null;
   },
 
   // 收藏/取消收藏浴室
@@ -1215,6 +1270,7 @@ var Storage = {
       },
       album: [],
       bath: { showers: [] },
+      bathOverrides: {}, // 浴室信息手动修改覆盖（id → {name/floor/hours}）
       festivals: [],
       notes: [],
       stopwatch: { colors: [] }, // 数字段 DIY 配色
@@ -1241,6 +1297,7 @@ var Storage = {
     if (!data.album) data.album = [];
     if (!data.bath) data.bath = { showers: [] };
     if (!data.bath.showers) data.bath.showers = [];
+    if (!data.bathOverrides) data.bathOverrides = {};
     if (!data.festivals) data.festivals = [];
     if (!data.notes) data.notes = [];
     if (!data.stopwatch) data.stopwatch = { colors: [] };

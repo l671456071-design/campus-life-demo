@@ -52,9 +52,9 @@ var Perf = (function () {
 
   // ---------- 3. 质量档位 ----------
   var TIERS = {
-    high:   { name: '高性能', dprCap: 2,   shadows: true,  shadowMapSize: 1024, detail: 1,   scanInterval: 200, ocrInterval: 3200, fpsCap: 60 },
-    medium: { name: '均衡',   dprCap: 1.5, shadows: true,  shadowMapSize: 1024, detail: 0.7, scanInterval: 250, ocrInterval: 3200, fpsCap: 60 },
-    low:    { name: '省电',   dprCap: 1,   shadows: false, shadowMapSize: 512,  detail: 0.5, scanInterval: 350, ocrInterval: 5000, fpsCap: 30 },
+    high:   { name: '高性能', dprCap: 2,   shadows: true,  shadowMapSize: 1024, detail: 1,   scanInterval: 500, ocrInterval: 3200, fpsCap: 60 },
+    medium: { name: '均衡',   dprCap: 1.5, shadows: true,  shadowMapSize: 1024, detail: 0.7, scanInterval: 500, ocrInterval: 3200, fpsCap: 60 },
+    low:    { name: '省电',   dprCap: 1,   shadows: false, shadowMapSize: 512,  detail: 0.5, scanInterval: 500, ocrInterval: 5000, fpsCap: 30 },
   };
 
   function readUserMode() {

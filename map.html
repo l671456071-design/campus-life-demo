@@ -76,7 +76,7 @@
     .map-view-controls {
       position: absolute;
       right: 12px;
-      bottom: 44px;
+      bottom: 18px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -253,7 +253,9 @@
     .sheet-nearest-btn:active { transform: scale(.95); }
     .sheet-nearest-btn svg { width: 14px; height: 14px; }
     .sheet-scroll {
-      flex: 1; min-height: 0; overflow-y: auto;
+      flex: 1 1 auto; min-height: 0; overflow-y: auto;
+      overscroll-behavior: contain;
+      touch-action: pan-y;
       -webkit-overflow-scrolling: touch;
       display: flex; flex-direction: column; gap: 8px;
       padding: 2px 2px 8px;
@@ -363,28 +365,6 @@
     }
     .cluster-tap-hint.show { opacity: 1; }
 
-    /* 操作提示（悬浮地图区底部） */
-    .map-hint {
-      position: absolute;
-      bottom: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255,255,255,0.9);
-      -webkit-backdrop-filter: blur(8px);
-      backdrop-filter: blur(8px);
-      padding: 6px 14px;
-      border-radius: var(--radius-full);
-      box-shadow: var(--shadow-sm);
-      font-size: 12px;
-      color: var(--color-text-sub);
-      display: flex; align-items: center; gap: 6px;
-      z-index: 15; white-space: nowrap;
-      pointer-events: none;
-      animation: fadeIn 0.4s 0.5s both;
-    }
-    .map-hint svg { width: 16px; height: 16px; color: var(--color-text-hint); }
-    .map-hint.hidden { display: none; }
-
     /* Map load error */
     .map-load-error {
       height: 100%;
@@ -452,12 +432,6 @@
           </button>
         </div>
       </div><!-- /map-container -->
-
-      <!-- 操作提示 -->
-      <div class="map-hint" id="mapHint">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        拖动旋转 · 双指缩放 · 点数字圆圈展开聚合点
-      </div>
 
       <!-- 聚合点点击提示 -->
       <div class="cluster-tap-hint" id="clusterHint"></div>
@@ -1492,7 +1466,6 @@
       M3.cam.radius = Math.max(M3.cam.minR, Math.min(M3.cam.radius, 92));
       fillDetail(id);
       document.getElementById('mapSheet').setAttribute('data-view', 'detail');
-      document.getElementById('mapHint').classList.add('hidden');
     }
 
     function fillDetail(id) {
@@ -1527,7 +1500,6 @@
       rebuildClusters(true);
       renderNearList();
       document.getElementById('mapSheet').setAttribute('data-view', 'list');
-      if (!MAP.isNavigating) document.getElementById('mapHint').classList.remove('hidden');
     }
 
     // ---------- 附近快递点列表（按路网距离排序） ----------
@@ -1720,7 +1692,6 @@
       removeRoute();
       MAP.isNavigating = false;
       document.getElementById('navBar').classList.remove('show');
-      document.getElementById('mapHint').classList.remove('hidden');
     }
 
     // ---------- 定位 ----------
@@ -1791,7 +1762,6 @@
       document.getElementById('pageTitle').textContent = '配送地图';
       document.body.classList.add('map-delivery');
       document.getElementById('mapFilters').style.display = 'none';
-      document.getElementById('mapHint').classList.add('hidden');
       document.getElementById('viewControls').style.display = 'none';
       // 60/40 → 全高布局后，强制重置渲染尺寸
       setTimeout(onResize, 60);

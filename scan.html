@@ -55,20 +55,50 @@
       transition:transform .25s;
     }
 
-    /* 四角：2px 白色圆角（全站统一 14px 圆角规范）+ 品牌绿呼吸灯（1.5s 循环） */
+    /* 四角：2px 白色圆角（全站统一 14px 圆角规范）；边框静态，呼吸效果交给 ::after 只动 opacity（GPU 合成层，避免 box-shadow 动画逐帧重绘掉帧） */
     .scan-corner {
       position:absolute; width:24px; height:24px;
       border:2px solid #fff;
-      animation:cornerBreath 1.5s ease-in-out infinite;
+      z-index:2;
     }
-    .scan-corner--tl { top:0; left:0; border-right:none; border-bottom:none; border-radius:14px 0 0 0; animation-delay:0s; }
-    .scan-corner--tr { top:0; right:0; border-left:none; border-bottom:none; border-radius:0 14px 0 0; animation-delay:.18s; }
-    .scan-corner--br { bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 14px 0; animation-delay:.36s; }
-    .scan-corner--bl { bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 14px; animation-delay:.54s; }
-    @keyframes cornerBreath {
-      0%, 100% { box-shadow:0 0 3px rgba(52,211,153,.35); }
-      50% { box-shadow:0 0 12px rgba(52,211,153,.95), 0 0 24px rgba(52,211,153,.45); }
+    .scan-corner::after {
+      content:''; position:absolute; inset:-3px; border-radius:inherit;
+      box-shadow:0 0 10px rgba(52,211,153,.9), 0 0 22px rgba(52,211,153,.4);
+      opacity:.3; pointer-events:none;
+      animation:cornerGlow 1.5s ease-in-out infinite;
+      will-change:opacity;
     }
+    .scan-corner--tl { top:0; left:0; border-right:none; border-bottom:none; border-radius:14px 0 0 0; }
+    .scan-corner--tl::after { animation-delay:0s; }
+    .scan-corner--tr { top:0; right:0; border-left:none; border-bottom:none; border-radius:0 14px 0 0; }
+    .scan-corner--tr::after { animation-delay:.18s; }
+    .scan-corner--br { bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 14px 0; }
+    .scan-corner--br::after { animation-delay:.36s; }
+    .scan-corner--bl { bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 14px; }
+    .scan-corner--bl::after { animation-delay:.54s; }
+    @keyframes cornerGlow {
+      0%, 100% { opacity:.25; }
+      50% { opacity:1; }
+    }
+
+    /* 扫描线：整条横线只做 translate3d 位移（独立合成层，不触发重排重绘），2.4s 往返 */
+    .scan-beam {
+      position:absolute; left:9%; right:9%; top:0; height:2.5px;
+      border-radius:2px; z-index:1; pointer-events:none;
+      background:linear-gradient(90deg, rgba(52,211,153,0), rgba(52,211,153,.95) 18%, #fff 50%, rgba(52,211,153,.95) 82%, rgba(52,211,153,0));
+      box-shadow:0 0 10px rgba(52,211,153,.75), 0 0 24px rgba(52,211,153,.35);
+      will-change:transform;
+      transform:translate3d(0,4px,0);
+      animation:beamMove 2.4s ease-in-out .3s infinite alternate;
+    }
+    @keyframes beamMove {
+      from { transform:translate3d(0,4px,0); }
+      to   { transform:translate3d(0,calc(min(64vw,240px) - 7px),0); }
+    }
+    /* 识别暂停 / 成功：立即停住动画并淡出，省 GPU */
+    .scan-frame.is-paused .scan-beam,
+    .scan-frame--success .scan-beam { animation-play-state:paused; opacity:0; }
+    .scan-frame--success .scan-corner::after { animation:none; opacity:1; }
 
     /* 识别成功：四角变绿 + 框内 0.3s 对勾缩放 */
     .scan-frame--success { transform:scale(1.05); }
@@ -408,6 +438,7 @@
         <!-- 识别区：扫描框居中上移 -->
         <div class="scan-center anim-fade-in-up">
           <div class="scan-frame" id="scanFrame">
+            <div class="scan-beam"></div>
             <div class="scan-corner scan-corner--tl"></div>
             <div class="scan-corner scan-corner--tr"></div>
             <div class="scan-corner scan-corner--bl"></div>
@@ -560,8 +591,8 @@
   <script src="api.js"></script>
   <script src="api-client.js"></script>
   <script src="app.js"></script>
-  <script src="libs/qr-scanner/jsQR.js"></script>
-  <script src="libs/tesseract/tesseract.min.js"></script>
+  <!-- jsQR / Tesseract 体积大（合计数百 KB + wasm），改为相机出画后空闲异步注入，杜绝 3-5s 白屏；
+       代码内对两个全局均有 typeof 防护，加载完成后会自动重扫引擎 -->
   <script>
     // ================= 真实本地摄像头扫码 + OCR 取件码识别 =================
     // 权限：navigator.mediaDevices.getUserMedia（需要 localhost / https 环境）
@@ -614,7 +645,7 @@
       busy: false,             // 单帧解码进行中
       lastScanAt: 0,
       torchOn: false,
-      scanInterval: 250,       // 二维码分析间隔（ms，按性能档位调整）
+      scanInterval: 500,       // 二维码分析间隔（ms）：统一节流 500ms，低配不发热
       ocrInterval: 3200,       // OCR 分析间隔（ms，按性能档位调整）
       ocrWorker: null,         // Tesseract 本地 worker（懒加载，独立线程运行）
       ocrReady: false,
@@ -672,12 +703,63 @@
         if (document.hidden) {
           pauseScan();
         } else if (SCAN.stream) {
+          // 成功覆盖层停留期间不自动恢复，避免对勾页扫描线空转
+          var ov = document.getElementById('successOverlay');
+          if (ov && ov.classList.contains('show')) return;
           resumeScan();
         }
       });
 
       startCamera();
     });
+
+    // ---------- 0.5 识别引擎异步加载（不阻塞相机首帧，消除 3-5s 白屏） ----------
+    // jsQR 与 Tesseract（含 wasm/语言包）合计数百 KB：等相机出画后再利用空闲时段串行注入，
+    // 全部失败静默——用户仍可手动输入取件码。单例 Promise，多处调用共享同一次加载。
+    var _enginesPromise = null;
+    function idleCallback(cb, timeout) {
+      if (window.requestIdleCallback) {
+        window.requestIdleCallback(cb, { timeout: timeout || 1500 });
+      } else {
+        setTimeout(cb, Math.max(120, (timeout || 1500) / 2));
+      }
+    }
+    function loadLib(src) {
+      return new Promise(function (resolve) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.async = true;
+        s.onload = function () { resolve(true); };
+        s.onerror = function () { resolve(false); };
+        document.head.appendChild(s);
+      });
+    }
+    function enginesReady() {
+      if (_enginesPromise) return _enginesPromise;
+      _enginesPromise = new Promise(function (resolve) {
+        idleCallback(function () {
+          loadLib('libs/qr-scanner/jsQR.js').then(function (ok) {
+            if (ok) { initDetector(); updateEngineHint(); }
+            idleCallback(function () {
+              loadLib('libs/tesseract/tesseract.min.js').then(function () {
+                updateEngineHint();
+                resolve();
+              });
+            }, 500);
+          });
+        }, 300);
+      });
+      return _enginesPromise;
+    }
+    // 相机稳定出画 1.2s 后，空闲拉脚本并预建 OCR worker（用户无感知，首次识别零等待）
+    function scheduleEnginePreload() {
+      setTimeout(function () {
+        if (document.visibilityState !== 'visible') return;
+        enginesReady().then(function () {
+          if (SCAN.scanning && !SCAN.ocrReady && !SCAN.ocrLoading) ensureOcrWorker();
+        });
+      }, 1200);
+    }
 
     // ---------- 1. 摄像头（兼容 Safari/华为/小米/OPPO/Chrome 等浏览器） ----------
     function cameraGetUserMedia(constraints) {
@@ -731,6 +813,8 @@
       initDetector();
       startDetectLoop();
       startSlowHints();
+      setBeamPaused(false);
+      scheduleEnginePreload();
     }
 
     function retryCamera() {
@@ -745,9 +829,26 @@
         SCAN.stream = null;
       }
       try { SCAN.video.srcObject = null; } catch (e) { SCAN.video.removeAttribute('src'); }
+      // 同步释放 OCR worker / 预处理 worker，防止反复进出页面内存堆积（越用越卡）
+      if (SCAN.ocrWorker) {
+        try { SCAN.ocrWorker.terminate(); } catch (e) {}
+        SCAN.ocrWorker = null;
+        SCAN.ocrReady = false;
+        SCAN.ocrLoading = false;
+      }
+      if (SCAN.ocrPipe) {
+        try { SCAN.ocrPipe.terminate(); } catch (e) {}
+        SCAN.ocrPipe = null;
+      }
       SCAN.torchOn = false;
       var btn = document.getElementById('flashBtn');
       if (btn) btn.classList.remove('active');
+    }
+
+    // 扫描线动画随识别循环暂停/恢复（纯 class 切换，不动 JS 节奏）
+    function setBeamPaused(paused) {
+      var f = document.getElementById('scanFrame');
+      if (f) f.classList.toggle('is-paused', !!paused);
     }
 
     // ---------- 1.5 停留 3s 未识别：半透明提示条浮现，自动消失，之后周期性轻提醒 ----------
@@ -785,11 +886,11 @@
     }
 
     function updateEngineHint() {
-      var qrPart = SCAN.useNativeDetector ? 'BarcodeDetector' : (typeof jsQR === 'function' ? '本地 jsQR' : '二维码不可用');
+      var qrPart = SCAN.useNativeDetector ? 'BarcodeDetector' : (typeof jsQR === 'function' ? '本地 jsQR' : '二维码引擎准备中');
       var el = document.getElementById('engineHint');
       if (typeof Tesseract === 'undefined') {
-        // 浏览器不支持本地 OCR：明确提示手动输入
-        el.textContent = '当前浏览器暂不支持自动识别，请手动输入取件码';
+        // 引擎正在后台异步加载：不白屏、不吓用户，先出相机画面
+        el.textContent = '识别引擎后台准备中，可先扫码或手动输入';
         el.style.fontSize = '12px';
         el.style.color = 'rgba(255,255,255,0.78)';
         el.style.padding = '0 16px';
@@ -829,6 +930,7 @@
       SCAN.loopGen++;
       SCAN.scanning = false;
       stopSlowHints();
+      setBeamPaused(true);
     }
 
     function resumeScan() {
@@ -837,6 +939,7 @@
       // 重置调度时间戳：恢复后立刻分析一帧，而不是补齐暂停期间欠下的 OCR/解码
       SCAN.lastScanAt = 0;
       SCAN.lastOcrAt = 0;
+      setBeamPaused(false);
       startDetectLoop();
       startSlowHints();
     }
@@ -933,8 +1036,16 @@
     // 仅识别扫描框区域，限制字符集为数字/字母/短横线，降低误识别与耗时
     async function ensureOcrWorker() {
       if (SCAN.ocrReady) return true;
-      if (typeof Tesseract === 'undefined') return false;
       if (SCAN.ocrLoading) return false;
+      // 引擎脚本改为空闲异步注入：未到位时先等加载（不阻塞 UI），加载失败则放弃 OCR
+      if (typeof Tesseract === 'undefined') {
+        var tipEl = document.getElementById('scanTip');
+        if (tipEl) tipEl.textContent = '本地识别引擎准备中…';
+        await enginesReady();
+        if (SCAN.ocrReady) return true;
+        if (SCAN.ocrLoading) return false;
+        if (typeof Tesseract === 'undefined') return false;
+      }
       SCAN.ocrLoading = true;
       document.getElementById('scanTip').textContent = '正在启动本地 OCR 引擎…';
       try {
@@ -1618,16 +1729,8 @@
       overlay.classList.add('show');
     }
 
-    // 页面离开时释放摄像头
+    // 页面离开时释放摄像头（pagehide 统一处理：停识别链 + 停所有媒体轨 + 释放 OCR worker）
     window.addEventListener('pagehide', stopCamera);
-    document.addEventListener('visibilitychange', function () {
-      if (document.hidden && !document.getElementById('successOverlay').classList.contains('show')) {
-        // 后台挂起时保持流但暂停识别循环，避免浪费 CPU
-        pauseScan();
-      } else if (!document.hidden && SCAN.stream && !SCAN.scanning && !document.getElementById('successOverlay').classList.contains('show')) {
-        // 页面被系统权限弹窗等遮挡后恢复时，无需自动恢复（用户可通过重试/取消恢复）
-      }
-    });
   </script>
 </body>
 </html>

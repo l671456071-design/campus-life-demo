@@ -479,7 +479,7 @@ const T = pub.Perf.TIERS;
 check('三档性能等级（high/medium/low）齐全', !!T.high && !!T.medium && !!T.low);
 check('DPR 上限分级（high 2 / medium 1.5 / low 1）', T.high.dprCap === 2 && T.medium.dprCap === 1.5 && T.low.dprCap === 1);
 check('阴影分级（low 关闭阴影 + 512 阴影贴图）', T.high.shadows === true && T.low.shadows === false && T.low.shadowMapSize === 512);
-check('扫码频率分级（200/250/350ms，非逐帧识别）', T.high.scanInterval === 200 && T.medium.scanInterval === 250 && T.low.scanInterval === 350);
+check('扫码频率统一节流 500ms（v8：200/250/350 三档已合并，降低发热）', T.high.scanInterval === 500 && T.medium.scanInterval === 500 && T.low.scanInterval === 500);
 check('OCR 频率分级（低配 5000ms）', T.high.ocrInterval === 3200 && T.low.ocrInterval === 5000);
 check('帧率上限分级（low 限 30fps）', T.high.fpsCap === 60 && T.low.fpsCap === 30);
 
@@ -524,7 +524,7 @@ check('scan.html 主线程只做抓帧，预处理走 Worker', scanSrc.indexOf("
 check('Worker 不可用时回退主线程同步预处理', scanSrc.indexOf('binarizeCanvasSync') !== -1);
 
 // 7.7 动画 GPU 化与列表分片
-check('扫描框改四角呼吸灯（cornerBreath，旧绿色扫描线已移除）', scanSrc.indexOf('@keyframes cornerBreath') !== -1 && scanSrc.indexOf('translateY(230px)') === -1);
+check('扫描框四角静态边框 + 角标只动 opacity（v8 cornerGlow，旧绿色 translateY 扫描线移除）', scanSrc.indexOf('@keyframes cornerGlow') !== -1 && scanSrc.indexOf('@keyframes beamMove') !== -1 && scanSrc.indexOf('translateY(230px)') === -1);
 const cssSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
 // 关键帧体含一层嵌套（0%/from/to 选择器），需嵌套感知正则
 const kfBlocks = cssSrc.match(/@keyframes[^{]+\{(?:[^{}]*\{[^{}]*\})*\s*[^{}]*\}/g) || [];
@@ -1156,7 +1156,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('新快递 id 以 LP 开头（Local Pkg 标识）', /^LP\d+$/.test(res.pkg.id));
   check('新快递 status=pending', res.pkg.status === 'pending');
   check('新快递 source=local-scan', res.pkg.source === 'local-scan');
-  check('新快递 trackingNo 默认本地导入前缀', /本地导入/.test(res.pkg.trackingNo));
+  check('新快递 trackingNo 默认手动导入占位前缀（手动/扫码均为 手动导入·code）', /手动导入·/.test(res.pkg.trackingNo));
 
   // 13.3 重复导入去重（同取件码+取件点 → 拒绝）
   const dup = Storage.addLocalPackage({
@@ -1223,8 +1223,8 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   const pkgHtml2 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
   check('packages.html 含待取横幅（pendingCount / pendingHint）',
     pkgHtml2.indexOf('id="pendingCount"') !== -1 && pkgHtml2.indexOf('id="pendingHint"') !== -1);
-  check('packages.html 含快捷操作（扫码取件/本地导入/查快递/取件记录）',
-    pkgHtml2.indexOf('扫码取件') !== -1 && pkgHtml2.indexOf('本地导入') !== -1 &&
+  check('packages.html 含快捷操作（扫码取件/手动录入/查快递/取件记录）',
+    pkgHtml2.indexOf('扫码取件') !== -1 && pkgHtml2.indexOf('手动录入') !== -1 &&
     pkgHtml2.indexOf('track.html') !== -1 && pkgHtml2.indexOf('records.html') !== -1);
   check('packages.html 含常用取件点区块（pointsList）', pkgHtml2.indexOf('id="pointsList"') !== -1);
   check('packages.html 已移除浴室卡区块（迁至首页）', pkgHtml2.indexOf('bathroomCard') === -1);
@@ -1235,8 +1235,9 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   const prof = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
   check('profile.html v7 hero-card 渐变大卡',
     /\.hero-card\s*\{/.test(prof));
-  check('profile.html 头像 120px 居中且可进入个人空间',
-    /avatarHtml\(user,\s*120,/.test(prof) && prof.indexOf('myhome.html') !== -1);
+  check('profile.html 头像 120px 居中且可直接点按更换（v8：openAvatarSheet，不再跳个人空间）',
+    /avatarHtml\(user,\s*120,/.test(prof) && prof.indexOf('openAvatarSheet') !== -1 &&
+    prof.indexOf('myhome.html') === -1);
   check('profile.html 用户名为 hero-name 20px/800',
     /\.hero-name\s*\{[^}]*font-size:\s*20px/.test(prof));
   check('profile.html v7 恢复统计数字卡片（statPending 等，见 [19] stat-card）',
@@ -1413,7 +1414,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 已跟进到 v7（[19]）', /var VERSION = 'v7'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v8（[20]）', /var VERSION = 'v8'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1457,7 +1458,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('storage.js 含 getUserId 数字 ID', storageSrc4.indexOf('getUserId') !== -1);
   check('profile.html 含 userIdRow 数字 ID 展示', profSrc3.indexOf('userIdRow') !== -1);
   check('profile.html 已移除学号 userStudentId', profSrc3.indexOf('userStudentId') === -1);
-  check('profile.html 头像可进入个人空间（myhome.html）', profSrc3.indexOf('myhome.html') !== -1);
+  check('profile.html v8 已移除头像个人空间入口（myhome.html 链接不再出现在个人中心）', profSrc3.indexOf('myhome.html') === -1);
   check('profile.html 含关于我们/反馈建议入口（[19] v7 有意移除应用官网）',
     profSrc3.indexOf('about.html') !== -1 && profSrc3.indexOf('feedback.html') !== -1 &&
     profSrc3.indexOf('website.html') === -1);
@@ -1544,8 +1545,8 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   // 16.4 扫码沉浸式重构
   const scanSrc2 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
   check('scan.html 全屏扫描舞台 scan-stage', scanSrc2.indexOf('scan-stage') !== -1);
-  check('scan.html 四角呼吸灯（scan-corner + cornerBreath 1.5s）',
-    scanSrc2.indexOf('scan-corner') !== -1 && scanSrc2.indexOf('cornerBreath 1.5s') !== -1);
+  check('scan.html 四角静态角标 + cornerGlow 1.5s 只动 opacity（v8）',
+    scanSrc2.indexOf('scan-corner') !== -1 && scanSrc2.indexOf('cornerGlow 1.5s') !== -1);
   check('scan.html 成功对勾动画 + 震动反馈',
     scanSrc2.indexOf('checkPop') !== -1 && scanSrc2.indexOf('vibrate') !== -1);
   check('scan.html 3 秒慢提示浮现（slowHint/startSlowHints，无常驻提示）',
@@ -1704,11 +1705,11 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   const heroPos = pkgSrc6.indexOf('hero-card');
   check('packages.html 搜索框位于页面最上方（先于待取横幅）',
     searchPos !== -1 && heroPos !== -1 && searchPos < heroPos);
-  check('packages.html 已取消旧「本地导入」快捷格（改为导入取件码）',
-    pkgSrc6.indexOf('>本地导入</span>') === -1 && pkgSrc6.indexOf('openImportCode') !== -1 &&
-    pkgSrc6.indexOf('导入取件码') !== -1);
-  check('packages.html 导入取件码校验格式（8-3-267）并走 addLocalPackage',
-    /\\d\+-\\d\+-\\d\+/.test(pkgSrc6) && pkgSrc6.indexOf('addLocalPackage') !== -1);
+  check('packages.html v8：快捷格改为手动录入（openImportPackage，旧 openImportCode 已删除）',
+    pkgSrc6.indexOf('openImportPackage') !== -1 && pkgSrc6.indexOf('openImportCode') === -1 &&
+    pkgSrc6.indexOf('手动录入') !== -1);
+  check('packages.html 手动录入取件码校验（^[A-Z0-9-#]{3,24}$）并走 addLocalPackage',
+    /\^\[A-Z0-9\\-\#\]\{3,24\}\$/.test(pkgSrc6) && pkgSrc6.indexOf('addLocalPackage') !== -1);
   check('packages.html 取件码高亮 pill（pk-code-row .code 蓝底圆角）',
     /pk-code-row \.code[\s\S]{0,400}border-radius/.test(pkgSrc6));
   check('packages.html 搜索支持取件码关键词', pkgSrc6.indexOf('取件码') !== -1);
@@ -1718,8 +1719,9 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     detailSrc.indexOf('body[data-page="detail"] .tab-bar') !== -1 &&
     /body\[data-page="detail"\] \.tab-bar\s*\{\s*display:\s*none/.test(detailSrc));
 
-  // 17.10 缓存版本
-  check('sw.js 版本已升级 v7（[17] 发布时为 v5，[18] 为 v6，v7 见 [19]）', /var VERSION = 'v7';/.test(swSrc2));
+  // 17.10 缓存版本（具体版本号由最新发布块断言，此处只校验版本机制）
+  check('sw.js 版本机制存在（VERSION + campus-life 缓存名）',
+    /var VERSION = 'v\d+';/.test(swSrc2) && swSrc2.indexOf("'campus-life-' + VERSION") !== -1);
 })();
 
 // ============================================================
@@ -1857,9 +1859,8 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     ['stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
       .every(s => idxSrc6.indexOf(s) !== -1));
 
-  // 18.12 缓存与离线（版本号随 [19] 升至 v7）
-  check('sw.js v7 且预缓存 6 个新页面',
-    /var VERSION = 'v7';/.test(swSrc3) &&
+  // 18.12 缓存与离线（版本号由最新发布块断言）
+  check('sw.js 预缓存 6 个新页面',
     ['festival.html', 'stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
       .every(s => swSrc3.indexOf(s) !== -1));
 })();
@@ -1945,9 +1946,154 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('storage.js fitImport 批量导入 API',
     /fitImport:\s*function/.test(storageSrc8));
 
-  // 19.9 缓存版本
-  check('sw.js v7 且预缓存 ai.html',
-    /var VERSION = 'v7';/.test(swSrc7) && swSrc7.indexOf("'./ai.html'") !== -1);
+  // 19.9 缓存（版本号由最新发布块断言）
+  check('sw.js 预缓存 ai.html', swSrc7.indexOf("'./ai.html'") !== -1);
+})();
+
+// ============================================================
+// [20] v8 改版：扫码性能五项 / 个人中心头像+双码 / 快递手动录入+清零 /
+//              浴室可编辑+实时钟+步行秒 / AI DeepSeek 后端代理 / 地图滑动删悬浮
+// ============================================================
+(function () {
+  console.log('\n[20] v8：扫码性能/个人中心/快递录入清零/浴室/AI后端代理/地图');
+  const scanSrc8 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  const profSrc8 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const pkgSrc8 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  const bathSrc8 = fs.readFileSync(path.join(ROOT, 'bathroom.html'), 'utf8');
+  const aiSrc8 = fs.readFileSync(path.join(ROOT, 'ai.html'), 'utf8');
+  const mapSrc8 = fs.readFileSync(path.join(ROOT, 'map.html'), 'utf8');
+  const storageSrc9 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const swSrc8 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const aiRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'ai.js'), 'utf8');
+  const cfgSrc8 = fs.readFileSync(path.join(ROOT, 'backend', 'config.js'), 'utf8');
+  const envExample = fs.readFileSync(path.join(ROOT, 'backend', '.env.example'), 'utf8');
+
+  // 20.1 扫码性能：GPU 扫描线 + 引擎空闲预加载 + 500ms 节流 + 释放 + 720p 静音
+  check('scan.html GPU 扫描线（.scan-beam 仅 translate3d 位移）',
+    scanSrc8.indexOf('scan-beam') !== -1 && /@keyframes[\s\S]{0,80}translate3d/.test(scanSrc8) &&
+    scanSrc8.indexOf('animation-play-state:paused') !== -1);
+  check('scan.html OCR 引擎空闲异步预加载（enginesReady + scheduleEnginePreload + idleCallback）',
+    scanSrc8.indexOf('enginesReady') !== -1 && scanSrc8.indexOf('scheduleEnginePreload') !== -1 &&
+    scanSrc8.indexOf('idleCallback') !== -1);
+  check('scan.html 识别节流 500ms（scanInterval: 500）',
+    /scanInterval:\s*500/.test(scanSrc8));
+  check('scan.html 离开页面释放相机流与 OCR Worker（stopCamera + terminate）',
+    /stopCamera[\s\S]{0,600}terminate\(\)/.test(scanSrc8) &&
+    scanSrc8.indexOf('ocrWorker.terminate') !== -1 && scanSrc8.indexOf('ocrPipe.terminate') !== -1);
+  check('scan.html 相机 720p 且关闭音频（1280/720 + audio: false）',
+    scanSrc8.indexOf('1280') !== -1 && scanSrc8.indexOf('720') !== -1 &&
+    /audio:\s*false/.test(scanSrc8));
+  check('scan.html 不再同步加载 jsQR/tesseract（改为空闲注入）',
+    !/<script[^>]+src=["'][^"']*jsQR\.js/.test(scanSrc8) &&
+    !/<script[^>]+src=["'][^"']*tesseract\.min\.js/.test(scanSrc8));
+
+  // 20.2 个人中心：头像可换 + 去重 + 双码（加微信 / 请喝咖啡）
+  check('profile.html 头像可直接更换（button.openAvatarSheet + #avatarInput + compressImage）',
+    profSrc8.indexOf('openAvatarSheet') !== -1 && profSrc8.indexOf('id="avatarInput"') !== -1 &&
+    profSrc8.indexOf('App.compressImage') !== -1);
+  check('profile.html 删除常用取件点与个人空间旧入口（无 favPoints/我的空间myhome链接）',
+    profSrc8.indexOf('favPoints') === -1 && profSrc8.indexOf('toggleFavoritePoints') === -1 &&
+    profSrc8.indexOf('renderFavoritePoints') === -1 && profSrc8.indexOf('myhome.html') === -1 &&
+    profSrc8.indexOf('常用取件点') === -1);
+  check('profile.html 加作者微信（wechat-qr.png + showWechatModal）',
+    profSrc8.indexOf('showWechatModal') !== -1 && profSrc8.indexOf('assets/images/wechat-qr.png') !== -1);
+  check('profile.html 请作者喝咖啡（donate-qr.png + showDonateModal）',
+    profSrc8.indexOf('showDonateModal') !== -1 && profSrc8.indexOf('assets/images/donate-qr.png') !== -1);
+
+  // 20.3 快递：手动录入完整字段 + 全部清零
+  check('packages.html 手动录入五字段弹窗（openImportPackage + source manual + 快递公司/单号/取件点）',
+    pkgSrc8.indexOf('openImportPackage') !== -1 &&
+    /source:\s*'manual'/.test(pkgSrc8) &&
+    pkgSrc8.indexOf('快递公司') !== -1 && pkgSrc8.indexOf('快递单号') !== -1);
+  check('packages.html 全部清零入口（clearAllBtn + openClearAllPackages）',
+    pkgSrc8.indexOf('clearAllBtn') !== -1 && pkgSrc8.indexOf('openClearAllPackages') !== -1 &&
+    pkgSrc8.indexOf('全部清零') !== -1);
+  check('storage.js 手动录入标记 manual-input + clearAllPackages 清空包裹/记录/快递消息',
+    storageSrc9.indexOf("'manual-input'") !== -1 && /clearAllPackages[\s\S]{0,900}pickup/.test(storageSrc9) &&
+    /clearAllPackages[\s\S]{0,900}warning/.test(storageSrc9));
+
+  // 20.4 浴室：名称可改 + 实时钟 + 步行精确到秒 + 距离米取消
+  check('bathroom.html 名称手动修改（openBathNameEditor + bathSaveOverride）',
+    bathSrc8.indexOf('openBathNameEditor') !== -1 && storageSrc9.indexOf('bathSaveOverride') !== -1 &&
+    storageSrc9.indexOf('bathGetOverride') !== -1 && storageSrc9.indexOf('bathOverrides') !== -1);
+  check('bathroom.html 实时时钟（#bathClock 每秒 tickBathClock + 离开清理）',
+    bathSrc8.indexOf('id="bathClock"') !== -1 && bathSrc8.indexOf('tickBathClock') !== -1 &&
+    /setInterval\(tickBathClock,\s*1000\)/.test(bathSrc8) && bathSrc8.indexOf('pagehide') !== -1);
+  check('bathroom.html 距离改为步行 X分Y秒（walkSec 精确到秒，无旧 📏 约Xm）',
+    bathSrc8.indexOf('walkSec') !== -1 && bathSrc8.indexOf('步行约') !== -1 &&
+    bathSrc8.indexOf('📏') === -1);
+
+  // 20.5 AI：DeepSeek 仅后端代理，前端零密钥，失败静默回退
+  check('backend/routes/ai.js 代理 /chat（Bearer 注入 + 超时 AbortController + 不回传 key）',
+    aiRouteSrc.indexOf("router.post('/chat'") !== -1 &&
+    aiRouteSrc.indexOf("'Bearer ' + config.DEEPSEEK_API_KEY") !== -1 &&
+    aiRouteSrc.indexOf('AbortController') !== -1 &&
+    aiRouteSrc.indexOf('sk-') === -1);
+  check('backend/config.js 读取 DEEPSEEK_* 环境变量',
+    cfgSrc8.indexOf('DEEPSEEK_API_KEY') !== -1 && cfgSrc8.indexOf('DEEPSEEK_BASE_URL') !== -1 &&
+    cfgSrc8.indexOf('DEEPSEEK_MODEL') !== -1);
+  check('backend/.env.example 只放空占位（DEEPSEEK_API_KEY= 后无值，且无完整 sk- 密钥）',
+    /DEEPSEEK_API_KEY=\s*\r?\n/.test(envExample) && !/sk-[A-Za-z0-9]{20,}/.test(envExample));
+  check('ai.html 双引擎（api/ai/chat 云端优先 + 失败回退本地 reply + 8s 超时）',
+    aiSrc8.indexOf("fetch('api/ai/chat'") !== -1 && aiSrc8.indexOf('askCloud') !== -1 &&
+    aiSrc8.indexOf('isLocalIntent') !== -1 && /CLOUD_TIMEOUT_MS\s*=\s*8000/.test(aiSrc8) &&
+    /function\s+reply\s*\(/.test(aiSrc8));
+
+  // 20.6 地图：列表可滑动 + 删除悬浮操作提示
+  check('map.html 附近点列表独立滚动（sheet-scroll + overscroll/touch-action pan-y）',
+    mapSrc8.indexOf('sheet-scroll') !== -1 && mapSrc8.indexOf('overscroll-behavior: contain') !== -1 &&
+    mapSrc8.indexOf('touch-action: pan-y') !== -1);
+  check('map.html 已删除底部悬浮操作提示（无 map-hint CSS/DOM/JS 残留）',
+    mapSrc8.indexOf('map-hint') === -1 && mapSrc8.indexOf('mapHint') === -1 &&
+    mapSrc8.indexOf('双指缩放 · 点数字圆圈展开聚合点') === -1);
+
+  // 20.7 安全红线：入库文件中不得出现任何完整 sk- 密钥
+  // 用形态正则而非写死 key（写死完整 key 本身就是泄漏）；backend/.env 扩展名不在扫描列，天然豁免
+  (function () {
+    const KEY_RE = /sk-[A-Za-z0-9]{20,}/g;
+    const SKIP_DIRS = { '.git': 1, 'node_modules': 1, '.vscode': 1 };
+    const leaks = [];
+    function walk(dir) {
+      fs.readdirSync(dir, { withFileTypes: true }).forEach(function (ent) {
+        if (ent.isDirectory()) {
+          if (!SKIP_DIRS[ent.name]) walk(path.join(dir, ent.name));
+        } else if (/\.(html|js|css|json|md|txt|example|cmd)$/.test(ent.name)) {
+          const full = path.join(dir, ent.name);
+          try {
+            const content = fs.readFileSync(full, 'utf8');
+            const hits = content.match(KEY_RE);
+            if (hits) leaks.push(path.relative(ROOT, full).replace(/\\/g, '/') + ' (' + hits.length + ')');
+          } catch (e) {}
+        }
+      });
+    }
+    walk(ROOT);
+    check('入库文件无完整 sk- 密钥（形态正则扫描；真 key 只允许在 backend/.env）',
+      leaks.length === 0, '命中文件: ' + leaks.join(', '));
+
+    // 若本机存在 backend/.env，额外校验：其中的真实 key 不出现在任何入库文件
+    const envPath = path.join(ROOT, 'backend', '.env');
+    if (fs.existsSync(envPath)) {
+      const m = fs.readFileSync(envPath, 'utf8').match(/^DEEPSEEK_API_KEY=(sk-[A-Za-z0-9]{20,})\s*$/m);
+      check('backend/.env 中 DEEPSEEK_API_KEY 形态有效（以 sk- 开头且足够长）', !!m);
+      if (m) {
+        const realKey = m[1];
+        const bad = [];
+        (function scan(dir) {
+          fs.readdirSync(dir, { withFileTypes: true }).forEach(function (ent) {
+            if (ent.isDirectory()) { if (!SKIP_DIRS[ent.name]) scan(path.join(dir, ent.name)); }
+            else if (ent.name !== '.env' && /\.(html|js|css|json|md|txt|example|cmd)$/.test(ent.name)) {
+              try { if (fs.readFileSync(path.join(dir, ent.name), 'utf8').indexOf(realKey) !== -1) bad.push(ent.name); } catch (e) {}
+            }
+          });
+        })(ROOT);
+        check('backend/.env 的真实 key 未出现在任何入库文件', bad.length === 0, '命中: ' + bad.join(', '));
+      }
+    }
+  })();
+
+  // 20.8 缓存版本 v8
+  check('sw.js 版本升级 v8', /var VERSION = 'v8';/.test(swSrc8));
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

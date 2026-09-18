@@ -28,6 +28,22 @@
     .pk-quick-btn:active { background:var(--color-primary-hover); }
     .pk-eta { margin-top:10px; font-size:12px; color:var(--color-text-sub); display:flex; gap:6px; align-items:center; }
     .pk-eta.warn { color:var(--color-warning); font-weight:600; }
+    /* 手动录入表单：紧凑分组输入 */
+    .imp-form { margin-top:12px; display:flex; flex-direction:column; gap:10px; text-align:left; }
+    .imp-field { display:flex; flex-direction:column; gap:5px; }
+    .imp-field > label { font-size:12px; color:var(--color-text-sub); font-weight:600; padding-left:2px; }
+    .imp-field > label .req { color:var(--color-danger); margin-left:2px; }
+    .imp-field input {
+      width:100%; box-sizing:border-box;
+      border:1.5px solid var(--color-border); border-radius:11px;
+      padding:10px 12px; font-size:14.5px; color:var(--color-text);
+      background:var(--color-surface-alt); outline:none;
+      transition:border-color .15s;
+    }
+    .imp-field input:focus { border-color:var(--color-primary); }
+    .imp-field input.code-input { font-weight:800; letter-spacing:1.5px; font-family:var(--font-mono); }
+    .imp-err { font-size:12px; color:var(--color-danger); display:none; line-height:1.5; }
+    .modal .imp-actions { margin-top:14px; }
   </style>
 </head>
 <body data-page="packages">
@@ -77,11 +93,11 @@
             </div>
             <span class="quick-action-label quick-action-label--primary">扫码取件</span>
           </a>
-          <a href="javascript:void(0)" class="quick-action anim-fade-in-up stagger-2" onclick="openImportCode()">
+          <a href="javascript:void(0)" class="quick-action anim-fade-in-up stagger-2" onclick="openImportPackage()">
             <div class="quick-action-icon is-neutral">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="9" x2="8" y2="9"/><line x1="11" y1="9" x2="12" y2="9"/><line x1="15" y1="9" x2="16" y2="9"/><line x1="7" y1="13" x2="8" y2="13"/><line x1="11" y1="13" x2="12" y2="13"/><line x1="15" y1="13" x2="16" y2="13"/><line x1="8" y1="16.2" x2="16" y2="16.2"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
             </div>
-            <span class="quick-action-label">导入取件码</span>
+            <span class="quick-action-label">手动录入</span>
           </a>
           <a href="track.html" class="quick-action anim-fade-in-up stagger-3">
             <div class="quick-action-icon is-neutral">
@@ -112,6 +128,10 @@
         <div style="margin-top:24px;" class="anim-fade-in-up stagger-4">
           <div class="section-header">
             <span class="section-title">全部快递</span>
+            <a href="javascript:void(0)" class="section-link" id="clearAllBtn" style="color:var(--color-danger);">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:3px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              全部清零
+            </a>
           </div>
 
           <!-- 筛选 chips -->
@@ -313,19 +333,51 @@
         }).catch(function () { App.toast('取件失败，请稍后再试'); });
       };
 
-      // —— 导入取件码：手动录入面单取件码（替代原「本地导入」扫码整包入口）——
-      window.openImportCode = function () {
+      // —— 手动录入快递：完整字段表单（只产生本地记录，不调任何第三方查件）——
+      var COMPANIES = ['顺丰速运', '圆通速递', '中通快递', '韵达快递', '申通快递', '京东快递', '邮政EMS', '极兔速递', '菜鸟裹裹', '丹鸟快递'];
+
+      function escAttr(s) {
+        return String(s == null ? '' : s).replace(/"/g, '&quot;');
+      }
+
+      window.openImportPackage = function () {
+        var pointNames = Storage.getPickupPoints().map(function (p) { return p.name; });
+        var companyOpts = COMPANIES.map(function (c) { return '<option value="' + escAttr(c) + '">'; }).join('');
+        var pointOpts = pointNames.map(function (n) { return '<option value="' + escAttr(n) + '">'; }).join('');
         var backdrop = document.createElement('div');
         backdrop.className = 'modal-backdrop';
         backdrop.innerHTML =
           '<div class="modal">' +
-            '<div class="modal-title">导入取件码</div>' +
-            '<div class="modal-desc">手动录入快递面单上的取件码，格式如 8-3-267</div>' +
-            '<input id="importCodeInput" type="text" inputmode="numeric" maxlength="20" placeholder="例如：8-3-267" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-border);border-radius:12px;padding:12px 14px;font-size:16px;font-weight:700;letter-spacing:2px;font-family:var(--font-mono);color:var(--color-text);background:var(--color-surface-alt);outline:none;" />' +
-            '<div id="importCodeErr" style="font-size:12px;color:var(--color-danger);margin-top:8px;display:none;">格式不正确，应为「区号-架号-件号」，如 8-3-267</div>' +
-            '<div class="modal-actions">' +
-              '<button class="btn btn-outline" id="importCodeCancel">取消</button>' +
-              '<button class="btn btn-primary" id="importCodeOk">导入</button>' +
+            '<div class="modal-title">手动录入快递</div>' +
+            '<div class="modal-desc">填写面单信息，记录只保存在本机；取件码必填，其余可留空</div>' +
+            '<div class="imp-form">' +
+              '<div class="imp-field">' +
+                '<label>快递公司</label>' +
+                '<input id="impCompany" type="text" list="impCompanyList" maxlength="12" placeholder="如：顺丰速运 / 圆通速递">' +
+                '<datalist id="impCompanyList">' + companyOpts + '</datalist>' +
+              '</div>' +
+              '<div class="imp-field">' +
+                '<label>快递单号</label>' +
+                '<input id="impTracking" type="text" maxlength="30" autocomplete="off" placeholder="面单上的运单号（选填）">' +
+              '</div>' +
+              '<div class="imp-field">' +
+                '<label>取件码<span class="req">*</span></label>' +
+                '<input id="impCode" class="code-input" type="text" maxlength="24" autocomplete="off" placeholder="如 8-3-267 / A12-99">' +
+              '</div>' +
+              '<div class="imp-field">' +
+                '<label>取件点</label>' +
+                '<input id="impPoint" type="text" list="impPointList" maxlength="20" placeholder="如：菜鸟驿站（楷苑）">' +
+                '<datalist id="impPointList">' + pointOpts + '</datalist>' +
+              '</div>' +
+              '<div class="imp-field">' +
+                '<label>寄件人 / 备注</label>' +
+                '<input id="impSender" type="text" maxlength="12" placeholder="如：妈妈 / 拼多多（选填）">' +
+              '</div>' +
+              '<div class="imp-err" id="impErr"></div>' +
+            '</div>' +
+            '<div class="modal-actions imp-actions">' +
+              '<button class="btn btn-outline" id="impCancel">取消</button>' +
+              '<button class="btn btn-primary" id="impOk">添加</button>' +
             '</div>' +
           '</div>';
         document.body.appendChild(backdrop);
@@ -334,33 +386,64 @@
           backdrop.classList.remove('show');
           setTimeout(function () { backdrop.remove(); }, 250);
         }
-        backdrop.querySelector('#importCodeCancel').addEventListener('click', close);
+        function showErr(msg) {
+          var err = backdrop.querySelector('#impErr');
+          err.textContent = msg;
+          err.style.display = 'block';
+        }
+        backdrop.querySelector('#impCancel').addEventListener('click', close);
         backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
         function submit() {
-          var input = backdrop.querySelector('#importCodeInput');
-          var err = backdrop.querySelector('#importCodeErr');
-          var val = (input.value || '').trim().toUpperCase();
-          if (!/^\d+-\d+-\d+$/.test(val)) { err.style.display = 'block'; return; }
-          var r = Storage.addLocalPackage({ pickupCode: val, sender: '本地导入' });
+          var code = (backdrop.querySelector('#impCode').value || '').trim().toUpperCase().replace(/\s+/g, '');
+          if (!code) { showErr('请填写取件码'); return; }
+          if (!/^[A-Z0-9\-#]{3,24}$/.test(code)) { showErr('取件码格式不对，支持数字、字母、短横线（3-24 位）'); return; }
+          var payload = {
+            source: 'manual',
+            pickupCode: code,
+            company: (backdrop.querySelector('#impCompany').value || '').trim(),
+            trackingNo: (backdrop.querySelector('#impTracking').value || '').trim().toUpperCase(),
+            pickupPoint: (backdrop.querySelector('#impPoint').value || '').trim(),
+            sender: (backdrop.querySelector('#impSender').value || '').trim(),
+          };
+          var r = Storage.addLocalPackage(payload);
           if (r && r.success) {
             close();
-            App.toastSuccess('已导入取件码 ' + val);
+            App.toastSuccess('已添加 ' + (payload.company || '快递') + ' · ' + code);
             loadPackages();
             renderBanner();
+            renderPoints();
             renderBadge();
           } else {
-            err.textContent = (r && r.message) || '导入失败，请稍后重试';
-            err.style.display = 'block';
+            showErr((r && r.message) || '添加失败，请稍后重试');
           }
         }
-        backdrop.querySelector('#importCodeOk').addEventListener('click', submit);
-        backdrop.querySelector('#importCodeInput').addEventListener('keydown', function (e) {
-          if (e.key === 'Enter') submit();
-        });
+        backdrop.querySelector('#impOk').addEventListener('click', submit);
         setTimeout(function () {
-          var i = backdrop.querySelector('#importCodeInput');
+          var i = backdrop.querySelector('#impCompany');
           if (i) i.focus();
         }, 300);
+      };
+
+      // —— 全部快递清零：包裹列表 + 取件记录 + 快递类消息，demo 数据不再复活 ——
+      window.openClearAllPackages = function () {
+        var count = Storage.getPackages().length + Storage.getRecords().length;
+        App.showModal({
+          title: '全部快递清零',
+          icon: 'warning',
+          desc: count
+            ? '将清空 <b>' + count + '</b> 条快递数据：全部包裹、取件记录和快递通知都会归零，且演示数据不会再恢复。清空后只能通过「手动录入」新增。此操作不可撤销。'
+            : '当前没有快递数据。清零后演示数据不会再恢复，列表只保留你手动录入的记录。',
+          confirmText: '确认清零',
+          cancelText: '再想想',
+          onConfirm: function () {
+            Storage.clearAllPackages();
+            loadPackages();
+            renderBanner();
+            renderPoints();
+            renderBadge();
+            App.toastSuccess('快递数据已全部清零');
+          },
+        });
       };
 
       function loadPackages() {
@@ -412,6 +495,7 @@
       renderBanner();
       renderPoints();
       renderBadge();
+      document.getElementById('clearAllBtn').addEventListener('click', function () { openClearAllPackages(); });
       App.initPullToRefresh(mainContent, refresh);
     })();
   </script>
