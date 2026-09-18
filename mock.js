@@ -6,6 +6,15 @@ var DB = {
     studentId: "2024010132",
     phone: "138****8888",
     campus: "涵江校区 · 兰苑 3号楼",
+    campusId: "hanjiang",
+    dormitory: "兰苑 3号楼",
+    dorm: {
+      campusId: "hanjiang",
+      areaId: "lanyuan",
+      areaName: "兰苑",
+      building: "3号楼",
+      room: "215室"
+    },
     boundPhone: true,
     avatar: null,
     packageCount: 5,
