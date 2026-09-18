@@ -82,8 +82,32 @@ var ApiClient = {
     return this._request('POST', '/api/auth/login', { phone: phone, code: code }).then(function (res) {
       if (res.code === 0 && res.data && res.data.token) {
         self.setToken(res.data.token);
+        // 真实账号登录后恢复本地真实模式，避免灰度体验的 demo 覆盖残留
+        try { localStorage.removeItem('campus_mode_override'); } catch (e) {}
       }
       return res;
+    });
+  },
+
+  // 灰度一键体验：免验证码换取 2h 体验令牌（由灰度页调用）
+  trialLogin: function () {
+    var self = this;
+    return this._request('POST', '/api/auth/trial-login', {}).then(function (res) {
+      if (res.code === 0 && res.data && res.data.token) {
+        self.setToken(res.data.token);
+      }
+      return res;
+    });
+  },
+
+  // 退出产品体验
+  trialLogout: function () {
+    return this._request('POST', '/api/auth/trial-logout', {}).then(function (res) {
+      try { localStorage.removeItem('campus_mode_override'); } catch (e) {}
+      return res;
+    }).catch(function () {
+      try { localStorage.removeItem('campus_mode_override'); } catch (e) {}
+      return { code: 0 };
     });
   },
 
@@ -130,6 +154,56 @@ var ApiClient = {
   // 删除快递
   deletePackage: function (id) {
     return this._request('DELETE', '/api/packages/' + id);
+  },
+
+  // ===== 真实快递链路接口（灰度用户） =====
+
+  // 获取实时取件码
+  getPickupCode: function (packageId) {
+    return this._request('GET', '/api/courier/packages/' + packageId + '/pickup-code');
+  },
+
+  // 获取当前有效出库码
+  getOutboundCode: function (packageId) {
+    return this._request('GET', '/api/courier/packages/' + packageId + '/outbound-code');
+  },
+
+  // 手动刷新出库码
+  refreshOutboundCode: function (packageId) {
+    return this._request('POST', '/api/courier/packages/' + packageId + '/refresh');
+  },
+
+  // 同步快递状态（30-60s 轮询）
+  syncPackageStatus: function (packageId) {
+    return this._request('GET', '/api/courier/packages/' + packageId + '/status');
+  },
+
+  // ===== 扫码验证闭环接口（灰度用户） =====
+
+  // 校验候选取件码是否属于当前用户
+  scanVerify: function (code, packageId) {
+    var data = { code: code };
+    if (packageId) data.packageId = packageId;
+    return this._request('POST', '/api/scan/verify', data);
+  },
+
+  // 确认取件（状态改为 picked）
+  scanConfirm: function (packageId) {
+    return this._request('POST', '/api/scan/confirm', { packageId: packageId });
+  },
+
+  // ===== 用户反馈接口 =====
+
+  // 提交问题反馈
+  // payload: { type, content, contact, screenshots:[dataURL...], device:{os,browser} }
+  // userId / feedbackId / appVersion / environment / createdAt 全部由后端生成
+  submitFeedback: function (payload) {
+    return this._request('POST', '/api/feedback', payload);
+  },
+
+  // 查询我自己的反馈记录
+  getMyFeedback: function () {
+    return this._request('GET', '/api/feedback/mine');
   },
 
   // 页面初始化时检查登录
@@ -258,5 +332,125 @@ if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) {
 
   ApiClient.login = function () {
     return Promise.resolve({ code: 0, data: { demo: true } });
+  };
+
+  // 扫码验证（demo 模式：本地匹配取件码）
+  ApiClient.scanVerify = function (code, packageId) {
+    var list = Storage.getPackages();
+    var found = null;
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].pickupCode === code && (!packageId || list[i].id === packageId)) {
+        found = list[i];
+        break;
+      }
+    }
+    if (!found) {
+      return Promise.resolve({
+        code: 404,
+        message: '演示模式：未找到匹配的快递',
+      });
+    }
+    return Promise.resolve({
+      code: 0,
+      data: {
+        packageId: found.id,
+        code: found.pickupCode,
+        status: found.status,
+        allowPickup: found.status === 'pending',
+      },
+    });
+  };
+
+  // 确认取件（demo 模式：本地更新状态）
+  ApiClient.scanConfirm = function (packageId) {
+    var list = Storage.getPackages();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i].id === packageId) {
+        list[i].status = 'picked';
+        list[i].pickedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        localStorage.setItem(Storage.KEYS.packages, JSON.stringify(list));
+        return Promise.resolve({
+          code: 0,
+          message: '取件成功',
+          data: { packageId: packageId, status: 'picked' },
+        });
+      }
+    }
+    return Promise.resolve({ code: 404, message: '快递不存在' });
+  };
+
+  // 真实快递链路（demo 模式：返回虚拟数据，不调用后端）
+  ApiClient.getPickupCode = function (packageId) {
+    var pkg = Storage.getPackage(packageId);
+    return Promise.resolve({
+      code: 0,
+      data: { code: pkg ? pkg.pickupCode : '', source: 'demo', packageId: packageId },
+    });
+  };
+
+  ApiClient.getOutboundCode = function (packageId) {
+    return Promise.resolve({
+      code: 0,
+      data: {
+        code: 'DEMO' + Date.now().toString().slice(-6),
+        source: 'demo',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        packageId: packageId,
+      },
+    });
+  };
+
+  ApiClient.refreshOutboundCode = function (packageId) {
+    return this.getOutboundCode(packageId);
+  };
+
+  ApiClient.syncPackageStatus = function (packageId) {
+    var pkg = Storage.getPackage(packageId);
+    return Promise.resolve({
+      code: 0,
+      data: { packageId: packageId, status: pkg ? pkg.status : 'unknown', state: '2', traces: [] },
+    });
+  };
+
+  // 用户反馈（demo 模式：只存浏览器本地，不发送到任何后端/生产系统，截图不持久化）
+  ApiClient.submitFeedback = function (payload) {
+    var KEY = 'demo_feedbackDB';
+    var list = [];
+    try { list = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { list = []; }
+    var record = {
+      id: 'FBDEMO' + Date.now(),
+      type: payload.type,
+      content: payload.content,
+      contact: payload.contact || '',
+      imageCount: (payload.screenshots || []).length,  // 仅记录张数，不存图片数据
+      device: payload.device || {},
+      status: 'pending',
+      environment: 'demo',
+      createdAt: new Date().toISOString(),
+    };
+    list.unshift(record);
+    try {
+      localStorage.setItem(KEY, JSON.stringify(list.slice(0, 50)));
+    } catch (e) {
+      // localStorage 配额不足时忽略持久化，仍返回演示成功
+    }
+    return Promise.resolve({
+      code: 0,
+      message: '演示环境提交成功（不会发送到生产系统）',
+      data: {
+        demo: true,
+        feedbackId: record.id,
+        environment: 'demo',
+        appVersion: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.appVersion) || '',
+        createdAt: record.createdAt,
+        imageCount: record.imageCount,
+      },
+    });
+  };
+
+  ApiClient.getMyFeedback = function () {
+    var list = [];
+    try { list = JSON.parse(localStorage.getItem('demo_feedbackDB') || '[]'); } catch (e) { list = []; }
+    return Promise.resolve({ code: 0, data: list });
   };
 }
