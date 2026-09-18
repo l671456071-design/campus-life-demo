@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>问题反馈 - 校园智能生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .feedback-intro {
+      font-size: 13px;
+      color: var(--color-text-sub);
+      background: var(--color-primary-light);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      line-height: 1.7;
+      margin-bottom: 14px;
+    }
+    .feedback-card {
+      background: var(--color-surface);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--color-border-light);
+    }
+    .feedback-label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feedback-label .req { color: var(--color-danger); }
+    .feedback-label .opt { font-size: 11px; color: var(--color-text-hint); font-weight: 400; }
+    .feedback-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    #feedbackContent {
+      width: 100%;
+      min-height: 128px;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: none;
+      outline: none;
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    #feedbackContent:focus { border-color: var(--color-primary); }
+    .feedback-counter { text-align: right; font-size: 12px; color: var(--color-text-hint); margin-top: 6px; }
+    .feedback-counter.over { color: var(--color-danger); }
+    .feedback-input {
+      width: 100%;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 11px 12px;
+      font-size: 14px;
+      outline: none;
+      background: var(--color-surface);
+      color: var(--color-text);
+    }
+    .feedback-input:focus { border-color: var(--color-primary); }
+    .feedback-hint { font-size: 12px; color: var(--color-text-hint); margin-top: 6px; line-height: 1.6; }
+    .feedback-thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+    .feedback-thumb { position: relative; width: 72px; height: 72px; }
+    .feedback-thumb img {
+      width: 72px; height: 72px; object-fit: cover;
+      border-radius: var(--radius-md); border: 1px solid var(--color-border);
+    }
+    .feedback-thumb .del {
+      position: absolute; top: -7px; right: -7px; width: 22px; height: 22px;
+      border-radius: 50%; background: rgba(15,23,42,.75); color: #fff;
+      border: none; font-size: 13px; line-height: 22px; text-align: center; padding: 0;
+    }
+    .feedback-add-img {
+      width: 72px; height: 72px; border: 1.5px dashed var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface-alt);
+      color: var(--color-text-hint); font-size: 26px; display: flex;
+      align-items: center; justify-content: center;
+    }
+    .feedback-privacy {
+      font-size: 12px; color: var(--color-text-hint); line-height: 1.8;
+      background: var(--color-surface-alt); border-radius: var(--radius-md);
+      padding: 10px 12px;
+    }
+    .feedback-demo-banner {
+      font-size: 12px; color: #92400E; background: #FEF3C7;
+      border-radius: var(--radius-md); padding: 10px 12px; margin-bottom: 12px;
+      line-height: 1.7;
+    }
+    .feedback-error-box {
+      font-size: 13px; color: #991B1B; background: #FEF2F2;
+      border: 1px solid #FECACA; border-radius: var(--radius-md);
+      padding: 10px 12px; margin-bottom: 12px; line-height: 1.6;
+    }
+    .feedback-footer {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      max-width: 480px; margin: 0 auto;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: var(--color-bg);
+      border-top: 1px solid var(--color-border-light);
+      z-index: 10;
+    }
+    .feedback-spinner {
+      display: inline-block; width: 15px; height: 15px;
+      border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+      border-radius: 50%; animation: fb-spin .7s linear infinite;
+      vertical-align: -2px; margin-right: 6px;
+    }
+    @keyframes fb-spin { to { transform: rotate(360deg); } }
+    .feedback-result { text-align: center; padding: 40px 20px 24px; }
+    .feedback-result-icon {
+      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 16px;
+      display: flex; align-items: center; justify-content: center; font-size: 36px;
+    }
+    .feedback-result-icon.ok { background: #DCFCE7; color: #16A34A; }
+    .feedback-result h2 { font-size: 19px; margin-bottom: 8px; }
+    .feedback-result p { color: var(--color-text-sub); font-size: 14px; }
+    .feedback-result-meta { font-size: 12px; color: var(--color-text-hint); margin: 14px 0 24px; line-height: 1.9; }
+  </style>
+</head>
+<body data-page="feedback">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="settings.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">问题反馈</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <div style="padding:16px 16px 96px;">
+        <!-- 表单视图 -->
+        <div id="feedbackFormView">
+          <div class="feedback-intro anim-fade-in-up stagger-1">
+            遇到问题或有更好的建议，可以告诉我们。我们会持续改进
+          </div>
+          <div id="feedbackDemoBanner" class="feedback-demo-banner" style="display:none;">
+            当前为演示环境，反馈不会发送到生产系统。仅在本机浏览器中模拟提交。
+          </div>
+          <div id="feedbackErrorBox" class="feedback-error-box" style="display:none;"></div>
+
+          <div class="feedback-card anim-fade-in-up stagger-1">
+            <div class="feedback-label"><span class="req">*</span>问题类型</div>
+            <div class="feedback-chips" id="feedbackTypeChips">
+              <div class="chip" data-code="bug">功能异常</div>
+              <div class="chip" data-code="ui">界面问题</div>
+              <div class="chip" data-code="suggestion">使用建议</div>
+              <div class="chip" data-code="express">快递问题</div>
+              <div class="chip" data-code="scan">扫码问题</div>
+              <div class="chip" data-code="food">外卖问题</div>
+              <div class="chip" data-code="map">地图问题</div>
+              <div class="chip" data-code="other">其他</div>
+            </div>
+          </div>
+
+          <div class="feedback-card anim-fade-in-up stagger-2">
+            <div class="feedback-label"><span class="req">*</span>反馈内容</div>
+            <textarea id="feedbackContent" maxlength="500" placeholder="请描述你遇到的问题或建议……"></textarea>
+            <div class="feedback-counter"><span id="feedbackCharCount">0</span> / 500</div>
+          </div>
+
+          <div class="feedback-card anim-fade-in-up stagger-3">
+            <div class="feedback-label">手机号 / 联系方式 <span class="opt">方便我们联系你处理问题（选填）</span></div>
+            <input type="text" class="feedback-input" id="feedbackContact" maxlength="50" placeholder="手机号 / 微信 / 邮箱（选填）">
+          </div>
+
+          <div class="feedback-card anim-fade-in-up stagger-4">
+            <div class="feedback-label">上传截图 <span class="opt">可选，最多 3 张</span></div>
+            <input type="file" id="feedbackFileInput" accept="image/png,image/jpeg,image/webp" multiple hidden>
+            <div class="feedback-thumbs" id="feedbackThumbs"></div>
+            <div class="feedback-hint">支持 PNG / JPG / JPEG / WEBP，单张不超过 5MB。截图仅在你提交时上传到安全存储。</div>
+          </div>
+
+          <div class="feedback-privacy anim-fade-in-up stagger-5" id="feedbackPrivacyNote"></div>
+        </div>
+
+        <!-- 成功视图 -->
+        <div id="feedbackSuccessView" style="display:none;">
+          <div class="feedback-result">
+            <div class="feedback-result-icon ok">✓</div>
+            <h2>反馈提交成功</h2>
+            <p>感谢你的反馈，我们会认真查看。</p>
+            <div class="feedback-result-meta" id="feedbackSuccessMeta"></div>
+            <button class="btn btn-primary btn-block btn-lg" onclick="location.href='settings.html'">返回设置</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部固定提交栏 -->
+    <div class="feedback-footer" id="feedbackFooter">
+      <button class="btn btn-primary btn-block btn-lg" id="feedbackSubmitBtn">提交反馈</button>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      'use strict';
+
+      var MAX_IMAGES = 3;
+      var MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+      var ALLOWED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
+      var state = {
+        type: '',
+        content: '',
+        contact: '',
+        images: [],          // { dataUrl, name }
+        submitting: false,
+      };
+
+      // ---- 非敏感设备信息：仅系统类型 / 浏览器类型 ----
+      function detectDevice() {
+        var ua = navigator.userAgent || '';
+        var os = '其他', browser = '其他';
+        if (/Android/i.test(ua)) os = 'Android';
+        else if (/iPhone|iPad|iPod/i.test(ua)) os = 'iOS';
+        else if (/Windows NT/i.test(ua)) os = 'Windows';
+        else if (/Macintosh|Mac OS X/i.test(ua)) os = 'macOS';
+        if (/Edg\//i.test(ua)) browser = 'Edge';
+        else if (/MicroMessenger/i.test(ua)) browser = '微信内置浏览器';
+        else if (/Chrome\//i.test(ua) && /Safari\//i.test(ua)) browser = 'Chrome';
+        else if (/Safari\//i.test(ua) && /Version\//i.test(ua)) browser = 'Safari';
+        else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+        return {
+          os: os,
+          browser: browser,
+          version: (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.appVersion) || 'v0.2.0-gray',
+        };
+      }
+
+      function renderPrivacy() {
+        var d = detectDevice();
+        document.getElementById('feedbackPrivacyNote').innerHTML =
+          '提交时将随反馈附上非敏感运行信息：系统 <b>' + d.os + '</b> · 浏览器 <b>' + d.browser +
+          '</b> · 版本 <b>' + d.version + '</b>。<br>不会收集通讯录、精确位置、相册全部内容或设备唯一标识。';
+      }
+
+      // ---- 类型 Chip 单选 ----
+      document.getElementById('feedbackTypeChips').addEventListener('click', function (e) {
+        var chip = e.target.closest('.chip');
+        if (!chip) return;
+        state.type = chip.dataset.code;
+        this.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+        chip.classList.add('active');
+        hideError();
+      });
+
+      // ---- 内容计数 ----
+      var contentEl = document.getElementById('feedbackContent');
+      contentEl.addEventListener('input', function () {
+        state.content = this.value;
+        var counter = document.getElementById('feedbackCharCount');
+        counter.textContent = this.value.length;
+        counter.parentElement.classList.toggle('over', this.value.length > 500);
+        if (this.value.trim().length >= 5) hideError();
+      });
+
+      document.getElementById('feedbackContact').addEventListener('input', function () {
+        state.contact = this.value;
+      });
+
+      // ---- 截图选择 / 缩略图 / 删除 ----
+      var fileInput = document.getElementById('feedbackFileInput');
+      fileInput.addEventListener('change', function () {
+        handleFiles(this.files);
+        this.value = '';
+      });
+
+      document.getElementById('feedbackThumbs').addEventListener('click', function (e) {
+        var add = e.target.closest('.feedback-add-img');
+        if (add) { fileInput.click(); return; }
+        var del = e.target.closest('.del');
+        if (del) {
+          state.images.splice(parseInt(del.dataset.idx, 10), 1);
+          renderThumbs();
+        }
+      });
+
+      function handleFiles(files) {
+        var remain = MAX_IMAGES - state.images.length;
+        if (remain <= 0) { App.toast('最多上传 ' + MAX_IMAGES + ' 张截图'); return; }
+        var list = Array.prototype.slice.call(files).slice(0, remain);
+        var tasks = list.map(function (file) {
+          return new Promise(function (resolve) {
+            if (ALLOWED_TYPES.indexOf(file.type) === -1) {
+              App.toast('仅支持 PNG / JPG / JPEG / WEBP：' + file.name);
+              return resolve(null);
+            }
+            if (file.size > MAX_IMAGE_BYTES) {
+              App.toast('单张图片不能超过 5MB：' + file.name);
+              return resolve(null);
+            }
+            var reader = new FileReader();
+            reader.onload = function () { resolve({ dataUrl: reader.result, name: file.name }); };
+            reader.onerror = function () { resolve(null); };
+            reader.readAsDataURL(file);
+          });
+        });
+        Promise.all(tasks).then(function (results) {
+          results.forEach(function (r) { if (r) state.images.push(r); });
+          if (files.length > remain) App.toast('最多 ' + MAX_IMAGES + ' 张，已截取前 ' + remain + ' 张');
+          renderThumbs();
+        });
+      }
+
+      function renderThumbs() {
+        var box = document.getElementById('feedbackThumbs');
+        var html = state.images.map(function (img, i) {
+          return '<div class="feedback-thumb"><img class="feedback-shot" alt="截图预览">' +
+            '<button type="button" class="del" data-idx="' + i + '" aria-label="删除">×</button></div>';
+        }).join('');
+        if (state.images.length < MAX_IMAGES) {
+          html += '<div class="feedback-add-img" role="button" aria-label="添加截图">+</div>';
+        }
+        box.innerHTML = html;
+        // dataURL 渲染后再赋值，避免把动态内容写进 HTML 属性
+        var shots = box.querySelectorAll('img.feedback-shot');
+        for (var j = 0; j < shots.length; j++) shots[j].src = state.images[j].dataUrl;
+      }
+
+      // ---- 错误提示（失败时保留全部已填内容）----
+      function showError(msg) {
+        var box = document.getElementById('feedbackErrorBox');
+        box.textContent = msg;
+        box.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      function hideError() {
+        document.getElementById('feedbackErrorBox').style.display = 'none';
+      }
+
+      // ---- 校验 ----
+      function validate() {
+        if (!state.type) { showError('请选择问题类型'); return false; }
+        if (state.content.trim().length < 5) { showError('问题描述至少需要 5 个字符'); return false; }
+        if (state.content.length > 500) { showError('问题描述不能超过 500 个字符'); return false; }
+        return true;
+      }
+
+      // ---- 提交 ----
+      document.getElementById('feedbackSubmitBtn').addEventListener('click', function () {
+        if (state.submitting || !validate()) return;
+        state.submitting = true;
+        hideError();
+        var btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="feedback-spinner"></span>正在提交……';
+
+        var device = detectDevice();
+        var payload = {
+          type: state.type,
+          content: state.content.trim(),
+          contact: state.contact.trim(),
+          screenshots: state.images.map(function (i) { return i.dataUrl; }),
+          device: { os: device.os, browser: device.browser },
+        };
+
+        ApiClient.submitFeedback(payload).then(function (res) {
+          state.submitting = false;
+          if (res.code === 0) {
+            renderSuccess(res.data || {});
+          } else {
+            btn.disabled = false;
+            btn.textContent = '重新提交';
+            showError(res.message || '反馈提交失败，请稍后重试。');
+          }
+        }).catch(function () {
+          state.submitting = false;
+          btn.disabled = false;
+          btn.textContent = '重新提交';
+          showError('反馈提交失败，请稍后重试。');
+        });
+      });
+
+      // ---- 成功页 ----
+      function renderSuccess(data) {
+        document.getElementById('feedbackFormView').style.display = 'none';
+        document.getElementById('feedbackFooter').style.display = 'none';
+        var isDemo = !!(data && data.demo);
+        document.getElementById('feedbackSuccessMeta').innerHTML =
+          (isDemo ? '当前为演示环境，反馈不会发送到生产系统。<br>' : '') +
+          '反馈编号：' + (data.feedbackId || '-') + '<br>' +
+          '环境：' + (data.environment || '-') + ' · 版本：' + (data.appVersion || '-');
+        document.getElementById('feedbackSuccessView').style.display = 'block';
+        window.scrollTo(0, 0);
+      }
+
+      // ---- 初始化 ----
+      document.addEventListener('DOMContentLoaded', function () {
+        if (typeof App !== 'undefined' && App.initTheme) App.initTheme();
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) {
+          document.getElementById('feedbackDemoBanner').style.display = 'block';
+        }
+        renderPrivacy();
+        renderThumbs();
+      });
+    })();
+  </script>
+</body>
+</html>
