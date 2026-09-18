@@ -4,98 +4,161 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>首页 - 校园取件</title>
+  <title>首页 - 校园智能生活</title>
   <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
   <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#2563EB">
   <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
+  <style>
+    /* ===== 生活门户首页 ===== */
+    .home-hello { padding: 18px 16px 4px; }
+    .home-hello .hello-title { font-size: 24px; font-weight: 800; color: var(--color-text); letter-spacing: 0.2px; }
+    .home-hello .hello-date { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
+
+    .life-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px 16px 0;
+    }
+    .life-card {
+      position: relative;
+      background: var(--color-surface);
+      border-radius: 20px;
+      padding: 18px 16px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
+      display: block;
+    }
+    .life-card:active { transform: scale(0.96); box-shadow: var(--shadow-md); }
+    .life-card-icon {
+      width: 44px; height: 44px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 14px;
+    }
+    .life-card-title { font-size: 16px; font-weight: 700; color: var(--color-text); }
+    .life-card-sub { font-size: 12px; color: var(--color-text-hint); margin-top: 3px; }
+    .life-card-deco {
+      position: absolute; right: -10px; bottom: -14px;
+      width: 76px; height: 76px; opacity: 0.10;
+    }
+
+    .life-section { padding: 22px 16px 0; }
+    .life-section .section-header { margin-bottom: 10px; }
+    .svc-row { display: flex; gap: 12px; }
+    .svc-card {
+      flex: 1; display: flex; align-items: center; gap: 12px;
+      background: var(--color-surface);
+      border-radius: 18px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .svc-card:active { transform: scale(0.96); }
+    .svc-icon {
+      width: 42px; height: 42px; border-radius: 13px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .svc-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
+    .svc-sub { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
+  </style>
 </head>
 <body data-page="home">
   <div class="app-shell">
     <header class="app-header">
       <div class="header-left">
-        <span style="font-size:20px;font-weight:800;color:var(--color-text);">校园取件</span>
+        <span style="font-size:18px;font-weight:800;color:var(--color-text);">校园生活</span>
       </div>
       <div class="header-right">
         <a href="messages.html" class="header-back-btn" style="position:relative;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <span class="badge-dot" id="msgBadge" style="position:absolute;top:6px;right:6px;background:var(--color-danger);width:8px;height:8px;"></span>
+          <span class="badge-dot" id="msgBadge" style="position:absolute;top:6px;right:6px;background:var(--color-danger);width:8px;height:8px;display:none;"></span>
         </a>
       </div>
     </header>
     <main class="app-content" id="mainContent">
-      <div class="px-4" style="padding-top:16px;">
-        <!-- 待取快递横幅卡片 -->
-        <div class="hero-card anim-fade-in-up">
-          <div class="hero-card-main">
-            <div class="hero-card-row">
-              <span class="hero-card-num" id="pendingCount">0</span>
-              <span class="hero-card-unit">件待取</span>
-            </div>
-            <p class="hero-card-sub" id="pendingHint">暂无待取快递</p>
-            <a href="packages.html" class="hero-card-cta">
-              立即查看
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-          </div>
-          <svg class="hero-card-deco" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        </div>
+      <div class="home-hello anim-fade-in-up">
+        <div class="hello-title" id="helloName">你好，同学</div>
+        <div class="hello-date" id="helloDate"></div>
+      </div>
 
-        <!-- 快捷操作网格 -->
-        <div class="quick-grid">
-          <a href="scan.html" class="quick-action quick-action--primary anim-fade-in-up stagger-1">
-            <div class="quick-action-icon quick-action-icon--primary">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-            </div>
-            <span class="quick-action-label quick-action-label--primary">扫码取件</span>
-          </a>
-          <a href="packages.html" class="quick-action anim-fade-in-up stagger-2">
-            <div class="quick-action-icon" style="background:#DBEAFE;">
+      <!-- 校园生活四大功能 -->
+      <div class="life-grid">
+        <a href="savings.html" class="life-card anim-fade-in-up stagger-1">
+          <div class="life-card-icon" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+          </div>
+          <div class="life-card-title">攒钱</div>
+          <div class="life-card-sub">工资记账 · 储蓄目标</div>
+          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+        </a>
+        <a href="schedule.html" class="life-card anim-fade-in-up stagger-2">
+          <div class="life-card-icon" style="background:linear-gradient(135deg,#DBEAFE,#BFDBFE);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="life-card-title">课程表</div>
+          <div class="life-card-sub">支持导入贝蒂课程表</div>
+          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </a>
+        <a href="forum.html" class="life-card anim-fade-in-up stagger-3">
+          <div class="life-card-icon" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="life-card-title">校园论坛</div>
+          <div class="life-card-sub">交流 · 二手 · 失物</div>
+          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </a>
+        <a href="jobs.html" class="life-card anim-fade-in-up stagger-4">
+          <div class="life-card-icon" style="background:linear-gradient(135deg,#FFEDD5,#FED7AA);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+          </div>
+          <div class="life-card-title">实习工作</div>
+          <div class="life-card-sub">实习 · 校招 · 兼职</div>
+          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+        </a>
+      </div>
+
+      <!-- 校园服务（原首页取件相关功能已整合至「快递」页） -->
+      <div class="life-section anim-fade-in-up">
+        <div class="section-header">
+          <span class="section-title">校园服务</span>
+        </div>
+        <div class="svc-row">
+          <a href="packages.html" class="svc-card">
+            <div class="svc-icon" style="background:#DBEAFE;">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
             </div>
-            <span class="quick-action-label">待取快递</span>
-          </a>
-          <a href="track.html" class="quick-action anim-fade-in-up stagger-3">
-            <div class="quick-action-icon" style="background:#FFEDD5;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <div>
+              <div class="svc-title">快递</div>
+              <div class="svc-sub">待取 · 取件点 · 记录</div>
             </div>
-            <span class="quick-action-label">查快递</span>
           </a>
-          <a href="records.html" class="quick-action anim-fade-in-up stagger-4">
-            <div class="quick-action-icon" style="background:#EDE9FE;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <a href="food.html" class="svc-card">
+            <div class="svc-icon" style="background:#FEE2E2;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
             </div>
-            <span class="quick-action-label">取件记录</span>
+            <div>
+              <div class="svc-title">外卖</div>
+              <div class="svc-sub">点餐 · 订单 · 配送</div>
+            </div>
           </a>
-        </div>
-
-        <!-- 最近待取 -->
-        <div style="margin-top:20px;" class="anim-fade-in-up stagger-3">
-          <div class="section-header">
-            <span class="section-title">最近待取</span>
-            <a href="packages.html" class="section-link">查看全部
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-          </div>
-          <div id="recentList" style="display:flex;flex-direction:column;gap:10px;"></div>
-        </div>
-
-        <!-- 取件点概览 -->
-        <div style="margin-top:20px;margin-bottom:20px;" class="anim-fade-in-up stagger-4">
-          <div class="section-header">
-            <span class="section-title">常用取件点</span>
-            <a href="map.html" class="section-link">查看地图
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </a>
-          </div>
-          <div id="pointsList" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;padding-bottom:4px;">
-          </div>
         </div>
       </div>
+
+      <!--
+        ============ 原版首页取件功能（按需求保留代码，已整合到 packages.html 快递页） ============
+      <div class="px-4" style="padding-top:16px;">
+        <div class="hero-card anim-fade-in-up"> ...待取快递横幅... </div>
+        <div class="quick-grid"> ...扫码取件/学校论坛/跑腿/外卖 快捷网格... </div>
+        <div id="bathroomCard"></div>
+        <div id="recentList"></div>
+        <div id="pointsList"></div>
+      </div>
+      -->
     </main>
-    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
     <nav class="tab-bar">
       <a href="index.html" class="tab-item" data-nav="home">
         <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
@@ -122,6 +185,7 @@
     </nav>
   </div>
   <script src="config.js"></script>
+  <script src="campus-data.js"></script>
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
@@ -130,165 +194,26 @@
   <script src="app.js"></script>
   <script>
     (function () {
-      var mainContent = document.getElementById('mainContent');
+      // 问候语 + 日期
+      var user = Storage.getUser();
+      var name = user && user.name && user.name !== '校园用户' ? user.name : '同学';
+      document.getElementById('helloName').textContent = '你好，' + name;
+      var d = new Date();
+      var week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()];
+      document.getElementById('helloDate').textContent =
+        (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 · ' + week;
 
-      // 登录检查
-      if (ApiClient.isLoggedIn()) {
-        ApiClient.getPackages().then(function (res) {
-          if (res.code === 0 && res.data && res.data.length > 0) {
-            var user = Storage.getUser();
-            user.name = user.name || '同学';
-            Storage.saveUser(user);
-          }
-        });
-      }
+      // 未读消息红点
+      var badge = document.getElementById('msgBadge');
+      if (badge) badge.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
 
-      function copyPickupCode(code) {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          navigator.clipboard.writeText(code).then(function () {
-            App.toastSuccess('取件码已复制');
-          }).catch(function () {
-            fallbackCopy(code);
-          });
-        } else {
-          fallbackCopy(code);
-        }
-      }
-      window.copyPickupCode = copyPickupCode;
-
-      function fallbackCopy(text) {
-        try {
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.position = 'fixed';
-          ta.style.opacity = '0';
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          App.toastSuccess('取件码已复制');
-        } catch (e) {
-          App.toast('复制失败，请手动记下');
-        }
-      }
-
-      function renderRecent() {
-        var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; });
-        // 优先展示 24h 内到期，最多 3 条
-        var urgent = pending.filter(function (p) {
-          if (!p.expiresIn) return false;
-          var m = p.expiresIn.match(/(\d+)/);
-          return m && parseInt(m[1]) <= 24;
-        });
-        var others = pending.filter(function (p) { return urgent.indexOf(p) === -1; });
-        var recent = urgent.concat(others).slice(0, 3);
-        var html = '';
-        recent.forEach(function (pkg, i) {
-          var stagger = 'stagger-' + (i + 1);
-          var urgentBadge = '';
-          if (pkg.expiresIn) {
-            var m = pkg.expiresIn.match(/(\d+)/);
-            if (m && parseInt(m[1]) <= 24) {
-              urgentBadge = '<span class="pkg-urgent-badge">紧急</span>';
-            }
-          }
-          html += '<div class="pkg-card card--clickable anim-fade-in-up ' + stagger + '" onclick="location.href=\'detail.html?id=' + pkg.id + '\'">' +
-            '<div class="pkg-card-header">' +
-              '<div class="pkg-company">' + App.pkgLogo(pkg) + '<span class="pkg-company-name">' + pkg.company + '</span>' + urgentBadge + '</div>' +
-              '<span class="status-badge ' + App.statusClass(pkg.status) + '">' + App.statusLabel(pkg.status) + '</span>' +
-            '</div>';
-          if (pkg.pickupCode) {
-            html += '<div class="pkg-code-row" onclick="event.stopPropagation();copyPickupCode(\'' + pkg.pickupCode + '\')" title="点击复制">' +
-              '<span class="pkg-code-label">取件码</span>' +
-              '<span class="pkg-code-value">' + pkg.pickupCode + '</span>' +
-              '<svg class="pkg-code-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
-            '</div>';
-          } else {
-            html += '<div class="pkg-info"><div class="pkg-info-item"><span class="pkg-info-label">单号</span><span class="pkg-info-value" style="font-family:var(--font-mono);font-size:12px;">' + pkg.trackingNo + '</span></div></div>';
-          }
-          html += '<div class="pkg-info pkg-info--compact">' +
-            '<div class="pkg-info-item"><span class="pkg-info-label">取件点</span><span class="pkg-info-value truncate" style="max-width:160px;">' + pkg.pickupPoint + '</span></div>' +
-            (pkg.expiresIn ? '<div class="pkg-info-item"><span class="pkg-info-label">到期</span><span class="pkg-info-value pkg-expires">' + pkg.expiresIn + '</span></div>' : '') +
-          '</div>';
-          html += '<div class="pkg-actions">' +
-            (pkg.pickupCode
-              ? '<button class="btn btn-primary btn-sm" onclick="event.stopPropagation();copyPickupCode(\'' + pkg.pickupCode + '\')">查看取件码</button>'
-              : '<a href="detail.html?id=' + pkg.id + '" class="btn btn-primary btn-sm" onclick="event.stopPropagation();">查看详情</a>') +
-            '<a href="map.html" class="btn btn-outline btn-sm" onclick="event.stopPropagation();">导航</a>' +
-          '</div>';
-          html += '</div>';
-        });
-        if (!recent.length) {
-          html = App.emptyState('暂无待取快递', ' Relax，放松一下');
-        }
-        document.getElementById('recentList').innerHTML = html;
-      }
-
-      function renderPoints() {
-        var points = Storage.getPickupPoints().slice(0, 3);
-        var html = '';
-        points.forEach(function (pp, i) {
-          var typeLabel = pp.type === 'station' ? '驿站' : '快递柜';
-          var typeColor = pp.type === 'station' ? 'var(--color-primary)' : 'var(--color-accent)';
-          var typeBg = pp.type === 'station' ? 'var(--color-primary-light)' : 'var(--color-accent-light)';
-          html += '<a href="map.html" class="card card--clickable anim-fade-in-up stagger-' + (i + 3) + '" style="min-width:160px;flex-shrink:0;display:flex;flex-direction:column;gap:8px;">' +
-            '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
-              '<span style="font-size:14px;font-weight:600;line-height:1.4;">' + pp.name + '</span>' +
-              '<span class="badge" style="background:' + typeBg + ';color:' + typeColor + ';flex-shrink:0;">' + typeLabel + '</span>' +
-            '</div>' +
-            '<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-sub);">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
-              '<span>' + pp.distance + ' · ' + pp.walkTime + '</span>' +
-            '</div>';
-          if (pp.pendingCount > 0) {
-            html += '<div style="display:flex;align-items:center;gap:4px;font-size:12px;color:var(--color-warning);font-weight:600;">' +
-              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>' +
-              '<span>' + pp.pendingCount + ' 件待取</span>' +
-            '</div>';
-          } else {
-            html += '<div style="font-size:12px;color:var(--color-text-hint);">暂无待取件</div>';
-          }
-          html += '</a>';
-        });
-        document.getElementById('pointsList').innerHTML = html;
-      }
-
-      function renderBanner() {
-        var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; });
-        document.getElementById('pendingCount').textContent = pending.length;
-        var urgent = pending.filter(function (p) {
-          if (!p.expiresIn) return false;
-          var m = p.expiresIn.match(/(\d+)/);
-          return m && parseInt(m[1]) <= 24;
-        });
-        var hint = document.getElementById('pendingHint');
-        if (urgent.length > 0) {
-          hint.textContent = '其中 ' + urgent.length + ' 件将在 24 小时内到期';
-        } else if (pending.length > 0) {
-          hint.textContent = '暂无紧急待取件，可安排时间取件';
-        } else {
-          hint.textContent = '当前没有待取快递，放松一下吧';
-        }
-      }
-
-      function renderBadge() {
-        var badge = document.getElementById('msgBadge');
-        if (badge) badge.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
-      }
-
-      function refresh() {
-        renderBanner();
-        renderRecent();
-        renderPoints();
-        renderBadge();
+      // 下拉刷新（仅刷新红点）
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        var b = document.getElementById('msgBadge');
+        if (b) b.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
         App.toastSuccess('已刷新');
-      }
-
-      renderBanner();
-      renderRecent();
-      renderPoints();
-      renderBadge();
-      App.initPullToRefresh(mainContent, refresh);
+        return Promise.resolve();
+      });
     })();
   </script>
 </body>
