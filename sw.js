@@ -8,7 +8,7 @@
 // 用户数据安全：仅缓存 App 外壳与静态资源；localStorage 业务数据不经过 SW
 'use strict';
 
-var VERSION = 'v1';
+var VERSION = 'v2';
 var CACHE_NAME = 'campus-life-' + VERSION;
 
 // 预缓存：App 外壳（页面 + 核心脚本 + 3D/扫码本地库 + 图标）
@@ -17,6 +17,8 @@ var PRECACHE = [
   './index.html', './login.html', './packages.html', './food.html', './food-detail.html',
   './order.html', './scan.html', './map.html', './settings.html', './track.html',
   './messages.html', './profile.html', './profile-edit.html', './records.html', './detail.html',
+  './savings.html', './schedule.html', './forum.html', './jobs.html',
+  './bathroom.html', './campus-data.js',
   './styles.css', './theme-init.js', './config.js', './mock.js', './demo-data.js',
   './storage.js', './api.js', './api-client.js', './app.js', './perf.js', './ocr-worker.js',
   './libs/three/three.min.js', './libs/qr-scanner/jsQR.js',
