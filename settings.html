@@ -210,6 +210,10 @@
                 <div class="theme-option-icon">🌙</div>
                 <div>深色模式</div>
               </div>
+              <div class="theme-option" data-theme="yaolan" onclick="setTheme('yaolan')">
+                <div class="theme-option-icon" style="display:flex;align-items:center;justify-content:center;width:26px;height:26px;margin:0 auto 4px;border-radius:50%;background:linear-gradient(135deg,#0A6EFF,#5EA0FF);color:#fff;font-size:13px;font-weight:700;">蓝</div>
+                <div>耀蓝模式</div>
+              </div>
             </div>
           </div>
         </div>
@@ -266,6 +270,44 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- 灰度体验会话：退出产品体验（仅从灰度页「一键体验」进入时可见） -->
+        <div class="settings-group anim-fade-in-up stagger-4" id="trialExitGroup" style="display:none;">
+          <div class="settings-group-title">产品体验</div>
+          <div class="settings-card">
+            <div class="settings-item" onclick="exitTrial()">
+              <div class="settings-item-icon" style="background:#FEF3C7;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              </div>
+              <div class="settings-item-body">
+                <div class="settings-item-title" style="color:#D97706;">退出产品体验</div>
+                <div class="settings-item-desc">结束 2 小时体验会话，返回灰度入口（演示数据将保留在本机）</div>
+              </div>
+              <div class="settings-item-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 意见反馈 -->
+        <div class="settings-group anim-fade-in-up stagger-4">
+          <div class="settings-group-title">意见反馈</div>
+          <div class="settings-card">
+            <a class="settings-item" href="feedback.html" style="text-decoration:none;color:inherit;">
+              <div class="settings-item-icon" style="background:var(--color-primary-light);">
+                <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="settings-item-body">
+                <div class="settings-item-title">问题反馈</div>
+                <div class="settings-item-desc">功能异常、界面建议、快递/扫码问题等</div>
+              </div>
+              <div class="settings-item-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            </a>
           </div>
         </div>
 
@@ -348,7 +390,42 @@
         var item = document.querySelector('.settings-item[onclick="showLogoutConfirm()"] .settings-item-title');
         if (item) item.textContent = '重置演示数据';
       }
+      // 灰度「一键体验」会话：显示退出产品体验入口
+      try {
+        if (localStorage.getItem('campus_trial') === '1') {
+          var g = document.getElementById('trialExitGroup');
+          if (g) g.style.display = '';
+        }
+      } catch (e) {}
     });
+
+    // ---- 退出灰度产品体验 ----
+    function exitTrial() {
+      App.showModal({
+        title: '退出产品体验',
+        desc: '将结束本次 2 小时体验会话并返回灰度入口。产品内的演示操作记录会保留在本机，下次体验仍可见。',
+        icon: 'warning',
+        confirmText: '退出体验',
+        cancelText: '再逛会儿',
+        onConfirm: function () {
+          // 通知后端清除 exp_session Cookie（失败也继续本地清理）
+          var done = function () {
+            try {
+              localStorage.removeItem('campus_trial');
+              localStorage.removeItem('campus_mode_override');
+              localStorage.removeItem('campus_jwt_token');
+              localStorage.removeItem('gray_feedback_token');
+            } catch (e) {}
+            location.href = '/gray/';
+          };
+          if (typeof ApiClient !== 'undefined' && ApiClient.trialLogout) {
+            ApiClient.trialLogout().then(done).catch(done);
+          } else {
+            done();
+          }
+        }
+      });
+    }
 
     // ---- 性能模式初始化 ----
     function initPerfMode() {
