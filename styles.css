@@ -94,8 +94,54 @@
   --shadow-xl: 0 12px 32px rgba(0,0,0,0.6);
 }
 
+/* ===== Yaolan Theme（耀蓝：明亮鲜艳蓝调） ===== */
+[data-theme="yaolan"] {
+  --color-primary: #0A6EFF;
+  --color-primary-hover: #0057E6;
+  --color-primary-light: #D8E7FF;
+  --color-primary-lighter: #EAF2FF;
+  --color-accent: #00B8A9;
+  --color-accent-hover: #009E91;
+  --color-accent-light: #CFF5F1;
+  --color-bg: #EBF2FF;
+  --color-surface: #FFFFFF;
+  --color-surface-alt: #F4F8FF;
+  --color-border: #D6E4FF;
+  --color-border-light: #E8F0FF;
+  --color-text: #0B1B3A;
+  --color-text-sub: #4A5E86;
+  --color-text-hint: #8AA0C8;
+  --color-text-disabled: #B9C9E8;
+  --color-warning: #FF9F0A;
+  --color-warning-light: #FFF0D6;
+  --color-danger: #FF3B4E;
+  --color-danger-light: #FFE0E4;
+  --color-success: #1FC7A8;
+  --color-success-light: #D2F7F0;
+  --color-orange: #FF7A1A;
+  --color-orange-light: #FFE8D6;
+}
+[data-theme="yaolan"] body { background: #C9DDFB; }
+[data-theme="yaolan"] .tab-bar {
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(10, 110, 255, 0.14);
+  box-shadow:
+    0 10px 40px rgba(10, 110, 255, 0.16),
+    0 4px 12px rgba(10, 110, 255, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+[data-theme="yaolan"] .tab-scan-btn {
+  box-shadow:
+    0 8px 24px rgba(10, 110, 255, 0.32),
+    0 2px 8px rgba(10, 110, 255, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+[data-theme="yaolan"] .tab-item--center.active .tab-scan-btn {
+  box-shadow: 0 10px 32px rgba(10, 110, 255, 0.55);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
+  :root:not([data-theme="light"]):not([data-theme="yaolan"]) {
     --color-primary: #3B82F6;
     --color-primary-hover: #60A5FA;
     --color-primary-light: #1E3A5F;
@@ -155,6 +201,19 @@ img { max-width: 100%; display: block; }
   box-shadow: 0 0 40px rgba(0,0,0,0.06);
 }
 
+/* 页面切换极简过渡：淡入 + 8px 上移，0.28s 一次完成，不花哨 */
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.app-shell {
+  /* backwards：仅入场前应用起始态，结束后移除 transform，避免内部 fixed 导航参照系被改变 */
+  animation: pageEnter 0.28s cubic-bezier(0.4, 0, 0.2, 1) backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-shell { animation: none; }
+}
+
 .app-header {
   height: var(--header-h);
   display: flex;
@@ -176,6 +235,16 @@ img { max-width: 100%; display: block; }
   text-align: center;
   flex: 1;
 }
+/* 标题靠左的主页 header（全部快递 / 校园外卖 / 个人中心） */
+.app-header.header--left { justify-content: flex-start; gap: 4px; }
+.app-header.header--left .header-title {
+  flex: 0 1 auto;
+  text-align: left;
+  font-size: 20px;
+  font-weight: 800;
+  margin-left: 2px;
+}
+.app-header.header--left .header-spacer { flex: 1; }
 .header-back-btn { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); color: var(--color-text); }
 .header-back-btn:active { background: var(--color-bg); }
 
