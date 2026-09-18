@@ -1,1 +1,333 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>攒钱 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .sav-hero { background:linear-gradient(135deg,#F59E0B,#D97706); border-radius:20px; padding:20px; color:#fff; position:relative; overflow:hidden; }
+    .sav-hero-label { font-size:12px; opacity:0.85; }
+    .sav-hero-num { font-size:32px; font-weight:800; margin-top:4px; font-family:var(--font-mono); }
+    .sav-hero-row { display:flex; gap:18px; margin-top:14px; }
+    .sav-hero-item { font-size:12px; opacity:0.92; }
+    .sav-hero-item b { display:block; font-size:16px; margin-top:2px; font-family:var(--font-mono); }
+    .sav-hero-deco { position:absolute; right:-14px; bottom:-18px; width:120px; height:120px; opacity:0.14; }
+
+    .goal-card { padding:14px 16px; }
+    .goal-top { display:flex; justify-content:space-between; align-items:center; }
+    .goal-name { font-size:15px; font-weight:700; color:var(--color-text); }
+    .goal-amount { font-size:13px; color:var(--color-text-sub); font-family:var(--font-mono); }
+    .goal-bar { height:8px; border-radius:99px; background:var(--color-surface-alt); margin-top:10px; overflow:hidden; }
+    .goal-bar-fill { height:100%; border-radius:99px; transition:width .35s ease; }
+    .goal-meta { display:flex; justify-content:space-between; margin-top:7px; font-size:12px; color:var(--color-text-hint); }
+    .goal-done { font-size:11px; color:#16A34A; font-weight:700; }
+
+    .ledger-item { display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid var(--color-border-light); }
+    .ledger-item:last-child { border-bottom:none; }
+    .ledger-ico { width:38px; height:38px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; }
+    .ledger-info { flex:1; min-width:0; }
+    .ledger-cat { font-size:14px; font-weight:600; color:var(--color-text); }
+    .ledger-note { font-size:12px; color:var(--color-text-hint); margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .ledger-amt { font-size:15px; font-weight:700; font-family:var(--font-mono); }
+    .ledger-amt.in { color:#16A34A; }
+    .ledger-amt.out { color:var(--color-danger); }
+    .ledger-time { font-size:11px; color:var(--color-text-hint); margin-top:2px; text-align:right; }
+
+    /* 底部抽屉表单 */
+    .sheet-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .sheet-mask.show { opacity:1; pointer-events:auto; }
+    .sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:86vh; overflow-y:auto; }
+    .sheet.show { transform:translateY(0); }
+    .sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:16px; }
+    .seg { display:flex; background:var(--color-surface-alt); border-radius:12px; padding:3px; margin-bottom:14px; }
+    .seg button { flex:1; border:none; background:transparent; padding:9px; border-radius:10px; font-size:14px; font-weight:600; color:var(--color-text-sub); }
+    .seg button.on { background:var(--color-surface); box-shadow:var(--shadow-sm); color:var(--color-text); }
+    .seg button.on.in { color:#16A34A; }
+    .seg button.on.out { color:var(--color-danger); }
+    .field { margin-bottom:12px; }
+    .field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
+    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--color-primary); }
+    .field textarea { resize:none; height:64px; }
+  </style>
+</head>
+<body data-page="savings">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">攒钱</div>
+      <div class="header-spacer"></div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+      <div style="padding:14px 16px 0;">
+        <!-- 总览 -->
+        <div class="sav-hero anim-fade-in-up">
+          <div class="sav-hero-label">总结余（元）</div>
+          <div class="sav-hero-num" id="savBalance">0.00</div>
+          <div class="sav-hero-row">
+            <div class="sav-hero-item">累计收入<b id="savIncome">0.00</b></div>
+            <div class="sav-hero-item">累计支出<b id="savExpense">0.00</b></div>
+            <div class="sav-hero-item">已存目标<b id="savSaved">0.00</b></div>
+          </div>
+          <svg class="sav-hero-deco" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div style="display:flex;gap:10px;margin-top:14px;" class="anim-fade-in-up stagger-1">
+          <button class="btn btn-primary" style="flex:1;" id="btnAddIncome">＋ 记收入</button>
+          <button class="btn btn-outline" style="flex:1;" id="btnAddExpense">－ 记支出</button>
+        </div>
+
+        <!-- 储蓄目标 -->
+        <div class="section-header" style="margin-top:22px;">
+          <span class="section-title">攒钱目标</span>
+          <a href="javascript:void(0)" class="section-link" id="btnAddGoal">＋ 新目标</a>
+        </div>
+        <div id="goalList" style="display:flex;flex-direction:column;gap:10px;"></div>
+
+        <!-- 流水 -->
+        <div class="section-header" style="margin-top:22px;">
+          <span class="section-title">收支流水</span>
+        </div>
+        <div class="card" id="ledgerList" style="padding:4px 16px;"></div>
+      </div>
+    </main>
+
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- 记一笔抽屉 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="ledgerSheet">
+    <div class="sheet-title" id="ledgerSheetTitle">记一笔</div>
+    <div class="seg">
+      <button type="button" id="segIncome" class="on in">收入</button>
+      <button type="button" id="segExpense" class="out">支出</button>
+    </div>
+    <div class="field">
+      <label>金额（元）</label>
+      <input type="number" id="ledgerAmount" inputmode="decimal" placeholder="0.00" min="0" step="0.01">
+    </div>
+    <div class="field">
+      <label>分类</label>
+      <select id="ledgerCategory"></select>
+    </div>
+    <div class="field">
+      <label>备注</label>
+      <input type="text" id="ledgerNote" placeholder="例如：图书馆助理工资" maxlength="30">
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="ledgerSubmit">保存</button>
+  </div>
+
+  <!-- 新目标抽屉 -->
+  <div class="sheet" id="goalSheet">
+    <div class="sheet-title">新建攒钱目标</div>
+    <div class="field">
+      <label>目标名称</label>
+      <input type="text" id="goalName" placeholder="例如：换一台新手机" maxlength="20">
+    </div>
+    <div class="field">
+      <label>目标金额（元）</label>
+      <input type="number" id="goalTarget" inputmode="decimal" placeholder="0.00" min="1" step="0.01">
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="goalSubmit">创建目标</button>
+  </div>
+
+  <!-- 存入目标抽屉 -->
+  <div class="sheet" id="depositSheet">
+    <div class="sheet-title" id="depositTitle">存入目标</div>
+    <div class="field">
+      <label>本次存入金额（元）</label>
+      <input type="number" id="depositAmount" inputmode="decimal" placeholder="0.00" min="0.01" step="0.01">
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="depositSubmit">确认存入</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var INCOME_CATS = ['兼职工资', '实习工资', '奖助学金', '生活费', '二手转让', '其他收入'];
+      var EXPENSE_CATS = ['餐饮', '学习', '购物', '交通', '娱乐', '其他支出'];
+      var GOAL_COLORS = ['#0A6EFF', '#F59E0B', '#16A34A', '#7C3AED', '#EF4444'];
+      var ledgerType = 'income';
+      var depositGoalId = null;
+
+      var mask = document.getElementById('sheetMask');
+      var ledgerSheet = document.getElementById('ledgerSheet');
+      var goalSheet = document.getElementById('goalSheet');
+      var depositSheet = document.getElementById('depositSheet');
+
+      function openSheet(sheet) { mask.classList.add('show'); sheet.classList.add('show'); }
+      function closeAll() {
+        mask.classList.remove('show');
+        [ledgerSheet, goalSheet, depositSheet].forEach(function (s) { s.classList.remove('show'); });
+      }
+      mask.addEventListener('click', closeAll);
+
+      function fmt(n) { return (Math.round(n * 100) / 100).toFixed(2); }
+
+      function render() {
+        var data = Storage.lifeGetSavings();
+        var income = 0, expense = 0, saved = 0;
+        data.ledger.forEach(function (l) {
+          if (l.type === 'income') income += l.amount; else expense += l.amount;
+        });
+        data.goals.forEach(function (g) { saved += g.saved; });
+        document.getElementById('savBalance').textContent = fmt(income - expense);
+        document.getElementById('savIncome').textContent = fmt(income);
+        document.getElementById('savExpense').textContent = fmt(expense);
+        document.getElementById('savSaved').textContent = fmt(saved);
+
+        // 目标
+        var gh = '';
+        if (!data.goals.length) {
+          gh = App.emptyState('还没有攒钱目标', '定个小目标，开始攒第一笔吧');
+        }
+        data.goals.forEach(function (g) {
+          var pct = Math.min(100, Math.round(g.saved / g.target * 100));
+          var done = g.saved >= g.target;
+          gh += '<div class="card goal-card anim-fade-in-up">' +
+            '<div class="goal-top"><span class="goal-name">' + g.name + (done ? ' 🎉' : '') + '</span>' +
+            '<span class="goal-amount">' + fmt(g.saved) + ' / ' + fmt(g.target) + '</span></div>' +
+            '<div class="goal-bar"><div class="goal-bar-fill" style="width:' + pct + '%;background:' + g.color + ';"></div></div>' +
+            '<div class="goal-meta"><span>' + pct + '%</span>' +
+            (done ? '<span class="goal-done">已达成</span>' : '<a href="javascript:void(0)" class="section-link" data-goal="' + g.id + '">存一笔</a>') +
+            '</div></div>';
+        });
+        document.getElementById('goalList').innerHTML = gh;
+        document.querySelectorAll('[data-goal]').forEach(function (a) {
+          a.addEventListener('click', function () {
+            depositGoalId = this.dataset.goal;
+            document.getElementById('depositTitle').textContent = '存入「' + (data.goals.find(function (g) { return g.id === depositGoalId; }) || {}).name + '」';
+            document.getElementById('depositAmount').value = '';
+            openSheet(depositSheet);
+          });
+        });
+
+        // 流水
+        var lh = '';
+        if (!data.ledger.length) {
+          lh = '<div style="padding:24px 0;">' + App.emptyState('暂无流水', '点上方按钮记第一笔') + '</div>';
+        }
+        data.ledger.forEach(function (l) {
+          var isIn = l.type === 'income';
+          lh += '<div class="ledger-item">' +
+            '<div class="ledger-ico" style="background:' + (isIn ? '#DCFCE7' : '#FEE2E2') + ';">' + (isIn ? '💰' : '🧾') + '</div>' +
+            '<div class="ledger-info"><div class="ledger-cat">' + l.category + '</div>' +
+            '<div class="ledger-note">' + (l.note || '（无备注）') + '</div></div>' +
+            '<div style="text-align:right;"><div class="ledger-amt ' + l.type + '">' + (isIn ? '+' : '-') + fmt(l.amount) + '</div>' +
+            '<div class="ledger-time">' + l.time + '</div></div></div>';
+        });
+        document.getElementById('ledgerList').innerHTML = lh;
+      }
+
+      function fillCats() {
+        var cats = ledgerType === 'income' ? INCOME_CATS : EXPENSE_CATS;
+        document.getElementById('ledgerCategory').innerHTML =
+          cats.map(function (c) { return '<option>' + c + '</option>'; }).join('');
+      }
+      function setType(t) {
+        ledgerType = t;
+        document.getElementById('segIncome').className = t === 'income' ? 'on in' : '';
+        document.getElementById('segExpense').className = t === 'expense' ? 'on out' : '';
+        document.getElementById('ledgerSheetTitle').textContent = t === 'income' ? '记一笔收入' : '记一笔支出';
+        fillCats();
+      }
+      document.getElementById('segIncome').addEventListener('click', function () { setType('income'); });
+      document.getElementById('segExpense').addEventListener('click', function () { setType('expense'); });
+
+      document.getElementById('btnAddIncome').addEventListener('click', function () {
+        setType('income'); document.getElementById('ledgerAmount').value = ''; document.getElementById('ledgerNote').value = '';
+        openSheet(ledgerSheet);
+      });
+      document.getElementById('btnAddExpense').addEventListener('click', function () {
+        setType('expense'); document.getElementById('ledgerAmount').value = ''; document.getElementById('ledgerNote').value = '';
+        openSheet(ledgerSheet);
+      });
+      document.getElementById('btnAddGoal').addEventListener('click', function () {
+        document.getElementById('goalName').value = ''; document.getElementById('goalTarget').value = '';
+        openSheet(goalSheet);
+      });
+
+      document.getElementById('ledgerSubmit').addEventListener('click', function () {
+        var amount = parseFloat(document.getElementById('ledgerAmount').value);
+        if (!(amount > 0)) { App.toast('请输入有效金额'); return; }
+        var res = Storage.lifeAddLedger({
+          type: ledgerType,
+          amount: amount,
+          category: document.getElementById('ledgerCategory').value,
+          note: document.getElementById('ledgerNote').value.trim(),
+        });
+        if (res.success) { closeAll(); App.toastSuccess('已保存'); render(); }
+        else App.toast(res.message || '保存失败');
+      });
+
+      document.getElementById('goalSubmit').addEventListener('click', function () {
+        var name = document.getElementById('goalName').value.trim();
+        var target = parseFloat(document.getElementById('goalTarget').value);
+        var goals = Storage.lifeGetSavings().goals;
+        var res = Storage.lifeAddGoal({ name: name, target: target, color: GOAL_COLORS[goals.length % GOAL_COLORS.length] });
+        if (res.success) { closeAll(); App.toastSuccess('目标已创建'); render(); }
+        else App.toast(res.message || '创建失败');
+      });
+
+      document.getElementById('depositSubmit').addEventListener('click', function () {
+        var amount = parseFloat(document.getElementById('depositAmount').value);
+        var res = Storage.lifeContributeGoal(depositGoalId, amount);
+        if (res.success) {
+          closeAll();
+          App.toastSuccess(res.goal.saved >= res.goal.target ? '恭喜，目标达成！' : '存入成功');
+          render();
+        } else App.toast(res.message || '存入失败');
+      });
+
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        render(); App.toastSuccess('已刷新'); return Promise.resolve();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
