@@ -58,6 +58,13 @@
       background:transparent; color:var(--color-text-sub); border-radius:15px; padding:13px 0;
       font-size:14px; font-weight:600; font-family:inherit; }
     .ft-add-btn:active { background:var(--color-surface-alt); }
+    .ft-import-row { display:flex; gap:9px; margin:10px 16px 0; }
+    .ft-import-row .ft-add-btn { margin:0; flex:1; width:auto; }
+    .ft-import-btn { flex-shrink:0; border:1.5px solid #FDBA74; background:#FFF7ED; color:#C2410C;
+      border-radius:15px; padding:0 16px; font-size:13.5px; font-weight:700; font-family:inherit; }
+    .ft-import-btn:active { background:#FFEDD5; }
+    .ft-md-hint { margin:8px 16px 0; font-size:11.5px; color:var(--color-text-hint); line-height:1.6; text-align:center; }
+    .ft-md-hint code { background:var(--color-surface-alt); border-radius:5px; padding:1px 5px; font-size:11px; }
 
     /* 饮食 */
     .ft-goal { margin:14px 16px 0; background:var(--color-surface); border-radius:18px; border:1px solid var(--color-border-light);
@@ -136,7 +143,12 @@
           <button id="btnCycleFocus">换部位</button>
         </div>
         <div class="ft-list" id="ftList"></div>
-        <button class="ft-add-btn" id="btnAddEx">＋ 添加训练动作</button>
+        <div class="ft-import-row">
+          <button class="ft-add-btn" id="btnAddEx">＋ 添加训练动作</button>
+          <button class="ft-import-btn" id="btnImportMd">📄 导入 MD</button>
+        </div>
+        <input type="file" id="mdFileInput" accept=".md,.markdown,.txt,text/markdown,text/plain" style="display:none;">
+        <div class="ft-md-hint">Markdown 格式：<code>## 周一</code> → <code>### 胸+三头</code> → <code>- 平板卧推 4组×10次</code>；含「饮食」段落可导入食谱</div>
       </div>
 
       <div id="paneDiet" style="display:none;">
@@ -349,6 +361,127 @@
         closeSheets();
         renderPlan();
         App.toastSuccess('已加入计划');
+      });
+
+      // ---- Markdown 一键导入 ----
+      var DAY_CN = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7 };
+      function parseDayToken(s) {
+        var m = String(s).match(/周\s*([一二三四五六日天])/);
+        return m && DAY_CN[m[1]] ? DAY_CN[m[1]] : 0;
+      }
+      function matchFocus(title) {
+        var t = String(title);
+        if (/休息|有氧|慢跑|拉伸/.test(t)) return 6;
+        if (/核心|手臂/.test(t)) return 5;
+        if (/腿|臀/.test(t)) return 3;
+        if (/肩|腹/.test(t)) return 2;
+        if (/胸/.test(t) && /背/.test(t)) return 4;
+        if (/背|二头/.test(t)) return 1;
+        if (/胸|三头/.test(t)) return 0;
+        return -1;
+      }
+      function stripMd(s) {
+        return String(s).replace(/`+/g, '').replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1')
+          .replace(/^\[[ xX]\]\s*/, '').replace(/^[#>\s]+/, '').trim();
+      }
+      function splitExercise(t) {
+        var s = String(t).replace(/[*_`]/g, '').replace(/^\[[ xX]\]\s*/, '').trim();
+        var m = s.match(/^(.+?)[\s　]+(.+)$/);
+        if (m) return { name: m[1].trim(), detail: m[2].trim() };
+        m = s.match(/^([^\d]+?)(\d+\s*组[\s\S]*)$/);
+        if (m) return { name: m[1].trim(), detail: m[2].trim() };
+        return { name: s, detail: '' };
+      }
+      function splitFood(t) {
+        var s = String(t).replace(/[*_`]/g, '').trim();
+        var m = s.match(/^(.+?)[\s　]+(.+)$/);
+        if (m && /\d/.test(m[2])) return { name: m[1].trim(), kcal: m[2].trim() };
+        return { name: s, kcal: '' };
+      }
+      function parseFitMd(text) {
+        var plan = {}, foods = [], focusMap = {}, goal = null;
+        var curDay = 0, dietMode = false, dietGoal = null;
+        String(text || '').split(/\r?\n/).forEach(function (raw) {
+          var line = raw.replace(/\s+$/, '');
+          var hm = line.match(/^#{1,6}\s*(.+?)\s*#*\s*$/);
+          if (hm) {
+            var title = hm[1].trim();
+            var d = parseDayToken(title);
+            if (d) {
+              curDay = d; dietMode = false;
+              if (!plan[curDay]) plan[curDay] = [];
+              return;
+            }
+            if (/饮食|食谱|三餐|餐单|怎么吃|吃什么/.test(title)) {
+              dietMode = true;
+              if (/减脂|瘦身|减重|cut/i.test(title)) { dietGoal = 'cut'; goal = goal || 'cut'; }
+              if (/增肌|增重|gain/i.test(title)) { dietGoal = 'gain'; goal = goal || 'gain'; }
+              return;
+            }
+            if (/减脂/.test(title)) goal = 'cut';
+            if (/增肌/.test(title)) goal = 'gain';
+            if (!dietMode && curDay) {
+              var fi = matchFocus(title);
+              if (fi >= 0) focusMap[curDay] = fi;
+            }
+            return;
+          }
+          var bm = line.match(/^\s*(?:[-*+]|\d+[.、])\s+(.+)$/);
+          if (!bm) return;
+          var t = stripMd(bm[1]);
+          if (!t) return;
+          if (dietMode) {
+            var f = splitFood(t);
+            if (f.name) foods.push({ name: f.name, kcal: f.kcal, goal: dietGoal || 'gain' });
+          } else if (curDay) {
+            var ex = splitExercise(t);
+            if (ex.name) plan[curDay].push(ex);
+          }
+        });
+        return { plan: plan, foods: foods, focusMap: focusMap, goal: goal };
+      }
+
+      var mdFileInput = document.getElementById('mdFileInput');
+      document.getElementById('btnImportMd').addEventListener('click', function () {
+        mdFileInput.value = '';
+        mdFileInput.click();
+      });
+      mdFileInput.addEventListener('change', function () {
+        var file = mdFileInput.files && mdFileInput.files[0];
+        if (!file) return;
+        if (file.size > 200 * 1024) { App.toast('文件太大了，换个 200KB 以内的吧'); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          var parsed;
+          try { parsed = parseFitMd(String(reader.result || '')); } catch (e) { parsed = null; }
+          if (!parsed) { App.toast('解析失败了，检查下文件内容'); return; }
+          var dayCount = Object.keys(parsed.plan).filter(function (d) { return parsed.plan[d].length; }).length;
+          var itemCount = parsed.foods.length;
+          var exCount = 0;
+          Object.keys(parsed.plan).forEach(function (d) { exCount += parsed.plan[d].length; });
+          if (!dayCount && !itemCount) {
+            App.toast('没识别到内容：用 ## 周一、### 部位、- 动作 详情 的格式试试');
+            return;
+          }
+          var desc = '解析到 ' + dayCount + ' 天训练（共 ' + exCount + ' 个动作）';
+          if (itemCount) desc += '、' + itemCount + ' 条食谱';
+          desc += '。导入后，文件里写到的星期会整组替换现有动作，食谱自动去重。确认导入？';
+          App.showModal({
+            title: '确认导入 Markdown',
+            desc: desc,
+            confirmText: '确认导入',
+            onConfirm: function () {
+              var res = Storage.fitImport(parsed);
+              data = Storage.fitGet();
+              switchTab('plan');
+              renderPlan();
+              renderGoal();
+              App.toastSuccess('导入成功：' + res.days + ' 天 / ' + res.items + ' 个动作' + (res.foods ? '，食谱 +' + res.foods : ''));
+            },
+          });
+        };
+        reader.onerror = function () { App.toast('文件读取失败，再试一次'); };
+        reader.readAsText(file, 'utf-8');
       });
 
       // ---- 饮食 ----

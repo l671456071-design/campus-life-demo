@@ -288,7 +288,9 @@
       Storage.festGetCustom().forEach(function (f) {
         list.push({ id: f.id, name: f.name, m: f.m, d: f.d, emoji: '✨', custom: true, bg: f.bg || null, layout: f.layout || 'wide', note: f.note || '', at: nextOccur(f.m, f.d), today: isToday(f.m, f.d) });
       });
+      // DIY 卡片永远优先：自定义组在前（组内今天优先、再按日期），预设节日组在后
       list.sort(function (a, b) {
+        if (!!a.custom !== !!b.custom) return a.custom ? -1 : 1;
         if (a.today !== b.today) return a.today ? -1 : 1;
         return a.at - b.at;
       });

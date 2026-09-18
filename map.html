@@ -12,31 +12,71 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    /* ===== 3D Map Page Styles ===== */
-    .map-page { padding: 0; }
-
-    .map-filters {
-      padding: 10px 16px 6px;
-      background: var(--color-bg);
-      position: relative;
-      z-index: 10;
+    /* ===== 3D Map Page Styles（60% 地图 + 40% 底部信息栏） ===== */
+    .map-page {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--header-h) - var(--tab-bar-h));
+      overflow: hidden;
     }
 
-    .map-container {
+    /* 地图区：屏幕 60% */
+    .map-wrap {
       position: relative;
-      width: 100%;
-      height: calc(100vh - var(--header-h) - 46px - var(--tab-bar-h) - 12px);
-      overflow: hidden;
+      flex: 0 0 60%;
+      min-height: 200px;
       background: #E8EDF2;
+      overflow: hidden;
+    }
+    .map-container {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
       touch-action: none;
     }
     .map-container canvas { display: block; width: 100%; height: 100%; }
+
+    /* 配送模式：地图占满内容区，隐藏底部信息栏 */
+    body.map-delivery .map-page { height: auto; }
+    body.map-delivery .map-wrap {
+      flex: 1 1 auto;
+      height: calc(100vh - var(--header-h));
+    }
+    body.map-delivery .map-sheet { display: none; }
+
+    /* 顶部类型筛选（悬浮胶囊） */
+    .map-filters {
+      position: absolute;
+      top: 10px;
+      left: 12px;
+      right: 12px;
+      padding: 0;
+      background: transparent;
+      z-index: 30;
+    }
+    .map-filters .filter-chips {
+      display: flex;
+      gap: 6px;
+      background: rgba(255,255,255,0.88);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border-radius: 999px;
+      padding: 4px;
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .map-filters .filter-chips::-webkit-scrollbar { display: none; }
+    .map-filters .chip { flex: 0 0 auto; }
 
     /* 3D 视角控制按钮组 */
     .map-view-controls {
       position: absolute;
       right: 12px;
-      bottom: 16px;
+      bottom: 44px;
       display: flex;
       flex-direction: column;
       gap: 8px;
@@ -55,15 +95,29 @@
     .map-view-btn:active { transform: scale(0.92); }
     .map-view-btn svg { width: 20px; height: 20px; }
 
-    /* 加载中 */
+    /* 加载中（进度条 + 分阶段提示） */
     .map-loading {
       position: absolute; inset: 0;
       display: flex; flex-direction: column;
       align-items: center; justify-content: center;
       background: var(--color-bg);
       z-index: 40; gap: 12px;
+      transition: opacity .3s ease;
     }
+    .map-loading.fade-out { opacity: 0; pointer-events: none; }
     .map-loading-text { font-size: 13px; color: var(--color-text-sub); }
+    .map-loading-bar {
+      width: 168px; height: 5px; border-radius: 3px;
+      background: var(--color-border-light, #E2E8F0);
+      overflow: hidden;
+    }
+    .map-loading-fill {
+      height: 100%; width: 0%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--color-primary), #60A5FA);
+      transition: width .3s ease;
+    }
+    .map-loading-pct { font-size: 12px; color: var(--color-text-hint); font-variant-numeric: tabular-nums; }
 
     /* Navigation bar (top) */
     .map-nav-bar {
@@ -159,82 +213,173 @@
     .delivery-route-name { font-weight: 600; }
     .delivery-card-meta { font-size: 12px; color: var(--color-text-sub); margin-bottom: 12px; display: flex; justify-content: space-between; }
 
-    /* Info card (bottom) */
-    .map-info-card {
-      position: fixed;
-      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 12px);
-      left: 50%;
-      transform: translateX(-50%) translateY(120%);
-      width: calc(100% - 24px);
-      max-width: 406px;
+    /* ===== 底部信息栏（屏幕 40%） ===== */
+    .map-sheet {
+      flex: 1 1 40%;
+      min-height: 0;
       background: var(--color-surface);
-      border-radius: 16px;
-      padding: 16px;
+      border-radius: 20px 20px 0 0;
       box-shadow: var(--shadow-xl);
-      z-index: 60;
-      opacity: 0;
-      pointer-events: none;
-      transition: all 0.35s cubic-bezier(0.32, 0.72, 0, 1);
-    }
-    .map-info-card.show {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
-    }
-    .map-info-card-header {
+      position: relative;
+      z-index: 20;
+      margin-top: -14px;
+      padding: 8px 16px calc(10px + env(safe-area-inset-bottom));
       display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 14px;
+      flex-direction: column;
     }
-    .map-info-card-name-wrap { flex: 1; min-width: 0; }
-    .map-info-card-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-    .map-info-card-type {
+    .sheet-grabber {
+      width: 36px; height: 4px; border-radius: 2px;
+      background: var(--color-border);
+      margin: 0 auto 8px;
+      flex: none;
+    }
+    .sheet-head {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 10px; flex: none;
+    }
+    .sheet-title-wrap { min-width: 0; }
+    .sheet-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
+    .sheet-sub { font-size: 12px; color: var(--color-text-hint); margin-top: 2px; }
+    .sheet-nearest-btn {
+      flex: none;
       display: inline-flex; align-items: center; gap: 4px;
-      padding: 2px 8px; border-radius: var(--radius-full);
-      font-size: 11px; font-weight: 600;
+      border: none; border-radius: 999px;
+      padding: 7px 13px;
+      background: var(--color-primary);
+      color: #fff; font-size: 12px; font-weight: 600;
+      box-shadow: 0 4px 12px rgba(37,99,235,.28);
+      -webkit-tap-highlight-color: transparent;
     }
-    .map-info-card-close {
-      width: 28px; height: 28px;
-      display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; color: var(--color-text-hint);
-      flex-shrink: 0; margin-left: 8px;
+    .sheet-nearest-btn:active { transform: scale(.95); }
+    .sheet-nearest-btn svg { width: 14px; height: 14px; }
+    .sheet-scroll {
+      flex: 1; min-height: 0; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      display: flex; flex-direction: column; gap: 8px;
+      padding: 2px 2px 8px;
     }
-    .map-info-card-close:active { background: var(--color-bg); }
-    .map-info-card-close svg { width: 18px; height: 18px; }
 
-    .map-info-card-body { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
-    .map-info-row {
-      display: flex; align-items: center; gap: 10px;
-      font-size: 13px; color: var(--color-text-sub);
+    /* 附近快递点列表行 */
+    .near-row {
+      display: flex; align-items: center; gap: 12px;
+      width: 100%; text-align: left;
+      background: var(--color-bg);
+      border: 1.5px solid transparent;
+      border-radius: 14px;
+      padding: 11px 12px;
+      transition: border-color .2s, background .2s;
+      -webkit-tap-highlight-color: transparent;
     }
-    .map-info-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--color-text-hint); }
-    .map-info-row .info-value { color: var(--color-text); font-weight: 500; }
-    .map-info-row .info-badge {
-      background: var(--color-danger-light);
-      color: var(--color-danger);
-      padding: 1px 8px; border-radius: var(--radius-full);
+    .near-row.active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-lighter, #EFF6FF);
+    }
+    .near-row:active { background: var(--color-border-light, #F1F5F9); }
+    .near-ic {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 15px; font-weight: 700;
+      flex: none;
+      box-shadow: inset 0 -2px 0 rgba(0,0,0,.08);
+    }
+    .near-main { flex: 1; min-width: 0; }
+    .near-name {
+      font-size: 14px; font-weight: 600; color: var(--color-text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .near-pending {
+      flex: none;
+      background: var(--color-danger-light); color: var(--color-danger);
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px; border-radius: 999px;
+    }
+    .near-meta {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+      font-size: 12px; color: var(--color-text-sub); margin-top: 3px;
+    }
+    .near-dist { color: var(--color-primary); font-weight: 700; }
+    .near-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-border); }
+    .near-walk { font-variant-numeric: tabular-nums; }
+    .near-nav {
+      flex: none;
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--color-primary);
+      color: #fff; border: none;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 10px rgba(37,99,235,.25);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .near-nav:active { transform: scale(.92); }
+    .near-nav svg { width: 17px; height: 17px; }
+    .near-empty {
+      text-align: center; color: var(--color-text-hint);
+      font-size: 13px; padding: 28px 0;
+    }
+
+    /* 列表 → 详情 两态切换 */
+    .sheet-detail { display: none; flex: 1; min-height: 0; flex-direction: column; }
+    .map-sheet[data-view="detail"] .sheet-list-view { display: none; }
+    .map-sheet[data-view="detail"] .sheet-detail { display: flex; }
+    .detail-back {
+      flex: none; width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--color-text-sub); margin-right: 4px;
+    }
+    .detail-back:active { background: var(--color-bg); }
+    .detail-back svg { width: 19px; height: 19px; }
+    .detail-title { font-size: 16px; font-weight: 700; flex: 1; min-width: 0; }
+    .detail-type {
+      display: inline-flex; align-items: center;
+      padding: 2px 9px; border-radius: 999px;
       font-size: 11px; font-weight: 600;
     }
-    .biz-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-left: 6px; }
-    .biz-status--open { color: var(--color-accent); }
-    .biz-status--closed { color: var(--color-warning); }
+    .detail-body { flex: 1; overflow-y: auto; padding: 12px 0; display: flex; flex-direction: column; gap: 11px; }
+    .detail-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--color-text-sub); }
+    .detail-row svg { width: 18px; height: 18px; flex-shrink: 0; color: var(--color-text-hint); }
+    .detail-row .info-value { color: var(--color-text); font-weight: 500; }
+    .detail-row .info-badge {
+      background: var(--color-danger-light); color: var(--color-danger);
+      padding: 1px 8px; border-radius: 999px;
+      font-size: 11px; font-weight: 600;
+    }
+    .detail-actions { flex: none; display: flex; gap: 10px; }
+    .detail-actions .btn { flex: 1; }
+
+    .biz-status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; margin-left: 2px; }
+    .biz-status--open { color: var(--color-accent, #10B981); }
+    .biz-status--closed { color: var(--color-warning, #F59E0B); }
     .biz-status-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-    /* Default hint */
+    /* 聚合数量气泡（3D 场景内） */
+    .cluster-tap-hint {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15,23,42,.82); color: #fff;
+      font-size: 12px; padding: 6px 12px; border-radius: 999px;
+      z-index: 35; pointer-events: none;
+      opacity: 0; transition: opacity .2s;
+      white-space: nowrap;
+    }
+    .cluster-tap-hint.show { opacity: 1; }
+
+    /* 操作提示（悬浮地图区底部） */
     .map-hint {
-      position: fixed;
-      bottom: calc(var(--tab-bar-h) + env(safe-area-inset-bottom) + 20px);
+      position: absolute;
+      bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      background: var(--color-surface);
-      padding: 10px 20px;
+      background: rgba(255,255,255,0.9);
+      -webkit-backdrop-filter: blur(8px);
+      backdrop-filter: blur(8px);
+      padding: 6px 14px;
       border-radius: var(--radius-full);
-      box-shadow: var(--shadow-md);
-      font-size: 13px;
+      box-shadow: var(--shadow-sm);
+      font-size: 12px;
       color: var(--color-text-sub);
       display: flex; align-items: center; gap: 6px;
-      z-index: 55; white-space: nowrap;
+      z-index: 15; white-space: nowrap;
+      pointer-events: none;
       animation: fadeIn 0.4s 0.5s both;
     }
     .map-hint svg { width: 16px; height: 16px; color: var(--color-text-hint); }
@@ -275,12 +420,15 @@
       </div>
     </header>
     <main class="app-content map-page">
+      <!-- ========== 地图区（60%） ========== -->
+      <div class="map-wrap" id="mapWrap">
       <!-- Filter chips（配送模式下隐藏） -->
       <div class="map-filters anim-fade-in-up stagger-1" id="mapFilters">
         <div class="filter-chips">
           <button class="chip active" data-filter="all" onclick="setFilter('all', this)">全部</button>
           <button class="chip" data-filter="station" onclick="setFilter('station', this)">驿站</button>
           <button class="chip" data-filter="locker" onclick="setFilter('locker', this)">快递柜</button>
+          <button class="chip" data-filter="pending" onclick="setFilter('pending', this)">有待取</button>
         </div>
       </div>
 
@@ -288,7 +436,9 @@
       <div class="map-container anim-fade-in-up stagger-2" id="mapContainer">
         <div class="map-loading" id="mapLoading">
           <div class="spinner"></div>
-          <div class="map-loading-text">正在加载 3D 校园…</div>
+          <div class="map-loading-text" id="mapLoadingText">正在启动 3D 引擎…</div>
+          <div class="map-loading-bar"><div class="map-loading-fill" id="mapLoadingFill"></div></div>
+          <div class="map-loading-pct" id="mapLoadingPct">0%</div>
         </div>
         <div class="map-view-controls" id="viewControls">
           <button class="map-view-btn" onclick="resetView()" aria-label="重置视角">
@@ -301,13 +451,16 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
           </button>
         </div>
-      </div>
+      </div><!-- /map-container -->
 
-      <!-- Default hint -->
+      <!-- 操作提示 -->
       <div class="map-hint" id="mapHint">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-        点击 3D 场景中的取件点标记查看信息 · 拖动旋转 / 双指缩放
+        拖动旋转 · 双指缩放 · 点数字圆圈展开聚合点
       </div>
+
+      <!-- 聚合点点击提示 -->
+      <div class="cluster-tap-hint" id="clusterHint"></div>
 
       <!-- Navigation info bar -->
       <div class="map-nav-bar" id="navBar">
@@ -317,6 +470,65 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </div>
+      </div><!-- /map-wrap -->
+
+      <!-- ========== 底部信息栏（40%）：附近快递点 + 详情 ========== -->
+      <section class="map-sheet" id="mapSheet" data-view="list">
+        <div class="sheet-grabber"></div>
+
+        <!-- 列表态 -->
+        <div class="sheet-list-view" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+          <div class="sheet-head">
+            <div class="sheet-title-wrap">
+              <div class="sheet-title">附近快递点</div>
+              <div class="sheet-sub" id="nearSub">按离你的距离排序</div>
+            </div>
+            <button class="sheet-nearest-btn" id="nearestBtn" onclick="navigateNearest()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              一键导航最近
+            </button>
+          </div>
+          <div class="sheet-scroll" id="nearList"></div>
+        </div>
+
+        <!-- 详情态 -->
+        <div class="sheet-detail">
+          <div style="display:flex;align-items:center;gap:6px;flex:none;">
+            <button class="detail-back" onclick="clearSelection()" aria-label="返回列表">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="detail-title" id="cardName">取件点名称</div>
+            <span class="detail-type" id="cardType">驿站</span>
+          </div>
+          <div class="detail-body">
+            <div class="detail-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span class="info-value" id="cardAddress">地址</span>
+            </div>
+            <div class="detail-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><circle cx="12" cy="12" r="10"/></svg>
+              <span>距离 <span class="info-value" id="cardDistance">--</span></span>
+              <span style="color:var(--color-border);">|</span>
+              <span>步行 <span class="info-value" id="cardWalkTime">--</span></span>
+            </div>
+            <div class="detail-row">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span>营业 <span class="info-value" id="cardHours">--</span><span class="biz-status" id="cardBizStatus"></span></span>
+            </div>
+            <div class="detail-row" id="cardPendingRow" style="display:none;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+              <span>你的待取快递 <span class="info-badge" id="cardPendingBadge">0件</span></span>
+            </div>
+          </div>
+          <div class="detail-actions">
+            <button class="btn btn-outline" onclick="clearSelection()">返回列表</button>
+            <button class="btn btn-primary btn-lg" onclick="startNavigation()">
+              <svg viewBox="0 0 24 24" width="16" height="16" style="vertical-align:-2px;margin-right:4px;" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              一键导航
+            </button>
+          </div>
+        </div>
+      </section>
 
       <!-- 配送模式：顶部状态栏 -->
       <div class="delivery-top-bar" id="deliveryTopBar">
@@ -345,43 +557,6 @@
           <span id="deliveryTotal">--</span>
         </div>
         <button class="btn btn-primary btn-block" onclick="goOrderDetail()">查看订单</button>
-      </div>
-
-      <!-- Bottom info card -->
-      <div class="map-info-card" id="infoCard">
-        <div class="map-info-card-header">
-          <div class="map-info-card-name-wrap">
-            <div class="map-info-card-name" id="cardName">取件点名称</div>
-            <span class="map-info-card-type" id="cardType">驿站</span>
-          </div>
-          <button class="map-info-card-close" onclick="clearSelection()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-        <div class="map-info-card-body">
-          <div class="map-info-row">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span class="info-value" id="cardAddress">地址</span>
-          </div>
-          <div class="map-info-row">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4"/><path d="M12 18v4"/><path d="M4.93 4.93l2.83 2.83"/><path d="M16.24 16.24l2.83 2.83"/><circle cx="12" cy="12" r="10"/></svg>
-            <span>距离 <span class="info-value" id="cardDistance">--</span></span>
-            <span style="color:var(--color-border);">|</span>
-            <span>步行 <span class="info-value" id="cardWalkTime">--</span></span>
-          </div>
-          <div class="map-info-row">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span>营业时间 <span class="info-value" id="cardHours">--</span><span class="biz-status" id="cardBizStatus"></span></span>
-          </div>
-          <div class="map-info-row" id="cardPendingRow" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            <span>待取快递 <span class="info-badge" id="cardPendingBadge">0件</span></span>
-          </div>
-        </div>
-        <button class="btn btn-primary btn-block btn-lg" onclick="startNavigation()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
-          前往这里
-        </button>
       </div>
     </main>
     <!-- 底部导航：首页 / 快递 / 扫码 / 外卖 / 我的 -->
@@ -439,7 +614,11 @@
         { id: 'PP03', name: '智能快递柜（兰苑）', short: '兰苑快递柜', type: 'locker', x: 47, y: 24, address: '兰苑3号楼一层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
         { id: 'PP04', name: '智能快递柜（菊苑）', short: '菊苑快递柜', type: 'locker', x: 29.5, y: 19.5, address: '菊苑2号楼一层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
         { id: 'PP05', name: '京东快递（梅苑）', short: '京东快递', type: 'station', x: 69.5, y: 13, address: '梅苑1号楼一层', businessHours: '09:00 - 21:00', color: '#DC2626', accessNode: 'd1' },
-        { id: 'PP06', name: '顺丰速运（信息楼）', short: '顺丰速运', type: 'station', x: 74.5, y: 61, address: '信息楼一层大厅', businessHours: '09:00 - 18:00', color: '#1E40AF', accessNode: 'e2' }
+        { id: 'PP06', name: '顺丰速运（信息楼）', short: '顺丰速运', type: 'station', x: 74.5, y: 61, address: '信息楼一层大厅', businessHours: '09:00 - 18:00', color: '#1E40AF', accessNode: 'e2' },
+        { id: 'PP07', name: '智能快递柜（松苑）', short: '松苑快递柜', type: 'locker', x: 38.5, y: 16.5, address: '松苑4号楼一层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
+        { id: 'PP08', name: '智能快递柜（梅苑西）', short: '梅苑西柜', type: 'locker', x: 60.5, y: 16.5, address: '梅苑3号楼架空层', businessHours: '24小时', color: '#10B981', accessNode: 'd1' },
+        { id: 'PP09', name: '菜鸟驿站（菊苑南）', short: '菊苑南驿站', type: 'station', x: 26, y: 27.5, address: '菊苑南侧商铺6号', businessHours: '08:30 - 20:30', color: '#2563EB', accessNode: 'w3' },
+        { id: 'PP10', name: '极兔速递（机电楼）', short: '极兔速递', type: 'station', x: 71, y: 58.5, address: '机电楼B区一层', businessHours: '09:00 - 19:00', color: '#F97316', accessNode: 'e2' }
       ],
       roads: {
         nodes: {
@@ -518,7 +697,10 @@
       isNavigating: false,
       currentFilter: 'all',
       deliveryOrder: null,
+      near: [],           // [{ poi, meters }] 路网距离排序
+      guideShown: false,  // 加载完成后仅弹一次首次引导
     };
+    var LOAD_START_TS = Date.now();
 
     // ---------- Three.js 基础 ----------
     var M3 = {
@@ -526,6 +708,7 @@
       container: null, raycaster: null,
       cam: { target: null, radius: 135, theta: 0, phi: Math.PI / 4, minR: 70, maxR: 240, minPhi: 0.35, maxPhi: 1.30, targetGoal: null },
       pins: [], hitTargets: [],
+      clusterGroups: [], clusterHits: [], clusterSig: '',
       routeGroup: null, routeCurve: null, routePulses: [],
       userMarker: null, userRing: null,
       delivery: { rider: null, routePoints: null, cum: null, total: 0, order: null },
@@ -559,6 +742,7 @@
     }
 
     function initThree() {
+      setLoad(12, '正在启动 3D 渲染引擎…');
       M3.container = document.getElementById('mapContainer');
       // 性能档位：DPR 上限 / 阴影 / 细节按设备等级（perf.js），避免手机 GPU 过热
       M3.tier = Perf.tier();
@@ -581,6 +765,7 @@
       M3.cam.targetGoal = M3.cam.target.clone();
       M3.clock = new THREE.Clock();
       M3.raycaster = new THREE.Raycaster();
+      setLoad(30, '铺设校园地形…');
 
       // 光照：半球光 + 平行光（阴影）
       var hemi = new THREE.HemisphereLight(dark ? 0x33415e : 0xdfeaf5, 0x8fa678, dark ? 0.85 : 1.0);
@@ -597,9 +782,15 @@
       sun.shadow.bias = -0.0008;
       M3.scene.add(sun);
 
+      setLoad(52, '搭建建筑与道路…');
       buildEnvironment();
+      setLoad(74, '加载取件点标记…');
       buildPois();
       buildUserMarker();
+      setLoad(88, '正在计算附近点位…');
+      refreshNearDistances();
+      renderNearList();
+      if (!DELIVERY_MODE) rebuildClusters(true);
 
       if (DELIVERY_MODE) {
         initDeliveryMode();
@@ -610,14 +801,55 @@
 
       bindControls();
       window.addEventListener('resize', onResize);
+      // 页面重新可见时刷新待取数与附近距离
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && !DELIVERY_MODE) {
+          refreshPoiCounts();
+          refreshNearDistances();
+          renderNearList();
+          if (MAP.selectedPointId) fillDetail(MAP.selectedPointId);
+        }
+      });
       // 档位变化（Governor 降档 / 用户切换模式）→ 动态应用渲染质量
       Perf.onChange(function (key, tier, byGovernor) { applyPerfTier(tier, byGovernor); });
       // WebGPU 实验开关（仅 ?debug=1 可见，生产环境隐藏）
       if (Perf.isDebug()) initWebGPUExperiment();
       animate();
+    }
 
-      var loading = document.getElementById('mapLoading');
-      if (loading) setTimeout(function () { loading.remove(); }, 250);
+    // ---------- 加载进度 ----------
+    function setLoad(pct, text) {
+      var fill = document.getElementById('mapLoadingFill');
+      var pctEl = document.getElementById('mapLoadingPct');
+      var textEl = document.getElementById('mapLoadingText');
+      if (fill) fill.style.width = pct + '%';
+      if (pctEl) pctEl.textContent = Math.round(pct) + '%';
+      if (textEl && text) textEl.textContent = text;
+    }
+    function finishLoading() {
+      if (MAP.guideShown) return;
+      MAP.guideShown = true;
+      setLoad(100, '地图就绪');
+      var elapsed = Date.now() - LOAD_START_TS;
+      var wait = Math.max(0, 550 - elapsed);
+      setTimeout(function () {
+        var loading = document.getElementById('mapLoading');
+        if (!loading) return;
+        loading.classList.add('fade-out');
+        setTimeout(function () { if (loading.parentNode) loading.remove(); }, 320);
+        if (DELIVERY_MODE) return;
+        // 首次使用引导（Storage 记录是否展示过）
+        App.showGuide('map_v2', {
+          emoji: '🗺️',
+          title: '3D 校园地图怎么玩',
+          items: [
+            '拖动旋转、双指缩放；点蓝色数字圆圈，聚合点就地展开',
+            '底部按真实步行路网距离排序快递点，可一键导航到最近点',
+            '顶部可筛选驿站 / 快递柜 / 有待取的点位',
+          ],
+          okText: '开始探索',
+        });
+      }, wait);
     }
 
     // 档位变化时动态调整：渲染分辨率 / 阴影 / 阴影贴图尺寸（无需重建场景）
@@ -1079,6 +1311,12 @@
       var r = M3.renderer.domElement.getBoundingClientRect();
       var ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
       M3.raycaster.setFromCamera(ndc, M3.camera);
+      // 聚合点优先
+      var chits = M3.raycaster.intersectObjects(M3.clusterHits, false);
+      if (chits.length && chits[0].object.userData.cluster) {
+        expandCluster(chits[0].object.userData);
+        return;
+      }
       var hits = M3.raycaster.intersectObjects(M3.hitTargets, false);
       if (hits.length) {
         var ud = hits[0].object.userData;
@@ -1100,28 +1338,143 @@
       M3.cam.radius = clamp(M3.cam.radius * (1 + dir * 0.18), M3.cam.minR, M3.cam.maxR);
     }
 
-    // ---------- 拾取点选择 / 信息卡 ----------
+    // ---------- 标记聚合（世界坐标并查集聚类，阈值随缩放变化） ----------
+    function pinMatchesFilter(poi) {
+      if (MAP.currentFilter === 'all') return true;
+      if (MAP.currentFilter === 'pending') return (poi.pendingCount || 0) > 0;
+      return poi.type === MAP.currentFilter;
+    }
+
+    function disposeClusterGroups() {
+      M3.clusterGroups.forEach(function (g) { M3.scene.remove(g.group); });
+      M3.clusterGroups = [];
+      M3.clusterHits = [];
+    }
+
+    function buildClusterMarker(group) {
+      var w = toWorld(group.cx, group.cy);
+      var grp = new THREE.Group();
+      grp.position.set(w.x, 0, w.z);
+      // 立杆
+      var pole = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, 3.0, 8), stdMat(0xF8FAFC, { roughness: 0.5 }));
+      pole.position.y = 1.5; pole.castShadow = true;
+      grp.add(pole);
+      // 圆盘底
+      var disc = new THREE.Mesh(new THREE.CylinderGeometry(1.45, 1.65, 0.22, 20), stdMat('#2563EB', { emissive: '#2563EB', emissiveIntensity: 0.45, roughness: 0.4 }));
+      disc.position.y = 3.1;
+      grp.add(disc);
+      // 数字气泡
+      var label = makeLabel(String(group.ids.length), { fontSize: 52, scale: 0.135, bgColor: 'rgba(37,99,235,0.97)', color: '#fff' });
+      label.position.y = 3.4;
+      grp.add(label);
+      // 地面光圈
+      var glow = new THREE.Mesh(new THREE.CircleGeometry(2.1, 24), new THREE.MeshBasicMaterial({ color: 0x2563EB, transparent: true, opacity: 0.2 }));
+      glow.rotation.x = -Math.PI / 2;
+      glow.position.y = 0.07;
+      grp.add(glow);
+      // 拾取热区
+      var hit = new THREE.Mesh(new THREE.SphereGeometry(3.0, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.y = 3.3;
+      hit.userData = { cluster: true, ids: group.ids.slice(), cx: group.cx, cy: group.cy };
+      grp.add(hit);
+      group.group = grp;
+      group.hit = hit;
+      group.disc = disc;
+      group.label = label;
+      M3.clusterHits.push(hit);
+      M3.scene.add(grp);
+    }
+
+    function rebuildClusters(force) {
+      if (DELIVERY_MODE || !M3.scene) return;
+      var enabled = M3.pins.filter(function (pin) {
+        return pinMatchesFilter(pin.poi) && pin.poi.id !== MAP.selectedPointId;
+      });
+      var sig = MAP.currentFilter + '|' + (MAP.selectedPointId || '-') + '|' +
+        Math.round(M3.cam.radius) + '|' + enabled.map(function (p) { return p.poi.id; }).join('.');
+      if (!force && sig === M3.clusterSig) return;
+      M3.clusterSig = sig;
+
+      disposeClusterGroups();
+      M3.pins.forEach(function (pin) { pin.group.visible = false; });
+      if (MAP.selectedPointId) {
+        M3.pins.forEach(function (p) { if (p.poi.id === MAP.selectedPointId) p.group.visible = true; });
+      }
+      if (!enabled.length) return;
+
+      // 阈值：世界坐标距离，随相机拉远而增大（6.5 ~ 20 单位 ≈ 52 ~ 160 米）
+      var th = clamp(M3.cam.radius * 0.085, 6.5, 20);
+
+      // 并查集
+      var parent = {};
+      enabled.forEach(function (p) { parent[p.poi.id] = p.poi.id; });
+      function find(a) { while (parent[a] !== a) { parent[a] = parent[parent[a]]; a = parent[a]; } return a; }
+      function union(a, b) { var ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; }
+      for (var i = 0; i < enabled.length; i++) {
+        for (var j = i + 1; j < enabled.length; j++) {
+          var a = enabled[i].poi, b = enabled[j].poi;
+          if (Math.sqrt(dist2({ x: a.x, y: a.y }, { x: b.x, y: b.y })) <= th) union(a.id, b.id);
+        }
+      }
+      var buckets = {};
+      enabled.forEach(function (p) {
+        var r = find(p.poi.id);
+        if (!buckets[r]) buckets[r] = [];
+        buckets[r].push(p);
+      });
+      Object.keys(buckets).forEach(function (root) {
+        var members = buckets[root];
+        if (members.length === 1) {
+          members[0].group.visible = true;
+        } else {
+          var cx = 0, cy = 0, ids = [];
+          members.forEach(function (p) { cx += p.poi.x; cy += p.poi.y; ids.push(p.poi.id); });
+          buildClusterMarker({ ids: ids, cx: cx / members.length, cy: cy / members.length });
+        }
+      });
+    }
+
+    function expandCluster(ud) {
+      var w = toWorld(ud.cx, ud.cy);
+      M3.cam.targetGoal.set(w.x, 0, w.z);
+      M3.cam.radius = Math.max(M3.cam.minR, M3.cam.radius * 0.45);
+      M3.clusterSig = '';
+      var hint = document.getElementById('clusterHint');
+      if (hint) {
+        hint.textContent = '已展开 ' + ud.ids.length + ' 个取件点';
+        hint.classList.add('show');
+        clearTimeout(expandCluster._t);
+        expandCluster._t = setTimeout(function () { hint.classList.remove('show'); }, 1200);
+      }
+    }
+
+    // ---------- 类型筛选 ----------
     function setFilter(filter, btn) {
       MAP.currentFilter = filter;
       document.querySelectorAll('.map-filters .chip').forEach(function (c) { c.classList.remove('active'); });
       if (btn) btn.classList.add('active');
-      M3.pins.forEach(function (pin) {
-        pin.group.visible = filter === 'all' || pin.poi.type === filter;
-      });
+      rebuildClusters(true);
+      renderNearList();
     }
 
     function refreshPoiCounts() {
       var points = Storage.getPickupPoints();
+      var countMap = {};
+      points.forEach(function (pt) { countMap[pt.id] = pt.pendingCount || 0; });
       M3.pins.forEach(function (pin) {
-        for (var i = 0; i < points.length; i++) {
-          if (points[i].id === pin.poi.id) {
-            pin.poi.pendingCount = points[i].pendingCount || 0;
-            if (pin.badge) {
-              pin.badge.visible = pin.poi.pendingCount > 0;
-            }
-          }
-        }
+        if (countMap[pin.poi.id] !== undefined) pin.poi.pendingCount = countMap[pin.poi.id];
+        MAP.points.forEach(function (p) { if (p.id === pin.poi.id) p.pendingCount = pin.poi.pendingCount; });
+        if (pin.badge) pin.badge.visible = pin.poi.pendingCount > 0;
       });
+      // "有待取"筛选下，待取数变化会影响聚合成员
+      if (MAP.currentFilter === 'pending') { M3.clusterSig = ''; rebuildClusters(); }
+    }
+
+    // ---------- 取件点选择 / 底部详情 ----------
+    function poiById(id) {
+      var f = null;
+      MAP.points.forEach(function (p) { if (p.id === id) f = p; });
+      return f;
     }
 
     function selectPOI(id) {
@@ -1132,37 +1485,111 @@
       M3.pins.forEach(function (p) { p.group.scale.set(1, 1, 1); });
       pin.group.scale.set(1.3, 1.3, 1.3);
       refreshPoiCounts();
+      rebuildClusters(true);
+      // 相机飞向目标点
+      var w = toWorld(pin.poi.x, pin.poi.y);
+      M3.cam.targetGoal.set(w.x, 0, w.z);
+      M3.cam.radius = Math.max(M3.cam.minR, Math.min(M3.cam.radius, 92));
+      fillDetail(id);
+      document.getElementById('mapSheet').setAttribute('data-view', 'detail');
+      document.getElementById('mapHint').classList.add('hidden');
+    }
 
-      var poi = pin.poi;
-      document.getElementById('cardName').textContent = poi.name;
+    function fillDetail(id) {
+      var poi = poiById(id);
+      if (!poi) return;
+      document.getElementById('cardName').textContent = poi.short || poi.name;
       var typeEl = document.getElementById('cardType');
       typeEl.textContent = poi.type === 'locker' ? '快递柜' : '驿站';
       typeEl.style.background = poi.color + '22';
       typeEl.style.color = poi.color;
       document.getElementById('cardAddress').textContent = poi.address;
       document.getElementById('cardHours').textContent = poi.businessHours;
-      document.getElementById('cardBizStatus').innerHTML = isOpenNow(poi) ? '<span class="biz-status-dot"></span>营业中' : '<span class="biz-status-dot"></span>已打烊';
-      document.getElementById('cardBizStatus').className = 'biz-status ' + (isOpenNow(poi) ? 'biz-status--open' : 'biz-status--closed');
+      var open = isOpenNow(poi);
+      document.getElementById('cardBizStatus').innerHTML = '<span class="biz-status-dot"></span>' + (open ? '营业中' : '已打烊');
+      document.getElementById('cardBizStatus').className = 'biz-status ' + (open ? 'biz-status--open' : 'biz-status--closed');
 
-      var dist = distanceTo(MAP.currentLoc, { x: poi.x, y: poi.y });
-      document.getElementById('cardDistance').textContent = formatDistance(dist);
-      document.getElementById('cardWalkTime').textContent = formatWalk(dist);
+      var entry = null;
+      MAP.near.forEach(function (n) { if (n.poi.id === poi.id) entry = n; });
+      var meters = entry ? entry.meters : distanceTo(MAP.currentLoc, { x: poi.x, y: poi.y });
+      document.getElementById('cardDistance').textContent = formatDistance(meters);
+      document.getElementById('cardWalkTime').textContent = formatWalk(meters);
 
       var pendingRow = document.getElementById('cardPendingRow');
       var badge = document.getElementById('cardPendingBadge');
-      if (poi.pendingCount > 0) { pendingRow.style.display = 'flex'; badge.textContent = poi.pendingCount + ' 件'; }
+      if ((poi.pendingCount || 0) > 0) { pendingRow.style.display = 'flex'; badge.textContent = poi.pendingCount + ' 件'; }
       else pendingRow.style.display = 'none';
-
-      document.getElementById('infoCard').classList.add('show');
-      document.getElementById('mapHint').classList.add('hidden');
     }
 
     function clearSelection() {
       MAP.selectedPointId = null;
       M3.pins.forEach(function (p) { p.group.scale.set(1, 1, 1); });
-      document.getElementById('infoCard').classList.remove('show');
+      rebuildClusters(true);
+      renderNearList();
+      document.getElementById('mapSheet').setAttribute('data-view', 'list');
       if (!MAP.isNavigating) document.getElementById('mapHint').classList.remove('hidden');
     }
+
+    // ---------- 附近快递点列表（按路网距离排序） ----------
+    function refreshNearDistances() {
+      MAP.near = MAP.points.map(function (poi) {
+        return { poi: poi, meters: distanceTo(MAP.currentLoc, { x: poi.x, y: poi.y }) };
+      });
+      MAP.near.sort(function (a, b) { return a.meters - b.meters; });
+    }
+
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+      });
+    }
+
+    var NAV_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>';
+
+    function renderNearList() {
+      var box = document.getElementById('nearList');
+      if (!box) return;
+      var list = MAP.near.filter(function (n) { return pinMatchesFilter(n.poi); });
+      var typeText = { all: '全部点位', station: '驿站', locker: '快递柜', pending: '有待取' }[MAP.currentFilter] || '全部点位';
+      document.getElementById('nearSub').textContent = typeText + ' · 共 ' + list.length + ' 个 · 按距离排序';
+      if (!list.length) {
+        box.innerHTML = '<div class="near-empty">当前筛选下暂无快递点<br>换个类型试试～</div>';
+        return;
+      }
+      box.innerHTML = list.map(function (n) {
+        var p = n.poi;
+        var open = isOpenNow(p);
+        var icon = p.type === 'locker' ? '柜' : '驿';
+        var pending = (p.pendingCount || 0) > 0 ? '<span class="near-pending">待取 ' + p.pendingCount + '</span>' : '';
+        return '<button type="button" class="near-row' + (MAP.selectedPointId === p.id ? ' active' : '') + '" onclick="selectPOI(\'' + p.id + '\')">' +
+          '<span class="near-ic" style="background:' + p.color + '">' + icon + '</span>' +
+          '<span class="near-main">' +
+            '<span class="near-name">' + escHtml(p.short || p.name) + pending + '</span>' +
+            '<span class="near-meta">' +
+              '<span class="near-dist">' + formatDistance(n.meters) + '</span>' +
+              '<span class="near-dot"></span><span>步行 ' + formatWalk(n.meters) + '</span>' +
+              '<span class="near-dot"></span>' +
+              '<span class="biz-status ' + (open ? 'biz-status--open' : 'biz-status--closed') + '"><span class="biz-status-dot"></span>' + (open ? '营业中' : '已打烊') + '</span>' +
+            '</span>' +
+          '</span>' +
+          '<span class="near-nav" onclick="event.stopPropagation();navigateTo(\'' + p.id + '\')" aria-label="导航到' + escHtml(p.short || p.name) + '">' + NAV_ICON_SVG + '</span>' +
+        '</button>';
+      }).join('');
+    }
+
+    // 一键导航到指定点 / 最近点（有待取优先）
+    window.navigateTo = function (id) {
+      if (!MAP.selectedPointId || MAP.selectedPointId !== id) selectPOI(id);
+      startNavigation();
+    };
+    window.navigateNearest = function () {
+      var list = MAP.near.filter(function (n) { return pinMatchesFilter(n.poi); });
+      if (!list.length) { App.toast('当前筛选下暂无快递点'); return; }
+      var target = list.filter(function (n) { return (n.poi.pendingCount || 0) > 0; })[0] || list[0];
+      selectPOI(target.poi.id);
+      startNavigation();
+      App.toast((target.poi.pendingCount || 0) > 0 ? '已导航到最近的有待取点' : '已导航到最近的快递点');
+    };
 
     function isOpenNow(poi) {
       if (poi.businessHours === '24小时') return true;
@@ -1284,7 +1711,9 @@
       document.getElementById('navDistance').textContent = formatDistance(dist);
       document.getElementById('navWalkTime').textContent = formatWalk(dist);
       document.getElementById('navBar').classList.add('show');
-      document.getElementById('infoCard').classList.remove('show');
+      // 导航中底部保持列表态，并高亮目标点
+      document.getElementById('mapSheet').setAttribute('data-view', 'list');
+      renderNearList();
     }
 
     function closeNavigation() {
@@ -1327,6 +1756,10 @@
       var p = toWorld(MAP.currentLoc.x, MAP.currentLoc.y);
       M3.userMarker.position.set(p.x, 0, p.z);
       moveCameraTo(MAP.currentLoc);
+      // 位置变化 → 重算附近距离、刷新列表/详情
+      refreshNearDistances();
+      renderNearList();
+      if (MAP.selectedPointId) fillDetail(MAP.selectedPointId);
       if (!silent) App.toastSuccess('已定位到当前位置');
     }
 
@@ -1356,9 +1789,13 @@
       MAP.deliveryOrder = order;
 
       document.getElementById('pageTitle').textContent = '配送地图';
+      document.body.classList.add('map-delivery');
       document.getElementById('mapFilters').style.display = 'none';
       document.getElementById('mapHint').classList.add('hidden');
       document.getElementById('viewControls').style.display = 'none';
+      // 60/40 → 全高布局后，强制重置渲染尺寸
+      setTimeout(onResize, 60);
+      setTimeout(onResize, 320);
 
       var home = dormHomePosition();
       var shop = { x: order.x || 50, y: order.y || 50 };
@@ -1528,6 +1965,8 @@
 
     // ---------- 渲染循环 ----------
     var lastUiTick = 0;
+    var lastClusterTick = 0;
+    var firstFrameDone = false;
     var lastFrameTime = 0;
     var lowDetail = false;   // 低档设备：跳过次要动画，减少 GPU 负担
     function animate() {
@@ -1555,6 +1994,17 @@
       M3.pins.forEach(function (pin, i) {
         pin.head.position.y = pin.baseY + Math.sin(t * 2 + i * 0.8) * 0.14;
         if (!lowDetail) pin.glow.scale.setScalar(1 + Math.sin(t * 2.4 + i) * 0.08);
+      });
+      // 聚合气泡：随缩放（radius）变化节流重建 + 呼吸缩放
+      if (!DELIVERY_MODE && now - lastClusterTick > 180) {
+        lastClusterTick = now;
+        rebuildClusters(false);
+      }
+      M3.clusterGroups.forEach(function (g, i) {
+        if (g.label) {
+          var s = 1 + Math.sin(t * 2.6 + i * 1.3) * 0.06;
+          g.label.scale.setScalar(s);
+        }
       });
       // 用户光圈脉冲
       if (M3.userRing) {
@@ -1598,6 +2048,12 @@
       }
 
       M3.renderer.render(M3.scene, M3.camera);
+
+      // 首帧渲染成功 → 进度 100% 并淡出，随后触发首次引导
+      if (!firstFrameDone) {
+        firstFrameDone = true;
+        finishLoading();
+      }
     }
 
     function onResize() {

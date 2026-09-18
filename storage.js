@@ -653,6 +653,56 @@ var Storage = {
     this._saveLife(data);
     return { success: true };
   },
+  // Markdown 一键导入：payload.plan={day:[{name,detail}]}（整组替换对应星期）；
+  // payload.foods=[{name,kcal,goal}]（同名同目标去重后追加）；payload.goal/payload.focusMap 可选
+  fitImport: function (payload) {
+    payload = payload || {};
+    var data = this._life();
+    var plan = payload.plan || {};
+    var days = 0, items = 0;
+    Object.keys(plan).forEach(function (k) {
+      var day = parseInt(k, 10);
+      if (!(day >= 1 && day <= 7) || !Array.isArray(plan[k])) return;
+      var rows = [], seen = {};
+      plan[k].forEach(function (it) {
+        var name = String((it && it.name) || '').trim().slice(0, 12);
+        if (!name || seen[name]) return;
+        seen[name] = 1;
+        rows.push({
+          id: 'F' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+          name: name,
+          detail: String((it && it.detail) || '').trim().slice(0, 20),
+        });
+      });
+      data.fitness.plan[day] = rows;
+      days++;
+      items += rows.length;
+    });
+    var foodsAdded = 0;
+    (payload.foods || []).forEach(function (f) {
+      var name = String((f && f.name) || '').trim().slice(0, 12);
+      if (!name) return;
+      var goal = f.goal === 'cut' ? 'cut' : 'gain';
+      var dup = data.fitness.customFoods.some(function (x) { return x.name === name && x.goal === goal; });
+      if (dup) return;
+      data.fitness.customFoods.push({
+        id: 'FD' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+        name: name,
+        kcal: String((f && f.kcal) || '').slice(0, 10),
+        goal: goal,
+      });
+      foodsAdded++;
+    });
+    if (payload.goal === 'gain' || payload.goal === 'cut') data.fitness.dietGoal = payload.goal;
+    if (payload.focusMap && typeof payload.focusMap === 'object') {
+      Object.keys(payload.focusMap).forEach(function (k) {
+        var day = parseInt(k, 10), idx = parseInt(payload.focusMap[k], 10);
+        if (day >= 1 && day <= 7 && idx >= 0 && idx <= 6) data.fitness.focusMap[day] = idx;
+      });
+    }
+    this._saveLife(data);
+    return { success: true, days: days, items: items, foods: foodsAdded };
+  },
 
   // ---- 上课摸鱼：录音整理记录（仅文本入库，音频不落盘）----
   lazyGetRecordings: function () {
@@ -1175,6 +1225,7 @@ var Storage = {
         focusMap: {}, // 每日训练部位自定义（{1: 索引}，缺省 day-1）
       },
       lazy: { recordings: [] }, // 上课摸鱼：录音转写整理记录（音频不入库，仅存文本）
+      aiChat: [], // AI 校园助手本地会话记录
     };
   },
 
@@ -1206,11 +1257,37 @@ var Storage = {
     }
     if (!data.lazy) data.lazy = { recordings: [] };
     if (!Array.isArray(data.lazy.recordings)) data.lazy.recordings = [];
+    if (!Array.isArray(data.aiChat)) data.aiChat = [];
     return data;
   },
 
   _saveLife: function (data) {
     this._write(this.KEYS.life, data);
+  },
+
+  // ---- AI 校园助手（本地规则引擎，会话仅存本机） ----
+  aiGetChat: function () {
+    return this._life().aiChat || [];
+  },
+
+  aiAddChat: function (msg) {
+    if (!msg || !msg.role || !msg.text) return;
+    var data = this._life();
+    data.aiChat.push({
+      role: msg.role === 'user' ? 'user' : 'ai',
+      text: String(msg.text).slice(0, 1200),
+      actions: Array.isArray(msg.actions) ? msg.actions.slice(0, 4) : [],
+      ts: Date.now(),
+    });
+    // 仅保留最近 50 条，避免无限膨胀
+    if (data.aiChat.length > 50) data.aiChat = data.aiChat.slice(-50);
+    this._saveLife(data);
+  },
+
+  aiClearChat: function () {
+    var data = this._life();
+    data.aiChat = [];
+    this._saveLife(data);
   },
 
   // ---- 攒钱 / 工资 ----
@@ -1316,6 +1393,7 @@ var Storage = {
         start: parseInt(c.start, 10) || 1,
         end: parseInt(c.end, 10) || c.start || 1,
         color: c.color || '',
+        remark: c.remark || '',
       };
     });
     this._saveLife(data);
@@ -1336,6 +1414,7 @@ var Storage = {
       start: parseInt(course.start, 10) || 1,
       end: parseInt(course.end, 10) || course.start || 1,
       color: course.color || '#0A6EFF',
+      remark: course.remark || '',
     });
     this._saveLife(data);
     return { success: true };

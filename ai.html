@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AI 校园助手 - 校园取件</title>
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* 本页为独立对话页：隐藏固定 tab bar（HTML 完整保留 5 项） */
+    body[data-page="ai"] .tab-bar { display: none !important; }
+    body[data-page="ai"] { background: var(--color-bg); }
+
+    .ai-page {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - var(--header-h));
+      overflow: hidden;
+    }
+    .ai-clear {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; color: var(--color-text-sub);
+    }
+    .ai-clear:active { background: var(--color-bg); }
+    .ai-clear svg { width: 18px; height: 18px; }
+
+    /* 对话区 */
+    .ai-chat {
+      flex: 1; min-height: 0;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 14px 8px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .ai-msg { display: flex; gap: 8px; align-items: flex-end; animation: fadeInUp .28s ease both; }
+    .ai-msg.user { flex-direction: row-reverse; }
+    .ai-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      flex: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      background: linear-gradient(135deg, #2563EB, #60A5FA);
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(37,99,235,.3);
+    }
+    .ai-msg.user .ai-avatar {
+      background: var(--color-surface);
+      color: var(--color-primary);
+      font-size: 14px; font-weight: 700;
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-bubble {
+      max-width: 78%;
+      padding: 10px 13px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.65;
+      white-space: normal;
+      word-break: break-word;
+    }
+    .ai-msg.ai .ai-bubble {
+      background: var(--color-surface);
+      color: var(--color-text);
+      border-bottom-left-radius: 5px;
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-msg.user .ai-bubble {
+      background: var(--color-primary);
+      color: #fff;
+      border-bottom-right-radius: 5px;
+    }
+    .ai-bubble b { font-weight: 700; }
+    .ai-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+    .ai-action {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: var(--color-primary-lighter, #EFF6FF);
+      color: var(--color-primary);
+      font-size: 12px; font-weight: 600;
+      border: 1px solid rgba(37,99,235,.18);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ai-action:active { transform: scale(.95); }
+    .ai-action svg { width: 12px; height: 12px; }
+
+    /* 欢迎卡（空会话） */
+    .ai-welcome {
+      background: var(--color-surface);
+      border-radius: 18px;
+      padding: 18px 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .ai-welcome-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .ai-welcome-sub { font-size: 13px; color: var(--color-text-sub); line-height: 1.7; }
+    .ai-welcome-tip {
+      margin-top: 12px;
+      background: var(--color-primary-lighter, #EFF6FF);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 12.5px;
+      color: #1D4ED8;
+      line-height: 1.7;
+    }
+
+    /* 正在输入 */
+    .ai-typing { display: none; align-items: flex-end; gap: 8px; }
+    .ai-typing.show { display: flex; animation: fadeInUp .2s ease both; }
+    .ai-typing .ai-bubble { padding: 13px 16px; }
+    .ai-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--color-text-hint);
+      display: inline-block; margin: 0 1.5px;
+      animation: aiBlink 1.2s infinite ease-in-out;
+    }
+    .ai-dot:nth-child(2) { animation-delay: .2s; }
+    .ai-dot:nth-child(3) { animation-delay: .4s; }
+    @keyframes aiBlink { 0%, 80%, 100% { opacity: .3; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-3px); } }
+
+    /* 底部：快捷操作 + 输入栏 */
+    .ai-bottom {
+      flex: none;
+      background: var(--color-surface);
+      box-shadow: 0 -4px 16px rgba(15,23,42,.05);
+      padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    }
+    .ai-quick {
+      display: flex; gap: 7px;
+      overflow-x: auto; scrollbar-width: none;
+      padding: 2px 2px 8px;
+    }
+    .ai-quick::-webkit-scrollbar { display: none; }
+    .ai-quick-chip {
+      flex: none;
+      padding: 6px 13px;
+      border-radius: 999px;
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-light, #E2E8F0);
+      font-size: 12.5px;
+      color: var(--color-text-sub);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ai-quick-chip:active { background: var(--color-primary-lighter, #EFF6FF); color: var(--color-primary); }
+    .ai-input-row { display: flex; gap: 8px; align-items: center; }
+    .ai-input {
+      flex: 1;
+      border: 1.5px solid var(--color-border-light, #E2E8F0);
+      background: var(--color-bg);
+      border-radius: 999px;
+      padding: 10px 16px;
+      font-size: 14px;
+      color: var(--color-text);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .ai-input:focus { border-color: var(--color-primary); background: var(--color-surface); }
+    .ai-send {
+      flex: none;
+      width: 42px; height: 42px; border-radius: 50%;
+      border: none;
+      background: var(--color-primary);
+      color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 12px rgba(37,99,235,.3);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ai-send:active { transform: scale(.92); }
+    .ai-send:disabled { opacity: .5; box-shadow: none; }
+    .ai-send svg { width: 19px; height: 19px; }
+  </style>
+</head>
+<body data-page="ai">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <button class="header-back-btn" onclick="goBack()" aria-label="返回">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </div>
+      <div class="header-title">AI 校园助手</div>
+      <div class="header-right">
+        <button class="ai-clear" id="aiClear" aria-label="清空对话">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="app-content ai-page">
+      <div class="ai-chat" id="aiChat"></div>
+
+      <div class="ai-typing" id="aiTyping">
+        <div class="ai-avatar">🤖</div>
+        <div class="ai-bubble"><span class="ai-dot"></span><span class="ai-dot"></span><span class="ai-dot"></span></div>
+      </div>
+
+      <div class="ai-bottom">
+        <div class="ai-quick" id="aiQuick">
+          <button class="ai-quick-chip" data-q="我有几个快递待取？取件码是多少？">📦 查快递</button>
+          <button class="ai-quick-chip" data-q="导航到最近的快递点">🧭 取件导航</button>
+          <button class="ai-quick-chip" data-q="今天有什么课？">📚 今日课表</button>
+          <button class="ai-quick-chip" data-q="下一个节日还有多少天？">🎉 节日倒计时</button>
+          <button class="ai-quick-chip" data-q="中午吃什么？给我推荐一下">🍜 中午吃什么</button>
+          <button class="ai-quick-chip" data-q="我今天练什么？">💪 今日健身</button>
+        </div>
+        <div class="ai-input-row">
+          <input class="ai-input" id="aiInput" type="text" maxlength="120" placeholder="问我：快递、课程、路线、校园生活…" enterkeyhint="send">
+          <button class="ai-send" id="aiSend" aria-label="发送">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- 底部导航：首页 / 快递 / 扫码 / 外卖 / 我的（本页隐藏，结构完整保留） -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // ================================================================
+    // AI 校园助手 —— 纯本地规则引擎（零在线依赖）
+    // 读取本机 Storage 的快递 / 课程 / 节日 / 健身等数据做意图匹配
+    // ================================================================
+    (function () {
+      var chatEl = document.getElementById('aiChat');
+      var inputEl = document.getElementById('aiInput');
+      var sendBtn = document.getElementById('aiSend');
+      var typingEl = document.getElementById('aiTyping');
+      var ARROW = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+
+      var LESSON_TIMES = [
+        ['08:00', '08:45'], ['08:55', '09:40'], ['10:00', '10:45'], ['10:55', '11:40'],
+        ['14:00', '14:45'], ['14:55', '15:40'], ['16:00', '16:45'], ['16:55', '17:40'],
+        ['19:00', '19:45'], ['19:55', '20:40'],
+      ];
+      var WEEK_NAMES = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+      var FEST_PRESETS = [
+        { name: '元旦', m: 1, d: 1, emoji: '🎊' }, { name: '情人节', m: 2, d: 14, emoji: '💝' },
+        { name: '妇女节', m: 3, d: 8, emoji: '🌷' }, { name: '劳动节', m: 5, d: 1, emoji: '🌿' },
+        { name: '青年节', m: 5, d: 4, emoji: '🔥' }, { name: '儿童节', m: 6, d: 1, emoji: '🎈' },
+        { name: '建党节', m: 7, d: 1, emoji: '⭐' }, { name: '建军节', m: 8, d: 1, emoji: '🎖️' },
+        { name: '教师节', m: 9, d: 10, emoji: '📚' }, { name: '国庆节', m: 10, d: 1, emoji: '🇨🇳' },
+        { name: '双十一', m: 11, d: 11, emoji: '🛒' }, { name: '圣诞节', m: 12, d: 25, emoji: '🎄' },
+      ];
+      // 取件点关键词 → 3D 地图 POI（与 map.html CAMPUS_DATA 对应）
+      var POI_KEYWORDS = [
+        { id: 'PP01', kws: ['楷苑'] },
+        { id: 'PP02', kws: ['南门'] },
+        { id: 'PP03', kws: ['兰苑'] },
+        { id: 'PP04', kws: ['菊苑柜', '菊苑2'] },
+        { id: 'PP09', kws: ['菊苑'] },
+        { id: 'PP05', kws: ['京东', '梅苑'] },
+        { id: 'PP06', kws: ['顺丰', '信息楼'] },
+        { id: 'PP07', kws: ['松苑'] },
+        { id: 'PP10', kws: ['极兔', '机电'] },
+      ];
+
+      // ---------- 工具 ----------
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+        });
+      }
+      function has(q, kws) {
+        for (var i = 0; i < kws.length; i++) if (q.indexOf(kws[i]) !== -1) return true;
+        return false;
+      }
+      function act(label, href) { return { label: label, href: href }; }
+      function scrollBottom() { chatEl.scrollTop = chatEl.scrollHeight; }
+      function nextOccur(m, d) {
+        var now = new Date();
+        var t = new Date(now.getFullYear(), m - 1, d);
+        if (t.getTime() <= now.getTime()) t.setFullYear(t.getFullYear() + 1);
+        return t;
+      }
+
+      // ---------- 渲染 ----------
+      function bubbleHtml(msg) {
+        // 先整体转义防注入，再放行本地回复模板里的 <b>/<strong> 白名单标签
+        var textHtml = esc(msg.text)
+          .replace(/&lt;(\/?)(?:b|strong)&gt;/g, '<$1strong>')
+          .replace(/\n/g, '<br>');
+        var actions = (msg.actions || []).map(function (a) {
+          return '<a class="ai-action" href="' + esc(a.href) + '">' + esc(a.label) + ARROW + '</a>';
+        }).join('');
+        return '<div class="ai-avatar">' + (msg.role === 'user' ? '我' : '🤖') + '</div>' +
+          '<div class="ai-bubble">' + textHtml + (actions ? '<div class="ai-actions">' + actions + '</div>' : '') + '</div>';
+      }
+
+      function renderAll() {
+        var msgs = Storage.aiGetChat();
+        if (!msgs.length) {
+          chatEl.innerHTML = welcomeHtml();
+          return;
+        }
+        chatEl.innerHTML = msgs.map(function (m) {
+          return '<div class="ai-msg ' + (m.role === 'user' ? 'user' : 'ai') + '">' + bubbleHtml(m) + '</div>';
+        }).join('');
+        scrollBottom();
+      }
+
+      function appendMessage(msg) {
+        // 空会话时先移除欢迎卡
+        if (!Storage.aiGetChat().length) chatEl.innerHTML = '';
+        var div = document.createElement('div');
+        div.className = 'ai-msg ' + (msg.role === 'user' ? 'user' : 'ai');
+        div.innerHTML = bubbleHtml(msg);
+        chatEl.appendChild(div);
+        scrollBottom();
+      }
+
+      // ---------- 主动提醒（进入页面聚合本机关键信息） ----------
+      function proactiveLines() {
+        var lines = [];
+        try {
+          var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; });
+          if (pending.length) {
+            var urgent = pending.filter(function (p) { return p.expiresIn && /小时/.test(p.expiresIn); })
+              .map(function (p) { return parseInt(p.expiresIn, 10); }).filter(function (n) { return !isNaN(n); });
+            var minH = urgent.length ? Math.min.apply(null, urgent) : null;
+            lines.push('📦 你有 <b>' + pending.length + '</b> 件快递待取' + (minH != null && minH <= 12 ? '，最近一件 <b>' + minH + ' 小时</b>内到期，记得尽快取哦' : ''));
+          }
+          var now = new Date();
+          var wd = now.getDay() === 0 ? 7 : now.getDay();
+          var curMin = now.getHours() * 60 + now.getMinutes();
+          var courses = Storage.lifeGetCourses().filter(function (c) { return c.weekday === wd; });
+          if (courses.length) {
+            courses.sort(function (a, b) { return a.start - b.start; });
+            var ongoing = courses.filter(function (c) {
+              var s = LESSON_TIMES[c.start - 1], e = LESSON_TIMES[c.end - 1];
+              if (!s || !e) return false;
+              var sm = +s[0].slice(0, 2) * 60 + +s[0].slice(3);
+              var em = +e[1].slice(0, 2) * 60 + +e[1].slice(3);
+              return curMin >= sm && curMin <= em;
+            })[0];
+            var next = courses.filter(function (c) {
+              var s = LESSON_TIMES[c.start - 1];
+              if (!s) return false;
+              return (+s[0].slice(0, 2) * 60 + +s[0].slice(3)) > curMin;
+            })[0];
+            if (ongoing) lines.push('📚 正在上 <b>' + esc(ongoing.name) + '</b>（' + esc(ongoing.position || '教室待定') + '）');
+            else if (next) lines.push('📚 下一节 <b>' + esc(next.name) + '</b> ' + LESSON_TIMES[next.start - 1][0] + ' 在 ' + esc(next.position || '教室待定'));
+          }
+          var fests = allFests();
+          if (fests.length) {
+            var f = fests[0];
+            var days = Math.ceil((f.at.getTime() - Date.now()) / 86400000);
+            lines.push(f.emoji + ' 距 <b>' + esc(f.name) + '</b>还有 <b>' + Math.max(0, days) + '</b> 天');
+          }
+        } catch (e) { /* 旧数据异常不阻塞 */ }
+        return lines;
+      }
+
+      function welcomeHtml() {
+        var lines = proactiveLines();
+        var tip = lines.length
+          ? '<div class="ai-welcome-tip">我看了下你的校园数据：<br>' + lines.join('<br>') + '</div>'
+          : '';
+        return '<div class="ai-msg ai">' +
+          '<div class="ai-avatar">🤖</div>' +
+          '<div class="ai-welcome"><div class="ai-bubble" style="background:transparent;box-shadow:none;padding:2px 0;">' +
+            '<div class="ai-welcome-title">嗨，我是你的校园 AI 助手</div>' +
+            '<div class="ai-welcome-sub">快递查询、取件导航、课程提醒、节日倒计时、吃喝训练建议……直接问我就行。所有回答都在本机完成，不上传任何数据。</div>' +
+            tip +
+            '<div class="ai-actions">' +
+              '<a class="ai-action" href="map.html">打开 3D 校园地图' + ARROW + '</a>' +
+              '<a class="ai-action" href="packages.html">查看我的快递' + ARROW + '</a>' +
+            '</div>' +
+          '</div></div>' +
+        '</div>';
+      }
+
+      // ---------- 节日数据 ----------
+      function allFests() {
+        var list = FEST_PRESETS.map(function (f) {
+          return { name: f.name, emoji: f.emoji, custom: false, at: nextOccur(f.m, f.d) };
+        });
+        Storage.festGetCustom().forEach(function (f) {
+          list.push({ name: f.name, emoji: '✨', custom: true, at: nextOccur(f.m, f.d) });
+        });
+        list.sort(function (a, b) {
+          if (!!a.custom !== !!b.custom) return a.custom ? -1 : 1;
+          return a.at - b.at;
+        });
+        return list;
+      }
+
+      // ---------- 本地规则引擎 ----------
+      function reply(q0) {
+        var q = q0.toLowerCase().replace(/\s+/g, '');
+
+        // 1) 路线 / 导航 / 地图
+        if (has(q, ['导航', '怎么走', '路线', '在哪', '怎么去', '地图'])) {
+          // 1.1 明确点名某个取件点
+          for (var i = 0; i < POI_KEYWORDS.length; i++) {
+            var pkw = POI_KEYWORDS[i];
+            for (var j = 0; j < pkw.kws.length; j++) {
+              if (q.indexOf(pkw.kws[j]) !== -1) {
+                return {
+                  text: '已为你在 3D 校园地图中定位到目标点位，点击下方按钮即可查看步行路线（按真实校园路网计算距离与用时）：',
+                  actions: [act('🧭 导航过去', 'map.html?poi=' + pkw.id), act('全部快递点', 'map.html')],
+                };
+              }
+            }
+          }
+          // 1.2 食堂/图书馆/体育馆等大地点
+          var places = [
+            { kw: ['食堂', '吃饭的地方'], name: '食堂', poi: 'c3' },
+            { kw: ['图书馆'], name: '图书馆' },
+            { kw: ['体育馆', '操场', '田径'], name: '体育馆' },
+            { kw: ['南门'], name: '南门' },
+            { kw: ['东门'], name: '东门' },
+            { kw: ['西门'], name: '西门' },
+            { kw: ['信息楼'], name: '信息楼', poi: 'PP06' },
+          ];
+          for (var k = 0; k < places.length; k++) {
+            if (has(q, places[k].kw)) {
+              var href = places[k].poi && places[k].poi.indexOf('PP') === 0
+                ? 'map.html?poi=' + places[k].poi
+                : 'map.html';
+              return {
+                text: '目标：<b>' + places[k].name + '</b>。打开 3D 地图后把视角转到目标区域，再点最近的快递点/标记可规划步行路线。',
+                actions: [act('🧭 打开校园地图', href)],
+              };
+            }
+          }
+          // 1.3 默认：最近快递点（有待取优先）
+          var pts = Storage.getPickupPoints();
+          var pendingPts = pts.filter(function (p) { return p.pendingCount > 0; });
+          var target = pendingPts.sort(function (a, b) { return b.pendingCount - a.pendingCount; })[0] || null;
+          var text = target
+            ? '离你最近且有快递待取的是 <b>' + esc(target.name) + '</b>（' + esc(target.address || '') + '），有 ' + target.pendingCount + ' 件在等你。打开地图一键导航：'
+            : '目前没有待取快递。打开 3D 校园地图，底部列表已按离你的步行距离排序，点右侧按钮即可一键导航。';
+          return {
+            text: text,
+            actions: [act('🧭 ' + (target ? '导航到' + target.name.slice(0, 8) : '打开校园地图'), target ? 'map.html?poi=' + target.id : 'map.html')],
+          };
+        }
+
+        // 2) 快递 / 取件码 / 包裹
+        if (has(q, ['快递', '取件', '包裹', '驿站', '快递柜', '取件码', '身份码', '菜鸟', '顺丰', '京东', '圆通', '中通', '韵达', '极兔', '邮政', '申通', 'ems'])) {
+          var packages = Storage.getPackages();
+          var pending = packages.filter(function (p) { return p.status === 'pending'; });
+          var incoming = packages.filter(function (p) { return p.status === 'incoming'; });
+          if (q.indexOf('身份码') !== -1 || q.indexOf('身份验证') !== -1) {
+            var idc = Storage.getIdentityCode ? Storage.getIdentityCode() : null;
+            return {
+              text: idc && idc.code
+                ? '你的身份码是 <b>' + esc(idc.code) + '</b>（' + (idc.source === 'imported' ? '相册/手动导入' : '系统默认') + '）。取件时出示给驿站扫码即可。'
+                : '你还没有设置身份码，可以手动录入或从相册截图识别导入。',
+              actions: [act('管理身份码', 'detail.html'), act('去扫码取件', 'scan.html')],
+            };
+          }
+          if (!pending.length) {
+            return {
+              text: incoming.length
+                ? '当前<b>没有已到站的快递</b>，但有 <b>' + incoming.length + '</b> 件正在路上，到站后我会在首页提醒你～'
+                : '当前<b>没有待取快递</b>，也没有在途包裹。有新快递到站时首页会出现红点提醒。',
+              actions: [act('查物流', 'track.html'), act('扫码取件', 'scan.html')],
+            };
+          }
+          var lines = pending.slice(0, 4).map(function (p) {
+            return '· <b>' + esc(p.company) + '</b> ' + (p.pickupCode ? '取件码 <b>' + esc(p.pickupCode) + '</b>' : '待上架') +
+              ' @ ' + esc(p.pickupPoint) +
+              (p.expiresIn ? '（剩余 ' + esc(p.expiresIn) + '）' : '');
+          });
+          if (pending.length > 4) lines.push('……另外还有 ' + (pending.length - 4) + ' 件');
+          var soon = pending.filter(function (p) { return p.expiresIn && /小时/.test(p.expiresIn); })
+            .map(function (p) { return parseInt(p.expiresIn, 10); }).filter(function (n) { return !isNaN(n); });
+          var warn = soon.length && Math.min.apply(null, soon) <= 12
+            ? '\n\n⚠️ 有件 <b>' + Math.min.apply(null, soon) + ' 小时</b>内就到期啦，建议先取它！'
+            : '';
+          return {
+            text: '你有 <b>' + pending.length + '</b> 件快递待取：\n' + lines.join('\n') + warn,
+            actions: [act('查看全部快递', 'packages.html'), act('扫码取件', 'scan.html'), act('导航去取', 'map.html')],
+          };
+        }
+
+        // 3) 课程 / 课表
+        if (has(q, ['课', '上课', '教室', '课表', '放学', '节次'])) {
+          var now = new Date();
+          var wd2 = now.getDay() === 0 ? 7 : now.getDay();
+          var cnMap = { '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7 };
+          var askedWd = wd2;
+          var askedLabel = '今天';
+          if (q.indexOf('明天') !== -1) { askedWd = wd2 === 7 ? 1 : wd2 + 1; askedLabel = '明天'; }
+          else {
+            var m = /周([一二两三四五六日天])/.exec(q);
+            if (m) { askedWd = cnMap[m[1]]; askedLabel = '周' + m[1]; }
+          }
+          var courses = Storage.lifeGetCourses().filter(function (c) { return c.weekday === askedWd; });
+          courses.sort(function (a, b) { return a.start - b.start; });
+          if (!courses.length) {
+            return {
+              text: askedLabel + '没有课哦，好好享受空闲时间吧 🎉（如果刚加了课，记得在课表页点"手动添加"）',
+              actions: [act('打开我的课表', 'schedule.html')],
+            };
+          }
+          var cls = courses.map(function (c) {
+            var s = LESSON_TIMES[c.start - 1], e = LESSON_TIMES[c.end - 1];
+            var time = s && e ? s[0] + '-' + e[1] + '（第' + c.start + (c.end > c.start ? '-' + c.end : '') + '节）' : '第' + c.start + '节';
+            return '· <b>' + time + '</b> ' + esc(c.name) +
+              (c.position ? ' @ ' + esc(c.position) : '') +
+              (c.teacher ? '（' + esc(c.teacher) + '老师）' : '');
+          });
+          return {
+            text: askedLabel + '（' + WEEK_NAMES[askedWd] + '）共 <b>' + courses.length + '</b> 门课：\n' + cls.join('\n'),
+            actions: [act('查看完整课表', 'schedule.html')],
+          };
+        }
+
+        // 4) 节日 / 倒计时 / 放假
+        if (has(q, ['节日', '倒计时', '放假', '生日', '纪念日'])) {
+          var fs = allFests();
+          if (!fs.length) return { text: '还没有节日记录，去添加一个 DIY 节日吧～', actions: [act('节日倒计时', 'festival.html')] };
+          var f = fs[0];
+          var ms = f.at.getTime() - Date.now();
+          var days = Math.max(0, Math.floor(ms / 86400000));
+          var hh = Math.max(0, Math.floor((ms % 86400000) / 3600000));
+          var mm2 = Math.max(0, Math.floor((ms % 3600000) / 60000));
+          return {
+            text: '最近的是' + (f.custom ? '你的 DIY 卡片 ' : '') + '<b>' + f.emoji + ' ' + esc(f.name) + '</b>（' +
+              (f.at.getMonth() + 1) + ' 月 ' + f.at.getDate() + ' 日），还有 <b>' + days + '</b> 天 ' + hh + ' 小时 ' + mm2 + ' 分。',
+            actions: [act('查看全部倒计时', 'festival.html')],
+          };
+        }
+
+        // 5) 吃 / 外卖
+        if (has(q, ['吃', '外卖', '食堂', '饭', '奶茶', '饿', '宵夜', '夜宵'])) {
+          var hour = new Date().getHours();
+          var meal = hour < 10 ? '早餐' : hour < 14 ? '午餐' : hour < 17 ? '下午茶' : hour < 21 ? '晚餐' : '宵夜';
+          return {
+            text: '这个点适合安排<b>' + meal + '</b>啦～食堂省钱但要排队，外卖直接送到宿舍楼下。打开外卖页看看今天的优惠商家，或者出门吃食堂也行：',
+            actions: [act('🍜 点个外卖', 'food.html'), act('🧭 去食堂', 'map.html')],
+          };
+        }
+
+        // 6) 健身 / 训练
+        if (has(q, ['健身', '训练', '增肌', '减脂', '动作', '锻炼', '肌肉', '跑步'])) {
+          var fit = Storage.fitGet();
+          var dow = new Date().getDay() === 0 ? 7 : new Date().getDay();
+          var items = (fit.plan && fit.plan[dow]) || [];
+          var goalText = fit.dietGoal === 'cut' ? '减脂' : '增肌';
+          if (!items.length) {
+            return {
+              text: '今天还没有安排训练动作。健身页可以按部位一键生成计划，也支持导入 Markdown 训练表哦（当前饮食目标：<b>' + goalText + '</b>）。',
+              actions: [act('安排今日训练', 'fitness.html')],
+            };
+          }
+          return {
+            text: '今天计划 <b>' + items.length + '</b> 个动作（' + goalText + '期）：\n' +
+              items.map(function (it) { return '· ' + esc(it.name) + (it.detail ? ' ' + esc(it.detail) : ''); }).join('\n'),
+            actions: [act('打开训练计划', 'fitness.html')],
+          };
+        }
+
+        // 7) 其他校园功能直达
+        var shortcuts = [
+          { kws: ['备忘', '笔记', '记一下'], label: '备忘录', href: 'notes.html' },
+          { kws: ['秒表', '计时', '倒计时工具'], label: '秒表', href: 'stopwatch.html' },
+          { kws: ['浴室', '洗澡', '淋浴', '排队洗浴'], label: '浴室排队', href: 'bathroom.html' },
+          { kws: ['分贝', '噪音', '吵'], label: '分贝测量', href: 'decibel.html' },
+          { kws: ['攒钱', '记账', '省钱', '工资'], label: '攒钱计划', href: 'savings.html' },
+          { kws: ['论坛', '墙', '吐槽'], label: '校园论坛', href: 'forum.html' },
+          { kws: ['实习', '兼职', '简历', '招聘'], label: '实习中心', href: 'jobs.html' },
+          { kws: ['摸鱼', '录音转写', '上课录'], label: '懒人模式', href: 'lazy.html' },
+          { kws: ['消息', '通知'], label: '消息中心', href: 'messages.html' },
+          { kws: ['设置', '隐私'], label: '设置', href: 'settings.html' },
+        ];
+        for (var si = 0; si < shortcuts.length; si++) {
+          if (has(q, shortcuts[si].kws)) {
+            return { text: '这个我熟，已经帮你找到 <b>' + shortcuts[si].label + '</b> 入口：', actions: [act(shortcuts[si].label, shortcuts[si].href)] };
+          }
+        }
+
+        // 8) 问候 / 能力
+        if (has(q, ['你好', '您好', '嗨', 'hi', 'hello', '在吗', '你是谁', '你能做什么', '会什么', '帮助', '谢谢'])) {
+          return {
+            text: '我是你的校园 AI 助手，运行在本机、不联网，可以帮你：\n· 查快递/取件码，提醒快到期的件\n· 一键导航到最近的快递点\n· 查今天上什么课、在哪个教室\n· 节日倒计时、吃喝与健身建议\n\n点下面的快捷问题试试～',
+          };
+        }
+
+        // 9) 兜底
+        return {
+          text: '这个问题我还在学习中 🤔 试试问我：「我有几个快递」「导航到最近的快递点」「今天有什么课」「下一个节日」「中午吃什么」。',
+          actions: [act('打开校园地图', 'map.html'), act('全部功能', 'index.html')],
+        };
+      }
+
+      // ---------- 发送流程 ----------
+      var busy = false;
+      function send(q) {
+        q = (q || '').trim();
+        if (!q || busy) return;
+        busy = true;
+        Storage.aiAddChat({ role: 'user', text: q });
+        appendMessage({ role: 'user', text: q });
+        inputEl.value = '';
+        typingEl.classList.add('show');
+        scrollBottom();
+        var r;
+        try { r = reply(q); } catch (e) { r = { text: '我这边出了点小问题，稍后再试试～' }; }
+        setTimeout(function () {
+          typingEl.classList.remove('show');
+          Storage.aiAddChat({ role: 'ai', text: r.text, actions: r.actions || [] });
+          appendMessage({ role: 'ai', text: r.text, actions: r.actions || [] });
+          busy = false;
+        }, 480 + Math.min(400, r.text.length * 4));
+      }
+
+      sendBtn.addEventListener('click', function () { send(inputEl.value); });
+      inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') send(inputEl.value); });
+      document.getElementById('aiQuick').addEventListener('click', function (e) {
+        var btn = e.target.closest('.ai-quick-chip');
+        if (btn) send(btn.getAttribute('data-q'));
+      });
+      document.getElementById('aiClear').addEventListener('click', function () {
+        if (!Storage.aiGetChat().length) { App.toast('对话已经是空的啦'); return; }
+        App.showModal({
+          title: '清空对话',
+          desc: '将清除本机上的全部聊天记录，且不可恢复',
+          confirmText: '清空',
+          onConfirm: function () {
+            Storage.aiClearChat();
+            renderAll();
+            App.toast('对话已清空');
+          },
+        });
+      });
+
+      function goBack() {
+        if (history.length > 1) history.back();
+        else location.href = 'index.html';
+      }
+      window.goBack = goBack;
+
+      // ---------- 初始化 ----------
+      renderAll();
+      App.showGuide('ai_v1', {
+        emoji: '🤖',
+        title: 'AI 校园助手怎么用',
+        items: [
+          '直接问快递、取件码、今日课程、导航路线，我会读你本机数据来回答',
+          '回答下方的按钮可一键跳转：查快递、导航、课表等',
+          '所有计算都在手机本地完成，不联网、不上传',
+        ],
+        okText: '我知道了',
+      });
+      // 从首页 AI 搜索栏带参进入
+      var presetQ = new URLSearchParams(location.search).get('q');
+      if (presetQ) setTimeout(function () { send(decodeURIComponent(presetQ).slice(0, 120)); }, 500);
+    })();
+  </script>
+</body>
+</html>

@@ -56,6 +56,16 @@
     .lesson-name { font-size:15px; font-weight:700; color:var(--color-text); display:flex; align-items:center; gap:6px; }
     .lesson-live { font-size:10px; font-weight:700; color:#fff; background:var(--color-primary); border-radius:99px; padding:1px 7px; flex-shrink:0; }
     .lesson-meta { font-size:12px; color:var(--color-text-sub); margin-top:5px; display:flex; flex-direction:column; gap:3px; }
+    .lesson-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .lesson-remark {
+      margin-top:7px;
+      font-size:11.5px; color:#92610B;
+      background:#FEF6E4; border:1px solid #F5E6BF;
+      border-radius:9px; padding:5px 9px;
+      line-height:1.5;
+      word-break:break-word;
+    }
+    .lesson-dur { font-size:10.5px; color:var(--color-text-hint); margin-top:3px; }
 
     /* 月历 */
     .sch-cal { margin:12px 16px 0; background:var(--color-surface); border-radius:18px; border:1px solid var(--color-border-light); padding:14px 14px 12px; }
@@ -208,6 +218,10 @@
         <input type="text" id="addTeacher" placeholder="王老师" maxlength="10">
       </div>
     </div>
+    <div class="field">
+      <label>备注（选填）</label>
+      <input type="text" id="addRemark" placeholder="例如：带电脑 / 第8周随堂测验" maxlength="30">
+    </div>
     <button class="btn btn-primary btn-block btn-lg" id="addSubmit">保存课程</button>
     <button class="sch-del" id="addDelete" style="display:none;">删除这门课</button>
   </div>
@@ -243,6 +257,11 @@
         if (s === '十') return 10;
         return CN_NUM[s] !== undefined ? CN_NUM[s] : NaN;
       }
+      function escHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"]/g, function (ch) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch];
+        });
+      }
 
       var today = midnight(new Date());
       var selectedDate = midnight(new Date());
@@ -270,6 +289,7 @@
           name: String(c.name || '').trim().slice(0, 20),
           teacher: String(c.teacher || '').trim().slice(0, 10),
           position: String(c.position || '').trim().slice(0, 20),
+          remark: String(c.remark || '').trim().slice(0, 30),
           weekday: clamp(parseInt(c.weekday, 10) || 1, 1, 7),
           start: st, end: en,
           color: c.color || '',
@@ -279,7 +299,7 @@
       function dedupeCourses(list) {
         var seen = {}, out = [];
         list.forEach(function (c) {
-          var key = [c.name, c.weekday, c.start, c.end, c.position, c.teacher].join('|');
+          var key = [c.name, c.weekday, c.start, c.end, c.position, c.teacher, c.remark].join('|');
           if (!seen[key]) { seen[key] = 1; out.push(c); }
         });
         out.forEach(function (c, i) { if (!c.color) c.color = COLORS[i % COLORS.length]; });
@@ -309,6 +329,7 @@
           merged.forEach(function (seg) {
             out.push(makeCourse({
               name: seg[2].name, teacher: seg[2].teacher, position: seg[2].position,
+              remark: seg[2].remark,
               weekday: seg[2].weekday, start: seg[0], end: seg[1], color: seg[2].color,
             }));
           });
@@ -843,15 +864,21 @@
           var sm = (+s[0].split(':')[0]) * 60 + (+s[0].split(':')[1]);
           var em = (+e[1].split(':')[0]) * 60 + (+e[1].split(':')[1]);
           var ongoing = isToday && curMin >= sm && curMin <= em;
+          var lessonCount = c.end - c.start + 1;
+          var metaHtml = '';
+          if (c.position) metaHtml += '<span>📍 ' + escHtml(c.position) + '</span>';
+          if (c.teacher) metaHtml += '<span>🧑‍🏫 ' + escHtml(c.teacher) + '老师' + (/老师|教授$/.test(c.teacher) ? '' : '') + '</span>';
+          if (!metaHtml) metaHtml = '<span style="opacity:.55;">教室 / 教师信息待补充，点卡片编辑</span>';
           html += '<div class="lesson-card' + (ongoing ? ' ongoing' : '') + ' anim-fade-in-up stagger-' + Math.min(i + 1, 5) + '" data-id="' + c.id + '">' +
             '<div class="lesson-strip" style="background:' + (c.color || '#0A6EFF') + ';"></div>' +
-            '<div class="lesson-time"><div class="lesson-no">' + c.start + (c.end > c.start ? '-' + c.end : '') + '节</div>' +
-            '<div class="lesson-clock">' + s[0] + '<br>' + e[1] + '</div></div>' +
-            '<div class="lesson-body"><div class="lesson-name">' + c.name + (ongoing ? '<span class="lesson-live">进行中</span>' : '') + '</div>' +
-            '<div class="lesson-meta">' +
-              (c.position ? '<span>📍 ' + c.position + '</span>' : '') +
-              (c.teacher ? '<span>👨‍🏫 ' + c.teacher + '</span>' : '') +
-            '</div></div></div>';
+            '<div class="lesson-time"><div class="lesson-no">第' + c.start + (c.end > c.start ? '-' + c.end : '') + '节</div>' +
+            '<div class="lesson-clock">' + s[0] + '<br>' + e[1] + '</div>' +
+            (c.end > c.start ? '<div class="lesson-dur">共' + lessonCount + '节</div>' : '') +
+            '</div>' +
+            '<div class="lesson-body"><div class="lesson-name">' + escHtml(c.name) + (ongoing ? '<span class="lesson-live">进行中</span>' : '') + '</div>' +
+            '<div class="lesson-meta">' + metaHtml + '</div>' +
+            (c.remark ? '<div class="lesson-remark">📝 ' + escHtml(c.remark) + '</div>' : '') +
+            '</div></div>';
         });
         document.getElementById('lessonList').innerHTML = html;
         document.querySelectorAll('.lesson-card').forEach(function (card) {
@@ -1037,6 +1064,7 @@
         document.getElementById('addName').value = '';
         document.getElementById('addRoom').value = '';
         document.getElementById('addTeacher').value = '';
+        document.getElementById('addRemark').value = '';
         document.getElementById('addWeekday').value = String(weekday || weekdayOf(selectedDate));
         document.getElementById('addStart').value = '1';
         document.getElementById('addEnd').value = '2';
@@ -1056,6 +1084,7 @@
         document.getElementById('addName').value = c.name;
         document.getElementById('addRoom').value = c.position || '';
         document.getElementById('addTeacher').value = c.teacher || '';
+        document.getElementById('addRemark').value = c.remark || '';
         document.getElementById('addWeekday').value = String(c.weekday);
         document.getElementById('addStart').value = String(c.start);
         document.getElementById('addEnd').value = String(c.end);
@@ -1075,6 +1104,7 @@
           start: start, end: end,
           position: document.getElementById('addRoom').value.trim(),
           teacher: document.getElementById('addTeacher').value.trim(),
+          remark: document.getElementById('addRemark').value.trim(),
         };
         if (editingId) {
           var list = Storage.lifeGetCourses();
@@ -1086,6 +1116,7 @@
               c.end = data.end;
               c.position = data.position;
               c.teacher = data.teacher;
+              c.remark = data.remark.slice(0, 30);
             }
           });
           Storage.lifeSaveCourses(list);

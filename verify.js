@@ -1231,19 +1231,18 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('packages.html 保留搜索/筛选/快递列表',
     pkgHtml2.indexOf('id="searchInput"') !== -1 && pkgHtml2.indexOf('id="filterChips"') !== -1 && pkgHtml2.indexOf('id="pkgList"') !== -1);
 
-  // 13.8 profile.html 个人中心改版（小头像 + 数字ID + 宿舍行）
+  // 13.8 profile.html 个人中心（[19] v7 重构为 hero 大卡 + 120px 居中头像，取代旧版小头像行）
   const prof = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
-  check('profile.html 用户卡片水平内边距 14px',
-    /margin-bottom:12px; padding:16px 14px/.test(prof));
-  check('profile.html 头像 52px 可点击进入个人空间',
-    /avatarHtml\(user,\s*52,/.test(prof) && prof.indexOf('myhome.html') !== -1);
-  check('profile.html 用户名字号 ≤ 18px',
-    /font-size:16px; font-weight:700/.test(prof));
-  check('profile.html 已移除统计数字卡片（待取/已取/未读）',
-    prof.indexOf('statPending') === -1 && prof.indexOf('statPicked') === -1 &&
-    prof.indexOf('font-size:20px; font-weight:800') === -1);
-  check('profile.html 装饰 svg 缩小 ≤ 100px',
-    /width:90px; height:90px/.test(prof));
+  check('profile.html v7 hero-card 渐变大卡',
+    /\.hero-card\s*\{/.test(prof));
+  check('profile.html 头像 120px 居中且可进入个人空间',
+    /avatarHtml\(user,\s*120,/.test(prof) && prof.indexOf('myhome.html') !== -1);
+  check('profile.html 用户名为 hero-name 20px/800',
+    /\.hero-name\s*\{[^}]*font-size:\s*20px/.test(prof));
+  check('profile.html v7 恢复统计数字卡片（statPending 等，见 [19] stat-card）',
+    prof.indexOf('statPending') !== -1 && prof.indexOf('statPicked') !== -1);
+  check('profile.html 旧版 90px 装饰 svg 已移除',
+    prof.indexOf('width:90px; height:90px') === -1);
 })();
 
 // ============================================================
@@ -1414,7 +1413,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 已跟进到 v6', /var VERSION = 'v6'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v7（[19]）', /var VERSION = 'v7'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1459,9 +1458,9 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('profile.html 含 userIdRow 数字 ID 展示', profSrc3.indexOf('userIdRow') !== -1);
   check('profile.html 已移除学号 userStudentId', profSrc3.indexOf('userStudentId') === -1);
   check('profile.html 头像可进入个人空间（myhome.html）', profSrc3.indexOf('myhome.html') !== -1);
-  check('profile.html 含关于我们/应用官网/反馈建议入口',
-    profSrc3.indexOf('about.html') !== -1 && profSrc3.indexOf('website.html') !== -1 &&
-    profSrc3.indexOf('feedback.html') !== -1);
+  check('profile.html 含关于我们/反馈建议入口（[19] v7 有意移除应用官网）',
+    profSrc3.indexOf('about.html') !== -1 && profSrc3.indexOf('feedback.html') !== -1 &&
+    profSrc3.indexOf('website.html') === -1);
   check('settings.html 已移除问题反馈入口', setSrc2.indexOf('feedback.html') === -1);
   check('profile.html 展示结构化宿舍（getUserDorm）', profSrc3.indexOf('getUserDorm') !== -1);
 
@@ -1659,12 +1658,11 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('storage.js 宿舍解析正则兼容宿舍格式（\\S+宿舍）',
     /\\S\+宿舍/.test(storageSrc6) || storageSrc6.indexOf('+宿舍') !== -1);
 
-  // 17.4 首页三分组：热门应用 / 日常应用 / 其余应用
-  check('index.html 三分组（热门应用/日常应用/其余应用）',
-    idxSrc5.indexOf('热门应用') !== -1 && idxSrc5.indexOf('日常应用') !== -1 &&
-    idxSrc5.indexOf('其余应用') !== -1);
-  check('index.html 热门应用含扫码取件高亮卡（life-card--hero）与 3D地图',
-    idxSrc5.indexOf('life-card--hero') !== -1 && idxSrc5.indexOf('map.html') !== -1);
+  // 17.4 首页（[19] v7 重构：AI 搜索栏 + 常用四宫格 + 全部应用折叠，取代旧三分组）
+  check('index.html v7 常用四宫格 + 全部应用分区',
+    idxSrc5.indexOf('quick-grid') !== -1 && idxSrc5.indexOf('全部应用') !== -1);
+  check('index.html 全部应用折叠展开（appsToggle）且保留 3D地图入口',
+    idxSrc5.indexOf('appsToggle') !== -1 && idxSrc5.indexOf('map.html') !== -1);
   check('index.html 日常应用含浴室/攒钱/课程表/论坛', idxSrc5.indexOf('bathroom.html') !== -1 &&
     idxSrc5.indexOf('savings.html') !== -1 && idxSrc5.indexOf('schedule.html') !== -1 &&
     idxSrc5.indexOf('forum.html') !== -1);
@@ -1721,7 +1719,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     /body\[data-page="detail"\] \.tab-bar\s*\{\s*display:\s*none/.test(detailSrc));
 
   // 17.10 缓存版本
-  check('sw.js 版本已升级 v6（[17] 发布时为 v5，v6 见 [18]）', /var VERSION = 'v6';/.test(swSrc2));
+  check('sw.js 版本已升级 v7（[17] 发布时为 v5，[18] 为 v6，v7 见 [19]）', /var VERSION = 'v7';/.test(swSrc2));
 })();
 
 // ============================================================
@@ -1850,8 +1848,8 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     /\.profile-bg-layer\s*\{[\s\S]{0,200}transition:\s*opacity/.test(profSrc6));
   check('profile.html 头像替换淡出淡入（#userAvatarBox opacity transition）',
     /#userAvatarBox[^}]*transition:\s*opacity/.test(profSrc6));
-  check('profile.html 校区/宿舍合并单行省略（userFoot + text-overflow:ellipsis）',
-    profSrc6.indexOf('userFoot') !== -1 && profSrc6.indexOf('text-overflow:ellipsis') !== -1 &&
+  check('profile.html 校区/宿舍合并单行省略（userFoot + text-overflow ellipsis）',
+    profSrc6.indexOf('userFoot') !== -1 && /text-overflow:\s*ellipsis/.test(profSrc6) &&
     profSrc6.indexOf('userCampus') === -1 && profSrc6.indexOf('userDorm') === -1);
 
   // 18.11 首页 5 个新功能入口齐全
@@ -1859,11 +1857,97 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     ['stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
       .every(s => idxSrc6.indexOf(s) !== -1));
 
-  // 18.12 缓存与离线
-  check('sw.js v6 且预缓存 6 个新页面',
-    /var VERSION = 'v6';/.test(swSrc3) &&
+  // 18.12 缓存与离线（版本号随 [19] 升至 v7）
+  check('sw.js v7 且预缓存 6 个新页面',
+    /var VERSION = 'v7';/.test(swSrc3) &&
     ['festival.html', 'stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
       .every(s => swSrc3.indexOf(s) !== -1));
+})();
+
+// ============================================================
+// [19] v7 改版：地图 60/40 重构+聚合 / AI 本地助手 / 首页与个人中心重构 /
+//              身份码相册 OCR / 课程备注 / 节日 DIY 优先 / 健身 MD 导入
+// ============================================================
+(function () {
+  console.log('\n[19] v7：地图60/40/AI助手/首页/个人中心/相册OCR/课程备注/DIY优先/MD导入');
+  const mapSrc7 = fs.readFileSync(path.join(ROOT, 'map.html'), 'utf8');
+  const aiSrc = fs.readFileSync(path.join(ROOT, 'ai.html'), 'utf8');
+  const idxSrc7 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const profSrc7 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const detailSrc7 = fs.readFileSync(path.join(ROOT, 'detail.html'), 'utf8');
+  const schedSrc7 = fs.readFileSync(path.join(ROOT, 'schedule.html'), 'utf8');
+  const festSrc7 = fs.readFileSync(path.join(ROOT, 'festival.html'), 'utf8');
+  const fitSrc7 = fs.readFileSync(path.join(ROOT, 'fitness.html'), 'utf8');
+  const storageSrc8 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const swSrc7 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+
+  // 19.1 地图：60/40 布局 + 聚合 + 首次引导 + 一键导航
+  check('map.html 60/40 布局（.map-wrap + .map-sheet）',
+    mapSrc7.indexOf('.map-wrap') !== -1 && mapSrc7.indexOf('.map-sheet') !== -1);
+  check('map.html 标记聚合（clusterHits 聚合命中先于单点）',
+    mapSrc7.indexOf('clusterHits') !== -1);
+  check('map.html 首次引导 map_v2', mapSrc7.indexOf("showGuide('map_v2'") !== -1);
+  check('map.html 一键导航最近快递点（navigateNearest）',
+    mapSrc7.indexOf('navigateNearest') !== -1);
+
+  // 19.2 AI 校园助手：纯本地规则引擎 + 会话持久化
+  check('ai.html 标题为 AI 校园助手', aiSrc.indexOf('AI 校园助手') !== -1);
+  check('ai.html 纯本地规则引擎（零在线依赖注释 + reply 规则）',
+    aiSrc.indexOf('纯本地规则引擎') !== -1 && /function\s+reply\s*\(/.test(aiSrc));
+  check('ai.html 快捷操作 chips + typing 动画 + 主动提醒',
+    aiSrc.indexOf('proactiveLines') !== -1);
+  check('ai.html 保留 5 项 tab-bar HTML 且页面内隐藏',
+    /data-nav="home"/.test(aiSrc) && /data-nav="profile"/.test(aiSrc) &&
+    /body\[data-page="ai"\]\s+\.tab-bar\s*\{[^}]*display:\s*none/.test(aiSrc));
+  check('storage.js AI 会话 API（aiGetChat/aiAddChat/aiClearChat）',
+    ['aiGetChat', 'aiAddChat', 'aiClearChat'].every(s => storageSrc8.indexOf(s) !== -1));
+
+  // 19.3 首页：AI 搜索栏置顶 + 4 常用 + 全部应用折叠 + 无重复
+  check('index.html AI 搜索栏置顶（ai-search-bar → ai.html）',
+    idxSrc7.indexOf('ai-search-bar') !== -1 && idxSrc7.indexOf('ai.html') !== -1);
+  check('index.html 常用 4 个 + 全部应用折叠展开',
+    idxSrc7.indexOf('常用') !== -1 && idxSrc7.indexOf('展开全部应用') !== -1);
+
+  // 19.4 个人中心：hero 大头像 + 数据卡 + AI 入口
+  check('profile.html hero-card 120px 居中头像',
+    profSrc7.indexOf('.hero-card') !== -1 && profSrc7.indexOf('120px') !== -1);
+  check('profile.html stat-card 数据统计卡 + ai-entry AI 入口',
+    profSrc7.indexOf('.stat-card') !== -1 && profSrc7.indexOf('.ai-entry') !== -1 &&
+    profSrc7.indexOf('ai.html') !== -1);
+
+  // 19.5 身份码相册 OCR 导入（二维码优先 + tesseract 兜底）
+  check('detail.html 相册识别按钮（idcAlbum + 从相册图片识别）',
+    detailSrc7.indexOf('idcAlbum') !== -1 && detailSrc7.indexOf('从相册图片识别') !== -1);
+  check('detail.html recognizeIdentityFromImage（jsQR 优先 + tesseract OCR 兜底）',
+    detailSrc7.indexOf('recognizeIdentityFromImage') !== -1 &&
+    detailSrc7.indexOf('libs/tesseract/tesseract.min.js') !== -1 &&
+    detailSrc7.indexOf('jsQR.js') !== -1);
+
+  // 19.6 课程表：每节课信息强化 + remark 备注
+  check('schedule.html 课卡展示节次/真实起止时钟/共N节（lesson-dur）',
+    schedSrc7.indexOf('lesson-dur') !== -1 && schedSrc7.indexOf('lesson-clock') !== -1);
+  check('schedule.html 课程备注全链路（addRemark 输入 + lesson-remark 展示 + escHtml 转义）',
+    schedSrc7.indexOf('addRemark') !== -1 && schedSrc7.indexOf('lesson-remark') !== -1 &&
+    schedSrc7.indexOf('function escHtml') !== -1);
+  check('storage.js 课程模型含 remark（lifeSaveCourses + lifeAddCourse）',
+    /lifeSaveCourses[\s\S]{0,700}remark:/.test(storageSrc8) &&
+    /lifeAddCourse[\s\S]{0,600}remark:/.test(storageSrc8));
+
+  // 19.7 节日倒计时：DIY 卡片优先
+  check('festival.html DIY 自定义节日排序优先（custom 组在前）',
+    /a\.custom[\s\S]{0,120}b\.custom/.test(festSrc7));
+
+  // 19.8 健身：Markdown 一键导入
+  check('fitness.html 导入 MD 按钮 + 文件选择器（btnImportMd/mdFileInput）',
+    fitSrc7.indexOf('btnImportMd') !== -1 && fitSrc7.indexOf('mdFileInput') !== -1);
+  check('fitness.html MD 解析器（parseFitMd：## 周X/### 部位/- 动作 详情 + 饮食段落）',
+    fitSrc7.indexOf('parseFitMd') !== -1 && fitSrc7.indexOf('matchFocus') !== -1);
+  check('storage.js fitImport 批量导入 API',
+    /fitImport:\s*function/.test(storageSrc8));
+
+  // 19.9 缓存版本
+  check('sw.js v7 且预缓存 ai.html',
+    /var VERSION = 'v7';/.test(swSrc7) && swSrc7.indexOf("'./ai.html'") !== -1);
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

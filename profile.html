@@ -62,14 +62,104 @@
     .profile-content-slot { position: relative; z-index: 1; }
     #userAvatarBox, #userAvatarBox img { transition: opacity .35s ease, transform .35s ease; }
     #userAvatarBox { display: inline-block; }
-    .profile-foot {
-      margin-top: 11px; padding-top: 9px;
-      border-top: 1px solid rgba(255,255,255,0.15);
-      font-size: 12px; opacity: 0.92;
-      display: flex; align-items: center; gap: 6px;
+    .profile-foot span { overflow: hidden; text-overflow: ellipsis; }
+
+    /* v7 个人中心：120px 居中头像 · 数据卡片 · AI 入口（单色调大留白） */
+    .hero-card {
+      background: linear-gradient(140deg, #2563EB, #1D4ED8);
+      color: #fff;
+      border-radius: 24px;
+      padding: 24px 16px 20px;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 12px 28px rgba(37, 99, 235, .24);
+      text-align: center;
+    }
+    .hero-avatar-wrap {
+      position: relative;
+      display: inline-block;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      text-decoration: none;
+    }
+    .hero-avatar-wrap::before {
+      content: '';
+      position: absolute; inset: -4px;
+      border-radius: 50%;
+      border: 2.5px solid rgba(255, 255, 255, .55);
+    }
+    #userAvatarBox { display: block; width: 120px; height: 120px; }
+    #userAvatarBox img, #userAvatarBox > div { width: 120px !important; height: 120px !important; }
+    .hero-avatar-chevron {
+      position: absolute; right: 2px; bottom: 2px;
+      width: 26px; height: 26px; border-radius: 50%;
+      background: #fff; color: #2563EB;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, .2);
+    }
+    .hero-name { font-size: 20px; font-weight: 800; margin-top: 14px; }
+    .hero-id { font-size: 11.5px; opacity: .85; margin-top: 4px; font-family: var(--font-mono); }
+    .hero-foot {
+      margin-top: 10px;
+      font-size: 12.5px; opacity: .92;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
       white-space: nowrap; overflow: hidden;
     }
-    .profile-foot span { overflow: hidden; text-overflow: ellipsis; }
+    .hero-foot span { overflow: hidden; text-overflow: ellipsis; }
+
+    /* 数据统计卡片 */
+    .stat-card {
+      display: flex;
+      background: var(--color-surface);
+      border-radius: 18px;
+      box-shadow: var(--shadow-sm);
+      padding: 16px 4px;
+      margin-bottom: 12px;
+    }
+    .stat-link {
+      flex: 1; text-align: center; text-decoration: none;
+      color: var(--color-text);
+      transition: transform 0.15s;
+    }
+    .stat-link + .stat-link { border-left: 1px solid var(--color-border-light); }
+    .stat-link:active { transform: scale(0.94); }
+    .stat-num { font-size: 22px; font-weight: 800; color: var(--color-primary); line-height: 1.2; }
+    .stat-num .stat-unit { font-size: 12px; font-weight: 600; color: var(--color-text-sub); margin-left: 1px; }
+    .stat-label { font-size: 12px; color: var(--color-text-sub); margin-top: 3px; }
+    .stat-badge {
+      display: none;
+      position: absolute; top: -4px; right: calc(50% - 34px);
+      min-width: 17px; height: 17px; padding: 0 5px;
+      border-radius: 999px; background: var(--color-danger); color: #fff;
+      font-size: 10.5px; font-weight: 700; line-height: 17px;
+    }
+    .stat-link { position: relative; }
+    .stat-badge.show { display: inline-block; }
+
+    /* AI 助手入口 */
+    .ai-entry {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--color-primary-lighter, #EFF6FF);
+      border: 1.5px solid rgba(37, 99, 235, .18);
+      border-radius: 18px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      text-decoration: none;
+      transition: transform .15s;
+    }
+    .ai-entry:active { transform: scale(0.98); }
+    .ai-entry-ic {
+      width: 42px; height: 42px; border-radius: 14px; flex: none;
+      background: linear-gradient(135deg, #2563EB, #60A5FA);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 10px rgba(37, 99, 235, .3);
+    }
+    .ai-entry-ic svg { width: 21px; height: 21px; }
+    .ai-entry-main { flex: 1; min-width: 0; }
+    .ai-entry-title { font-size: 15px; font-weight: 700; color: var(--color-primary); }
+    .ai-entry-sub { font-size: 12px; color: #3B6FC4; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ai-entry-arrow { color: var(--color-primary); flex: none; }
   </style>
 </head>
 <body data-page="profile">
@@ -81,29 +171,25 @@
     </header>
     <main class="app-content" id="mainContent">
       <div style="padding: 16px;">
-        <!-- 用户信息卡片：小头像 + 数字ID（每个用户数据ID唯一，用于甄别数据） -->
-        <div class="card anim-fade-in-up" id="profileCard" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color:#fff; margin-bottom:12px; padding:16px 14px; position:relative; overflow:hidden;">
+        <!-- 用户信息卡片：120px 头像居中（每个用户数据ID唯一，用于甄别数据） -->
+        <div class="hero-card anim-fade-in-up" id="profileCard">
           <!-- 背景图层：切换相册背景时与默认渐变交叉淡入 -->
           <div class="profile-bg-layer" id="profileBgLayer"></div>
-          <svg style="position:absolute; right:-16px; top:-16px; width:90px; height:90px; opacity:0.1; z-index:0;" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+          <svg style="position:absolute; right:-20px; top:-20px; width:110px; height:110px; opacity:0.09; z-index:0;" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
           <!-- DIY 背景入口：从相册选图自定义卡片背景 -->
-          <button id="bgEditBtn" style="position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; border:none; z-index:2;" title="自定义卡片背景">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          <button id="bgEditBtn" style="position:absolute; top:12px; right:12px; width:32px; height:32px; border-radius:50%; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; border:none; z-index:2;" title="自定义卡片背景">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </button>
           <div class="profile-content-slot">
-            <div style="display:flex; align-items:center; gap:12px;">
-              <a href="myhome.html" style="flex-shrink:0; border-radius:50%; display:block; position:relative;" title="进入个人主页">
-                <div id="userAvatarBox"></div>
-                <span style="position:absolute; right:-2px; bottom:-2px; width:16px; height:16px; border-radius:50%; background:#fff; color:#2563EB; display:flex; align-items:center; justify-content:center;">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </span>
-              </a>
-              <div style="flex:1; min-width:0;">
-                <div style="font-size:16px; font-weight:700; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="userName">校园用户</div>
-                <div style="font-size:11.5px; opacity:0.85; margin-top:3px; font-family:var(--font-mono);" id="userIdRow">ID：--</div>
-              </div>
-            </div>
-            <div class="profile-foot">
+            <a href="myhome.html" class="hero-avatar-wrap" title="进入个人主页">
+              <div id="userAvatarBox"></div>
+              <span class="hero-avatar-chevron">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </span>
+            </a>
+            <div class="hero-name" id="userName">校园用户</div>
+            <div class="hero-id" id="userIdRow">ID：--</div>
+            <div class="hero-foot">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
               <span id="userFoot">校区 / 宿舍未设置</span>
             </div>
@@ -113,45 +199,37 @@
         <!-- DIY 背景相册选择（隐藏 input） -->
         <input type="file" id="cardBgInput" accept="image/*" style="display:none;">
 
-        <!-- 功能菜单列表 -->
-        <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
-          <div class="list-item anim-fade-in-up stagger-1" onclick="location.href='packages.html'">
-            <div class="list-item-icon" style="background:var(--color-primary-light);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-            </div>
-            <div class="list-item-body">
-              <div class="list-item-title">我的快递</div>
-            </div>
-            <span class="text-sub text-sm" id="menuPending">0件待取</span>
-            <div class="list-item-arrow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-          <div class="list-item anim-fade-in-up stagger-2" onclick="location.href='records.html'">
-            <div class="list-item-icon" style="background:var(--color-accent-light);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div class="list-item-body">
-              <div class="list-item-title">取件记录</div>
-            </div>
-            <span class="text-sub text-sm" id="menuPicked">0件</span>
-            <div class="list-item-arrow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-          <div class="list-item anim-fade-in-up stagger-3" onclick="location.href='messages.html'">
-            <div class="list-item-icon" style="background:var(--color-warning-light);">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </div>
-            <div class="list-item-body">
-              <div class="list-item-title">消息通知</div>
-            </div>
-            <span class="badge badge-danger" id="menuUnread">0</span>
-            <div class="list-item-arrow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
+        <!-- 数据统计卡片：待取 / 已取 / 未读 -->
+        <div class="stat-card anim-fade-in-up stagger-1">
+          <a href="packages.html" class="stat-link">
+            <span class="stat-badge" id="statPendingBadge"></span>
+            <div class="stat-num"><span id="statPending">0</span><span class="stat-unit">件</span></div>
+            <div class="stat-label">待取快递</div>
+          </a>
+          <a href="records.html" class="stat-link">
+            <div class="stat-num"><span id="statPicked">0</span><span class="stat-unit">件</span></div>
+            <div class="stat-label">累计已取</div>
+          </a>
+          <a href="messages.html" class="stat-link">
+            <span class="stat-badge" id="statUnreadBadge"></span>
+            <div class="stat-num"><span id="statUnread">0</span><span class="stat-unit">条</span></div>
+            <div class="stat-label">未读消息</div>
+          </a>
         </div>
+
+        <!-- AI 校园助手入口 -->
+        <a href="ai.html" class="ai-entry anim-fade-in-up stagger-2">
+          <span class="ai-entry-ic">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5.1L19 10l-5.3 1.9L12 17l-1.7-5.1L5 10l5.3-1.9z"/><path d="M19 15l.7 2.1L22 18l-2.3.9L19 21l-.7-2.1L16 18l2.3-.9z"/></svg>
+          </span>
+          <span class="ai-entry-main">
+            <span class="ai-entry-title" style="display:block;">AI 校园助手</span>
+            <span class="ai-entry-sub" style="display:block;">查快递 · 问路线 · 课程提醒，一问便知</span>
+          </span>
+          <span class="ai-entry-arrow">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+          </span>
+        </a>
 
         <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
           <div class="list-item anim-fade-in-up stagger-1" onclick="toggleFavoritePoints()">
@@ -204,18 +282,7 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </div>
           </div>
-          <div class="list-item anim-fade-in-up stagger-2" onclick="location.href='website.html'">
-            <div class="list-item-icon" style="background:#DCFCE7;">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-            </div>
-            <div class="list-item-body">
-              <div class="list-item-title">应用官网</div>
-            </div>
-            <div class="list-item-arrow">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-            </div>
-          </div>
-          <div class="list-item anim-fade-in-up stagger-3" onclick="location.href='feedback.html'">
+          <div class="list-item anim-fade-in-up stagger-2" onclick="location.href='feedback.html'">
             <div class="list-item-icon" style="background:#FEF3C7;">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
@@ -335,11 +402,11 @@
     // 用户信息与统计全部来自 localStorage（Storage 数据层）
     function renderUserInfo() {
       var user = Storage.getUser();
-      // 小头像（52px，点击进入个人主页），替换时淡出淡入平滑过渡
+      // 120px 居中大头像（点击进入个人主页），替换时淡出淡入平滑过渡
       var box = document.getElementById('userAvatarBox');
       box.style.opacity = '0';
       setTimeout(function () {
-        box.innerHTML = App.avatarHtml(user, 52, 'rgba(255,255,255,0.25)', '#fff');
+        box.innerHTML = App.avatarHtml(user, 120, 'rgba(255,255,255,0.35)', '#fff');
         box.style.opacity = '1';
       }, 140);
       document.getElementById('userName').textContent = user.name;
@@ -358,11 +425,13 @@
       var pending = Storage.getPackages().filter(function (p) { return p.status === 'pending'; }).length;
       var user = Storage.getUser();
       var unread = Storage.getUnreadCount();
-      document.getElementById('menuPending').textContent = pending + '件待取';
-      document.getElementById('menuPicked').textContent = (user.pickedCount || 0) + '件';
-      var menuUnread = document.getElementById('menuUnread');
-      menuUnread.textContent = unread;
-      menuUnread.style.display = unread > 0 ? '' : 'none';
+      document.getElementById('statPending').textContent = pending;
+      document.getElementById('statPicked').textContent = user.pickedCount || 0;
+      document.getElementById('statUnread').textContent = unread;
+      var pBadge = document.getElementById('statPendingBadge');
+      var uBadge = document.getElementById('statUnreadBadge');
+      if (pending > 0) { pBadge.textContent = pending; pBadge.classList.add('show'); }
+      if (unread > 0) { uBadge.textContent = unread; uBadge.classList.add('show'); }
     }
 
     function renderFavoritePoints() {
