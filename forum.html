@@ -1,1 +1,291 @@
-REPLACE_FORUM
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>校园论坛 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .board-chips { display:flex; gap:8px; overflow-x:auto; padding:12px 16px 4px; scrollbar-width:none; }
+    .post-card { padding:14px 16px; display:block; }
+    .post-top { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .post-avatar { width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg,#7C3AED,#A78BFA); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; flex-shrink:0; }
+    .post-author { font-size:13px; font-weight:600; color:var(--color-text); }
+    .post-time { font-size:11px; color:var(--color-text-hint); }
+    .post-tag { margin-left:auto; font-size:11px; padding:3px 9px; border-radius:99px; flex-shrink:0; }
+    .post-title { font-size:16px; font-weight:700; color:var(--color-text); line-height:1.45; }
+    .post-content { font-size:13px; color:var(--color-text-sub); line-height:1.6; margin-top:6px; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .post-foot { display:flex; gap:18px; margin-top:11px; font-size:12px; color:var(--color-text-hint); }
+    .post-foot span { display:inline-flex; align-items:center; gap:4px; }
+    .post-foot .liked { color:var(--color-danger); }
+
+    .fab { position:fixed; right:18px; bottom:calc(104px + env(safe-area-inset-bottom)); width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#7C3AED,#6D28D9); color:#fff; border:none; box-shadow:0 8px 20px rgba(124,58,237,.4); z-index:20; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+    .fab:active { transform:scale(.9); }
+
+    .sheet-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .sheet-mask.show { opacity:1; pointer-events:auto; }
+    .sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:88vh; overflow-y:auto; }
+    .sheet.show { transform:translateY(0); }
+    .sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:16px; }
+    .field { margin-bottom:12px; }
+    .field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
+    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:#7C3AED; }
+    .field textarea { resize:vertical; min-height:110px; }
+
+    .detail-head { display:flex; align-items:center; gap:9px; margin-bottom:12px; }
+    .detail-title { font-size:19px; font-weight:800; color:var(--color-text); line-height:1.45; }
+    .detail-content { font-size:14px; color:var(--color-text); line-height:1.75; margin-top:10px; white-space:pre-wrap; }
+    .detail-actions { display:flex; gap:10px; margin:16px 0 6px; }
+    .detail-actions .btn { flex:1; }
+    .cmt { padding:11px 0; border-top:1px solid var(--color-border-light); }
+    .cmt-top { font-size:13px; font-weight:600; color:var(--color-text); }
+    .cmt-top time { font-weight:400; color:var(--color-text-hint); font-size:11px; margin-left:8px; }
+    .cmt-text { font-size:13px; color:var(--color-text-sub); margin-top:4px; line-height:1.55; }
+    .cmt-input-row { display:flex; gap:8px; margin-top:14px; }
+    .cmt-input-row input { flex:1; border:1.5px solid var(--color-border); border-radius:99px; padding:10px 15px; font-size:13px; background:var(--color-surface); color:var(--color-text); outline:none; }
+    .cmt-input-row input:focus { border-color:#7C3AED; }
+  </style>
+</head>
+<body data-page="forum">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">校园论坛</div>
+      <div class="header-spacer"></div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+      <div class="board-chips" id="boardChips"></div>
+      <div style="padding:12px 16px 0;display:flex;flex-direction:column;gap:10px;" id="postList"></div>
+    </main>
+
+    <button class="fab" id="btnNewPost" title="发帖">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+    </button>
+
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="sheet-mask" id="sheetMask"></div>
+
+  <!-- 发帖 -->
+  <div class="sheet" id="postSheet">
+    <div class="sheet-title">发布新帖</div>
+    <div class="field">
+      <label>板块</label>
+      <select id="postBoard"></select>
+    </div>
+    <div class="field">
+      <label>标题</label>
+      <input type="text" id="postTitle" placeholder="一句话说清你要发什么" maxlength="30">
+    </div>
+    <div class="field">
+      <label>内容</label>
+      <textarea id="postContent" placeholder="详细描述一下吧……" maxlength="500"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="postSubmit" style="background:#7C3AED;">发布</button>
+  </div>
+
+  <!-- 帖子详情 -->
+  <div class="sheet" id="detailSheet">
+    <div id="detailBody"></div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var BOARDS = [
+        { key: 'all', label: '全部' },
+        { key: 'study', label: '学习交流', color: '#0A6EFF', bg: '#DBEAFE' },
+        { key: 'market', label: '二手交易', color: '#16A34A', bg: '#DCFCE7' },
+        { key: 'lost', label: '失物招领', color: '#F59E0B', bg: '#FEF3C7' },
+        { key: 'jobs', label: '兼职实习', color: '#C2410C', bg: '#FFEDD5' },
+        { key: 'talk', label: '校园吐槽', color: '#7C3AED', bg: '#EDE9FE' },
+      ];
+      var boardMap = {};
+      BOARDS.forEach(function (b) { boardMap[b.key] = b; });
+      var currentBoard = 'all';
+      var detailId = null;
+
+      var mask = document.getElementById('sheetMask');
+      var postSheet = document.getElementById('postSheet');
+      var detailSheet = document.getElementById('detailSheet');
+      function openSheet(s) { mask.classList.add('show'); s.classList.add('show'); }
+      function closeAll() { mask.classList.remove('show'); postSheet.classList.remove('show'); detailSheet.classList.remove('show'); }
+      mask.addEventListener('click', closeAll);
+
+      function timeAgo(ts) {
+        var diff = Date.now() - ts;
+        if (diff < 0) diff = 0;
+        var m = Math.floor(diff / 60000);
+        if (m < 1) return '刚刚';
+        if (m < 60) return m + ' 分钟前';
+        var h = Math.floor(m / 60);
+        if (h < 24) return h + ' 小时前';
+        return Math.floor(h / 24) + ' 天前';
+      }
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function renderBoards() {
+        document.getElementById('boardChips').innerHTML = BOARDS.map(function (b) {
+          return '<button class="chip' + (b.key === currentBoard ? ' active' : '') + '" data-board="' + b.key + '"' +
+            (b.key !== 'all' && b.key !== currentBoard ? ' style="color:' + b.color + ';border-color:' + b.bg + ';background:' + b.bg + ';"' : '') +
+            (b.key === currentBoard && b.key !== 'all' ? ' style="background:' + b.color + ';border-color:' + b.color + ';"' : '') +
+            '>' + b.label + '</button>';
+        }).join('');
+        document.querySelectorAll('[data-board]').forEach(function (el) {
+          el.addEventListener('click', function () { currentBoard = this.dataset.board; render(); });
+        });
+      }
+
+      function renderPosts() {
+        var posts = Storage.lifeGetPosts().filter(function (p) {
+          return currentBoard === 'all' || p.board === currentBoard;
+        });
+        var html = '';
+        if (!posts.length) {
+          html = App.emptyState('这个板块还没有帖子', '来抢沙发，发第一帖吧');
+        }
+        posts.forEach(function (p, i) {
+          var b = boardMap[p.board] || boardMap.talk;
+          html += '<a href="javascript:void(0)" class="card card--clickable post-card anim-fade-in-up stagger-' + Math.min(i + 1, 5) + '" data-post="' + p.id + '">' +
+            '<div class="post-top"><div class="post-avatar">' + esc(p.author.charAt(0)) + '</div>' +
+            '<div><div class="post-author">' + esc(p.author) + (p.mine ? '（我）' : '') + '</div>' +
+            '<div class="post-time">' + timeAgo(p.createdAt) + '</div></div>' +
+            '<span class="post-tag" style="color:' + b.color + ';background:' + b.bg + ';">' + b.label + '</span></div>' +
+            '<div class="post-title">' + esc(p.title) + '</div>' +
+            '<div class="post-content">' + esc(p.content) + '</div>' +
+            '<div class="post-foot">' +
+            '<span class="' + (p.liked ? 'liked' : '') + '">❤ ' + p.likes + '</span>' +
+            '<span>💬 ' + p.comments.length + '</span></div></a>';
+        });
+        document.getElementById('postList').innerHTML = html;
+        document.querySelectorAll('[data-post]').forEach(function (el) {
+          el.addEventListener('click', function () { openDetail(this.dataset.post); });
+        });
+      }
+
+      function render() { renderBoards(); renderPosts(); }
+
+      // 发帖
+      document.getElementById('postBoard').innerHTML =
+        BOARDS.filter(function (b) { return b.key !== 'all'; })
+          .map(function (b) { return '<option value="' + b.key + '">' + b.label + '</option>'; }).join('');
+      document.getElementById('btnNewPost').addEventListener('click', function () {
+        document.getElementById('postTitle').value = '';
+        document.getElementById('postContent').value = '';
+        openSheet(postSheet);
+      });
+      document.getElementById('postSubmit').addEventListener('click', function () {
+        var res = Storage.lifeAddPost({
+          board: document.getElementById('postBoard').value,
+          title: document.getElementById('postTitle').value.trim(),
+          content: document.getElementById('postContent').value.trim(),
+        });
+        if (res.success) {
+          closeAll();
+          currentBoard = 'all';
+          App.toastSuccess('发布成功');
+          render();
+        } else App.toast(res.message || '发布失败');
+      });
+
+      // 详情
+      function openDetail(id) {
+        detailId = id;
+        renderDetail();
+        openSheet(detailSheet);
+      }
+      function renderDetail() {
+        var p = Storage.lifeGetPosts().find(function (x) { return x.id === detailId; });
+        if (!p) { closeAll(); return; }
+        var b = boardMap[p.board] || boardMap.talk;
+        var cmtHtml = p.comments.map(function (c) {
+          return '<div class="cmt"><div class="cmt-top">' + esc(c.author) + (c.time ? '<time>' + esc(c.time) + '</time>' : '') + '</div>' +
+            '<div class="cmt-text">' + esc(c.text) + '</div></div>';
+        }).join('');
+        document.getElementById('detailBody').innerHTML =
+          '<div class="detail-head"><div class="post-avatar">' + esc(p.author.charAt(0)) + '</div>' +
+          '<div><div class="post-author">' + esc(p.author) + (p.mine ? '（我）' : '') + '</div>' +
+          '<div class="post-time">' + timeAgo(p.createdAt) + ' · <span style="color:' + b.color + ';">' + b.label + '</span></div></div></div>' +
+          '<div class="detail-title">' + esc(p.title) + '</div>' +
+          '<div class="detail-content">' + esc(p.content) + '</div>' +
+          '<div class="detail-actions">' +
+            '<button class="btn btn-outline btn-sm" id="detailLike">' + (p.liked ? '❤ 已赞 ' : '♡ 点赞 ') + p.likes + '</button>' +
+            '<button class="btn btn-outline btn-sm" id="detailCmtCount">💬 ' + p.comments.length + ' 条回复</button>' +
+          '</div>' +
+          (cmtHtml || '<div style="padding:16px 0;text-align:center;font-size:13px;color:var(--color-text-hint);">还没有回复，来抢沙发</div>') +
+          '<div class="cmt-input-row"><input type="text" id="cmtInput" placeholder="写下你的回复……" maxlength="100">' +
+          '<button class="btn btn-primary btn-sm" id="cmtSubmit" style="background:#7C3AED;">发送</button></div>';
+
+        document.getElementById('detailLike').addEventListener('click', function () {
+          Storage.lifeLikePost(detailId);
+          renderPosts();
+          renderDetail();
+        });
+        function sendCmt() {
+          var input = document.getElementById('cmtInput');
+          var text = input.value.trim();
+          if (!text) { App.toast('回复内容不能为空'); return; }
+          var res = Storage.lifeAddComment(detailId, text);
+          if (res.success) { renderPosts(); renderDetail(); App.toastSuccess('回复成功'); }
+        }
+        document.getElementById('cmtSubmit').addEventListener('click', sendCmt);
+        document.getElementById('cmtInput').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') sendCmt();
+        });
+      }
+
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        render(); App.toastSuccess('已刷新'); return Promise.resolve();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
