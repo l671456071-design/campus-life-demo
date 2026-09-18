@@ -1,1 +1,396 @@
-REPLACE_SCHEDULE
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>课程表 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .day-chips { display:flex; gap:8px; overflow-x:auto; padding:12px 16px; scrollbar-width:none; }
+    .day-chip { flex-shrink:0; width:42px; padding:8px 0; border-radius:14px; text-align:center; border:1.5px solid var(--color-border-light); background:var(--color-surface); color:var(--color-text-sub); font-size:13px; cursor:pointer; transition:all .2s; }
+    .day-chip .d { font-size:11px; }
+    .day-chip .n { display:block; font-size:15px; font-weight:700; margin-top:2px; }
+    .day-chip.on { background:var(--color-primary); border-color:var(--color-primary); color:#fff; }
+    .day-chip.today:not(.on) { border-color:var(--color-primary); color:var(--color-primary); }
+    .day-chip:active { transform:scale(.94); }
+
+    .lesson-card { position:relative; display:flex; gap:12px; background:var(--color-surface); border-radius:16px; padding:13px 14px 13px 16px; box-shadow:var(--shadow-sm); overflow:hidden; }
+    .lesson-strip { position:absolute; left:0; top:0; bottom:0; width:5px; }
+    .lesson-time { flex-shrink:0; width:54px; text-align:center; }
+    .lesson-no { font-size:15px; font-weight:800; color:var(--color-text); }
+    .lesson-clock { font-size:11px; color:var(--color-text-hint); margin-top:3px; line-height:1.4; }
+    .lesson-body { flex:1; min-width:0; }
+    .lesson-name { font-size:15px; font-weight:700; color:var(--color-text); }
+    .lesson-meta { font-size:12px; color:var(--color-text-sub); margin-top:5px; display:flex; flex-direction:column; gap:3px; }
+
+    .sheet-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .sheet-mask.show { opacity:1; pointer-events:auto; }
+    .sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:88vh; overflow-y:auto; }
+    .sheet.show { transform:translateY(0); }
+    .sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:6px; }
+    .sheet-sub { font-size:12px; color:var(--color-text-hint); text-align:center; margin-bottom:16px; line-height:1.6; }
+    .field { margin-bottom:12px; }
+    .field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
+    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:var(--color-primary); }
+    .field textarea { resize:vertical; min-height:96px; font-family:var(--font-mono); font-size:12px; }
+    .field-row { display:flex; gap:10px; }
+    .field-row .field { flex:1; }
+    .import-preview { font-size:12px; color:var(--color-primary); background:var(--color-primary-lighter); border-radius:10px; padding:9px 12px; margin-bottom:12px; display:none; }
+  </style>
+</head>
+<body data-page="schedule">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">课程表</div>
+      <div class="header-spacer"></div>
+      <div class="header-right">
+        <button class="header-back-btn" id="btnImport" title="导入贝蒂课程表" style="border:none;background:none;cursor:pointer;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
+        <button class="header-back-btn" id="btnAdd" title="手动加课" style="border:none;background:none;cursor:pointer;font-size:22px;font-weight:300;line-height:1;padding:0 2px;">＋</button>
+      </div>
+    </header>
+
+    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+      <div class="day-chips" id="dayChips"></div>
+      <div style="padding:4px 16px;">
+        <div class="section-header">
+          <span class="section-title" id="dayTitle">今日课程</span>
+          <span class="section-link" id="courseCount"></span>
+        </div>
+        <div id="lessonList" style="display:flex;flex-direction:column;gap:10px;"></div>
+      </div>
+    </main>
+
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- 导入贝蒂课程表抽屉 -->
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet" id="importSheet">
+    <div class="sheet-title">导入贝蒂课程表</div>
+    <div class="sheet-sub">支持贝蒂课程表 / 超级课程表等导出的 JSON 文件，也可以直接粘贴 JSON 文本。导入将覆盖当前课表。</div>
+    <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
+    <button class="btn btn-outline btn-block" id="btnPickFile" style="margin-bottom:12px;">选择 JSON 文件</button>
+    <div class="field">
+      <label>或粘贴课表 JSON</label>
+      <textarea id="importText" placeholder='[{"courseName":"高等数学","weekday":1,"start":1,"end":2,"room":"文201","teacher":"王老师"}]'></textarea>
+    </div>
+    <div class="import-preview" id="importPreview"></div>
+    <button class="btn btn-primary btn-block btn-lg" id="importSubmit">开始导入</button>
+  </div>
+
+  <!-- 手动加课抽屉 -->
+  <div class="sheet" id="addSheet">
+    <div class="sheet-title">手动添加课程</div>
+    <div class="field">
+      <label>课程名称</label>
+      <input type="text" id="addName" placeholder="例如：高等数学" maxlength="20">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>星期</label>
+        <select id="addWeekday">
+          <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+          <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>周次</label>
+        <input type="text" id="addWeeks" placeholder="1-16周" value="1-16周">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>开始节次</label>
+        <select id="addStart"></select>
+      </div>
+      <div class="field">
+        <label>结束节次</label>
+        <select id="addEnd"></select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>教室</label>
+        <input type="text" id="addRoom" placeholder="文201" maxlength="20">
+      </div>
+      <div class="field">
+        <label>教师</label>
+        <input type="text" id="addTeacher" placeholder="王老师" maxlength="10">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="addSubmit">保存课程</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var DAYS = ['一', '二', '三', '四', '五', '六', '日'];
+      var COLORS = ['#0A6EFF', '#16A34A', '#F59E0B', '#7C3AED', '#EF4444', '#0891B2', '#DB2777', '#65A30D'];
+      // 节次时间（常见作息，可按学校调整）
+      var LESSON_TIMES = ['08:00', '08:55', '10:00', '10:55', '14:00', '14:55', '16:00', '16:55', '19:00', '19:55'];
+      var today = (new Date().getDay() + 6) % 7 + 1; // 周一=1
+      var selectedDay = today;
+      var pendingImport = null;
+
+      var mask = document.getElementById('sheetMask');
+      var importSheet = document.getElementById('importSheet');
+      var addSheet = document.getElementById('addSheet');
+      function openSheet(s) { mask.classList.add('show'); s.classList.add('show'); }
+      function closeAll() { mask.classList.remove('show'); importSheet.classList.remove('show'); addSheet.classList.remove('show'); }
+      mask.addEventListener('click', closeAll);
+
+      // ---- 贝蒂/常见课表 JSON 容错解析 ----
+      function pick(obj, keys) {
+        for (var i = 0; i < keys.length; i++) {
+          if (obj[keys[i]] !== undefined && obj[keys[i]] !== null && obj[keys[i]] !== '') return obj[keys[i]];
+        }
+        return '';
+      }
+      function parseDay(v) {
+        if (typeof v === 'number') return v >= 1 && v <= 7 ? v : (v === 0 ? 7 : 1);
+        var s = String(v);
+        var m = s.match(/[一二三四五六日天1-7]/);
+        if (!m) return 1;
+        var map = { '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '日': 7, '天': 7 };
+        if (map[m[0]]) return map[m[0]];
+        var n = parseInt(m[0], 10);
+        return n === 0 ? 7 : n;
+      }
+      function parseSections(item) {
+        var start = pick(item, ['start', 'startSection', 'startNode', 'beginSection', 'ksjc', 'section', 'sections']);
+        var end = pick(item, ['end', 'endSection', 'endNode', 'jsjc']);
+        // "1-2节" / "第1,2节"
+        var range = String(start).match(/(\d+)\s*[-~至,，]\s*(\d+)/);
+        if (range) { start = parseInt(range[1], 10); end = parseInt(range[2], 10); }
+        start = parseInt(start, 10);
+        end = parseInt(end, 10);
+        if (!(start >= 1)) start = 1;
+        if (!(end >= start)) end = start;
+        return { start: Math.min(start, 10), end: Math.min(end, 10) };
+      }
+
+      function parseSchedule(jsonText) {
+        var raw;
+        try { raw = JSON.parse(jsonText); } catch (e) { return { error: 'JSON 格式不正确，无法解析' }; }
+        // 找到课程数组
+        var arr = null;
+        if (Array.isArray(raw)) arr = raw;
+        else if (raw && typeof raw === 'object') {
+          ['courses', 'courseList', 'kebiao', 'kbList', 'list', 'data', 'rows'].forEach(function (k) {
+            if (arr === null && Array.isArray(raw[k])) arr = raw[k];
+          });
+          // 贝蒂部分导出为 {week1:[...],week2:[...]} 或 {"1":[...]}
+          if (arr === null) {
+            arr = [];
+            Object.keys(raw).forEach(function (k) {
+              if (Array.isArray(raw[k])) arr = arr.concat(raw[k]);
+            });
+          }
+        }
+        if (!arr || !arr.length) return { error: '没有在文件里找到课程数据' };
+
+        var courses = [];
+        arr.forEach(function (c) {
+          if (!c || typeof c !== 'object') return;
+          var name = pick(c, ['courseName', 'name', 'course', 'kcmc', 'title', 'course_name']);
+          if (!name) return;
+          var sec = parseSections(c);
+          courses.push({
+            name: String(name).slice(0, 20),
+            teacher: String(pick(c, ['teacher', 'teacherName', 'jsxm', 'teacher_name'])).slice(0, 10),
+            position: String(pick(c, ['room', 'position', 'classroom', 'jasm', 'jddm', 'location', 'address'])).slice(0, 20),
+            weekday: parseDay(pick(c, ['weekday', 'day', 'week', 'xqj', 'dayOfWeek']) || 1),
+            start: sec.start,
+            end: sec.end,
+            weeks: String(pick(c, ['weeks', 'weekDesc', 'weekText', 'zcd', 'weekRange']) || '1-16周').slice(0, 14) || '1-16周',
+            color: COLORS[courses.length % COLORS.length],
+          });
+        });
+        if (!courses.length) return { error: '课程字段无法识别，请检查文件内容' };
+        return { courses: courses };
+      }
+
+      function renderDayChips() {
+        var d = new Date();
+        var html = '';
+        DAYS.forEach(function (label, i) {
+          var day = i + 1;
+          var cls = 'day-chip' + (day === selectedDay ? ' on' : '') + (day === today ? ' today' : '');
+          var date = new Date(d);
+          date.setDate(d.getDate() + (day - today));
+          html += '<button class="' + cls + '" data-day="' + day + '"><span class="d">周' + label + '</span><span class="n">' + date.getDate() + '</span></button>';
+        });
+        document.getElementById('dayChips').innerHTML = html;
+        document.querySelectorAll('.day-chip').forEach(function (el) {
+          el.addEventListener('click', function () { selectedDay = parseInt(this.dataset.day, 10); render(); });
+        });
+      }
+
+      function renderLessons() {
+        var courses = Storage.lifeGetCourses()
+          .filter(function (c) { return c.weekday === selectedDay; })
+          .sort(function (a, b) { return a.start - b.start; });
+        document.getElementById('dayTitle').textContent = selectedDay === today ? '今日课程' : '周' + DAYS[selectedDay - 1] + '课程';
+        document.getElementById('courseCount').textContent = courses.length ? courses.length + ' 门课' : '';
+
+        var html = '';
+        if (!courses.length) {
+          html = App.emptyState('这天没有课', '享受空闲时光，或点右上角＋加课');
+        }
+        courses.forEach(function (c, i) {
+          html += '<div class="lesson-card anim-fade-in-up stagger-' + Math.min(i + 1, 5) + '">' +
+            '<div class="lesson-strip" style="background:' + (c.color || '#0A6EFF') + ';"></div>' +
+            '<div class="lesson-time"><div class="lesson-no">' + c.start + (c.end > c.start ? '-' + c.end : '') + '节</div>' +
+            '<div class="lesson-clock">' + (LESSON_TIMES[c.start - 1] || '') + '</div></div>' +
+            '<div class="lesson-body"><div class="lesson-name">' + c.name + '</div>' +
+            '<div class="lesson-meta">' +
+              (c.position ? '<span>📍 ' + c.position + '</span>' : '') +
+              (c.teacher ? '<span>👨‍🏫 ' + c.teacher + '</span>' : '') +
+              '<span>🗓 ' + (c.weeks || '1-16周') + '</span>' +
+            '</div></div></div>';
+        });
+        document.getElementById('lessonList').innerHTML = html;
+      }
+
+      function render() { renderDayChips(); renderLessons(); }
+
+      // 导入
+      document.getElementById('btnImport').addEventListener('click', function () {
+        document.getElementById('importText').value = '';
+        document.getElementById('importPreview').style.display = 'none';
+        pendingImport = null;
+        openSheet(importSheet);
+      });
+      document.getElementById('btnPickFile').addEventListener('click', function () {
+        document.getElementById('importFile').click();
+      });
+      document.getElementById('importFile').addEventListener('change', function () {
+        var file = this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          document.getElementById('importText').value = String(reader.result || '').slice(0, 20000);
+          previewImport();
+        };
+        reader.readAsText(file, 'utf-8');
+      });
+      document.getElementById('importText').addEventListener('input', previewImport);
+
+      function previewImport() {
+        var text = document.getElementById('importText').value.trim();
+        var pv = document.getElementById('importPreview');
+        if (!text) { pv.style.display = 'none'; pendingImport = null; return; }
+        var res = parseSchedule(text);
+        if (res.error) {
+          pv.style.display = 'block';
+          pv.style.background = '#FEE2E2';
+          pv.style.color = '#DC2626';
+          pv.textContent = '⚠ ' + res.error;
+          pendingImport = null;
+        } else {
+          pv.style.display = 'block';
+          pv.style.background = 'var(--color-primary-lighter)';
+          pv.style.color = 'var(--color-primary)';
+          pv.textContent = '✓ 识别到 ' + res.courses.length + ' 门课程，点击下方按钮导入';
+          pendingImport = res.courses;
+        }
+      }
+
+      document.getElementById('importSubmit').addEventListener('click', function () {
+        if (!pendingImport) { App.toast('请先选择文件或粘贴 JSON'); return; }
+        Storage.lifeSaveCourses(pendingImport);
+        closeAll();
+        App.toastSuccess('成功导入 ' + pendingImport.length + ' 门课程');
+        selectedDay = today;
+        render();
+      });
+
+      // 手动加课
+      var secOpts = '';
+      for (var i = 1; i <= 10; i++) secOpts += '<option value="' + i + '">第' + i + '节</option>';
+      document.getElementById('addStart').innerHTML = secOpts;
+      document.getElementById('addEnd').innerHTML = secOpts;
+      document.getElementById('addStart').value = '1';
+      document.getElementById('addEnd').value = '2';
+      document.getElementById('addWeekday').value = String(today);
+
+      document.getElementById('btnAdd').addEventListener('click', function () {
+        document.getElementById('addName').value = '';
+        document.getElementById('addRoom').value = '';
+        document.getElementById('addTeacher').value = '';
+        document.getElementById('addWeeks').value = '1-16周';
+        openSheet(addSheet);
+      });
+      document.getElementById('addSubmit').addEventListener('click', function () {
+        var start = parseInt(document.getElementById('addStart').value, 10);
+        var end = parseInt(document.getElementById('addEnd').value, 10);
+        if (end < start) end = start;
+        var existing = Storage.lifeGetCourses().length;
+        var res = Storage.lifeAddCourse({
+          name: document.getElementById('addName').value.trim(),
+          weekday: document.getElementById('addWeekday').value,
+          start: start, end: end,
+          position: document.getElementById('addRoom').value.trim(),
+          teacher: document.getElementById('addTeacher').value.trim(),
+          weeks: document.getElementById('addWeeks').value.trim(),
+          color: COLORS[existing % COLORS.length],
+        });
+        if (res.success) {
+          closeAll();
+          selectedDay = parseInt(document.getElementById('addWeekday').value, 10);
+          App.toastSuccess('课程已添加');
+          render();
+        } else App.toast(res.message || '添加失败');
+      });
+
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        render(); App.toastSuccess('已刷新'); return Promise.resolve();
+      });
+      render();
+    })();
+  </script>
+</body>
+</html>
