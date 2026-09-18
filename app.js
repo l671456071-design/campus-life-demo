@@ -285,6 +285,8 @@ var App = {
       html.setAttribute('data-theme', 'dark');
     } else if (theme === 'light') {
       html.setAttribute('data-theme', 'light');
+    } else if (theme === 'yaolan') {
+      html.setAttribute('data-theme', 'yaolan');
     } else {
       html.removeAttribute('data-theme');
     }
