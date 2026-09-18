@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>浴室详情 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .bath-hero {
+      background: linear-gradient(135deg, #60A5FA, #2563EB);
+      color: #fff;
+      padding: 32px 20px 28px;
+      text-align: center;
+      border-radius: 0 0 20px 20px;
+    }
+    .bath-hero-icon { font-size: 48px; margin-bottom: 8px; }
+    .bath-hero-name { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
+    .bath-hero-floor { font-size: 13px; opacity: 0.85; }
+
+    .bath-info-card { margin: 16px; background: var(--color-surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--color-border-light); }
+    .bath-info-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--color-border-light); gap: 12px; }
+    .bath-info-item:last-child { border-bottom: none; }
+    .bath-info-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--color-surface-alt); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .bath-info-label { font-size: 13px; color: var(--color-text-sub); width: 64px; flex-shrink: 0; }
+    .bath-info-value { font-size: 15px; color: var(--color-text); flex: 1; text-align: right; }
+
+    .bath-status-card { margin: 0 16px 16px; padding: 16px; background: var(--color-surface-alt); border-radius: var(--radius-md); text-align: center; border: 1px dashed var(--color-border-light); }
+    .bath-status-title { font-size: 14px; color: var(--color-text-sub); margin-bottom: 6px; }
+    .bath-status-hint { font-size: 13px; color: var(--color-text-hint); }
+
+    .bath-actions { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .bath-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; }
+    .bath-btn-primary { background: var(--color-primary); color: #fff; }
+    .bath-btn-outline { background: transparent; border: 1.5px solid var(--color-border); color: var(--color-text); }
+    .bath-btn-fav { background: #FEF3C7; color: #92400E; }
+    .bath-btn-fav.active { background: #FDE68A; }
+    .bath-btn svg { width: 18px; height: 18px; }
+  </style>
+</head>
+<body data-page="bathroom">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="javascript:history.back()" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">浴室详情</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <div id="bathContent"></div>
+    </main>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="campus-data.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      App.initTheme();
+      renderBathroom();
+    });
+
+    function renderBathroom() {
+      var params = new URLSearchParams(location.search);
+      var id = params.get('id');
+      var bath = id ? Storage.getBathroomById(id) : Storage.getDefaultBathroom();
+      var container = document.getElementById('bathContent');
+
+      if (!bath) {
+        container.innerHTML =
+          '<div style="padding:60px 20px;text-align:center;color:var(--color-text-sub);">' +
+          '<div style="font-size:40px;margin-bottom:12px;">🛁</div>' +
+          '<p>未找到浴室信息</p>' +
+          '<p style="font-size:13px;margin-top:8px;color:var(--color-text-hint);">请先在个人资料中设置宿舍</p>' +
+          '<a href="profile-edit.html" class="btn btn-outline btn-sm" style="margin-top:16px;">去设置</a></div>';
+        return;
+      }
+
+      var user = Storage.getUser();
+      var favs = user.favoriteBathrooms || [];
+      var isFav = favs.indexOf(bath.id) !== -1;
+      var isDefault = user.defaultBathroomId === bath.id;
+      var dorm = Storage.getUserDorm();
+      var dormText = dorm ? dorm.areaName + ' ' + dorm.building + (dorm.room ? ' ' + dorm.room : '') : '';
+
+      container.innerHTML =
+        '<div class="bath-hero anim-fade-in-up">' +
+          '<div class="bath-hero-icon">🛁</div>' +
+          '<div class="bath-hero-name">' + bath.name + '</div>' +
+          (bath.floor ? '<div class="bath-hero-floor">' + bath.floor + '</div>' : '') +
+        '</div>' +
+
+        '<div class="bath-info-card anim-fade-in-up stagger-1">' +
+          '<div class="bath-info-item">' +
+            '<div class="bath-info-icon">📏</div>' +
+            '<div class="bath-info-label">距离</div>' +
+            '<div class="bath-info-value">约 ' + bath.distance + 'm</div>' +
+          '</div>' +
+          '<div class="bath-info-item">' +
+            '<div class="bath-info-icon">🕐</div>' +
+            '<div class="bath-info-label">开放时间</div>' +
+            '<div class="bath-info-value">' + bath.hours + '</div>' +
+          '</div>' +
+          (dormText ? '<div class="bath-info-item">' +
+            '<div class="bath-info-icon">🏠</div>' +
+            '<div class="bath-info-label">我的宿舍</div>' +
+            '<div class="bath-info-value">' + dormText + '</div>' +
+          '</div>' : '') +
+        '</div>' +
+
+        '<div class="bath-status-card anim-fade-in-up stagger-2">' +
+          '<div class="bath-status-title">当前状态</div>' +
+          '<div class="bath-status-hint">实时状态暂未接入</div>' +
+        '</div>' +
+
+        '<div class="bath-actions anim-fade-in-up stagger-3">' +
+          '<a href="map.html?dest=' + encodeURIComponent(bath.name) + '" class="bath-btn bath-btn-primary">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/></svg>' +
+            '3D地图导航' +
+          '</a>' +
+          '<button class="bath-btn bath-btn-outline" onclick="location.href=\'map.html?dest=' + encodeURIComponent(bath.name) + '\'">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+            '查看位置' +
+          '</button>' +
+          '<button class="bath-btn bath-btn-fav' + (isFav ? ' active' : '') + '" id="favBtn" onclick="toggleFav(\'' + bath.id + '\')">' +
+            '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+            (isFav ? '已收藏' : '收藏') +
+          '</button>' +
+          '<button class="bath-btn bath-btn-outline" id="defaultBtn" onclick="setDefault(\'' + bath.id + '\')"' + (isDefault ? ' style="opacity:0.5;pointer-events:none;"' : '') + '>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+            (isDefault ? '已设为常用' : '设为常用浴室') +
+          '</button>' +
+        '</div>';
+    }
+
+    function toggleFav(id) {
+      var isFav = Storage.toggleFavoriteBathroom(id);
+      var btn = document.getElementById('favBtn');
+      btn.classList.toggle('active', isFav);
+      btn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
+        (isFav ? '已收藏' : '收藏');
+      App.toast(isFav ? '已收藏' : '已取消收藏');
+    }
+
+    function setDefault(id) {
+      Storage.setDefaultBathroom(id);
+      var btn = document.getElementById('defaultBtn');
+      btn.style.opacity = '0.5';
+      btn.style.pointerEvents = 'none';
+      btn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+        '已设为常用';
+      App.toastSuccess('已设为常用浴室');
+    }
+  </script>
+</body>
+</html>
