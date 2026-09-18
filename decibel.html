@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>分贝仪 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    body[data-page="decibel"] .tab-bar { display:none !important; }
+    body[data-page="decibel"] .app-content { padding-bottom:calc(28px + env(safe-area-inset-bottom)) !important; }
+
+    .db-card {
+      margin:16px 16px 0; border-radius:24px; padding:26px 18px 22px;
+      background:var(--color-surface); border:1px solid var(--color-border-light);
+      box-shadow:var(--shadow-sm); text-align:center;
+    }
+    .db-dial { position:relative; width:190px; height:190px; margin:2px auto 0; border-radius:50%;
+      background:conic-gradient(var(--db-c,#16A34A) calc(var(--db-p,0)*1%), var(--color-surface-alt) 0);
+      display:flex; align-items:center; justify-content:center; transition:background .25s;
+    }
+    .db-dial::before { content:''; position:absolute; inset:13px; border-radius:50%; background:var(--color-surface); }
+    .db-dial-inner { position:relative; z-index:1; }
+    .db-num { font-size:52px; font-weight:800; line-height:1; color:var(--db-c,#16A34A); font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; transition:color .25s; }
+    .db-unit { font-size:13px; color:var(--color-text-hint); margin-top:4px; letter-spacing:2px; }
+    .db-level { display:inline-block; margin-top:13px; font-size:14px; font-weight:700; color:#fff;
+      background:var(--db-c,#16A34A); border-radius:99px; padding:5px 16px; transition:background .25s; }
+    .db-desc { margin-top:11px; font-size:12.5px; color:var(--color-text-sub); line-height:1.65; min-height:38px; }
+
+    .db-bar { margin:16px auto 0; max-width:300px; height:10px; border-radius:99px; overflow:hidden;
+      background:linear-gradient(90deg,#22C55E,#84CC16,#EAB308,#F59E0B,#F97316,#EF4444,#B91C1C); opacity:.85; position:relative; }
+    .db-bar i { position:absolute; top:-4px; width:4px; height:18px; border-radius:2px; background:#0F172A; left:0; transition:left .15s; }
+    .db-stats { display:flex; justify-content:center; gap:30px; margin-top:16px; }
+    .db-stat b { display:block; font-size:19px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace; color:var(--color-text); }
+    .db-stat span { font-size:11.5px; color:var(--color-text-hint); }
+
+    .db-controls { display:flex; gap:12px; margin:16px 16px 0; }
+    .db-btn { flex:1; border:none; border-radius:16px; padding:14px 0; font-size:15px; font-weight:700; font-family:inherit; }
+    .db-btn:active { transform:scale(.97); }
+    .db-btn.main { background:linear-gradient(135deg,#DC2626,#EF4444); color:#fff; box-shadow:0 8px 20px rgba(220,38,38,.26); }
+    .db-btn.main.on { background:linear-gradient(135deg,#16A34A,#22C55E); box-shadow:0 8px 20px rgba(22,163,74,.26); }
+    .db-btn.sub { background:var(--color-surface); color:var(--color-text); border:1.5px solid var(--color-border); }
+
+    .db-alert { margin:14px 16px 0; border-radius:16px; padding:13px 15px; display:none;
+      background:#FEF2F2; border:1.5px solid #FECACA; color:#B91C1C; font-size:13px; line-height:1.65; }
+    .db-alert.show { display:block; animation:fadeIn .25s; }
+    .db-alert b { display:block; font-size:14px; margin-bottom:2px; }
+
+    .db-ref { margin:14px 16px 0; background:var(--color-surface); border-radius:18px; border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm); overflow:hidden; }
+    .db-ref-head { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; font-size:14.5px; font-weight:700; color:var(--color-text); }
+    .db-ref-body { padding:0 16px 14px; display:none; }
+    .db-ref.open .db-ref-body { display:block; }
+    .db-zones { display:flex; flex-direction:column; gap:0; }
+    .db-zone { display:flex; gap:11px; padding:9px 0; border-bottom:1px dashed var(--color-border-light); font-size:12.5px; line-height:1.55; }
+    .db-zone:last-child { border-bottom:none; }
+    .db-zone .dot { flex-shrink:0; width:10px; height:10px; border-radius:50%; margin-top:5px; }
+    .db-zone .r { flex-shrink:0; width:58px; font-weight:700; color:var(--color-text); font-family:"SF Mono",ui-monospace,Menlo,monospace; font-size:11.5px; }
+    .db-zone .t { color:var(--color-text-sub); }
+    .db-zone .t b { color:var(--color-text); }
+    .db-note { margin-top:10px; font-size:11px; color:var(--color-text-hint); line-height:1.6; }
+  </style>
+</head>
+<body data-page="decibel">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">分贝仪</div>
+      <div class="header-spacer"></div>
+      <div class="header-right"></div>
+    </header>
+
+    <main class="app-content" id="mainContent">
+      <div class="db-card">
+        <div class="db-dial" id="dbDial">
+          <div class="db-dial-inner">
+            <div class="db-num" id="dbNum">--</div>
+            <div class="db-unit">dB</div>
+          </div>
+        </div>
+        <div><span class="db-level" id="dbLevel">未开始</span></div>
+        <div class="db-desc" id="dbDesc">点下方按钮，允许使用麦克风后开始测量环境音量</div>
+        <div class="db-bar"><i id="dbMarker"></i></div>
+        <div class="db-stats">
+          <div class="db-stat"><b id="dbMax">--</b><span>最大值</span></div>
+          <div class="db-stat"><b id="dbAvg">--</b><span>平均值</span></div>
+        </div>
+      </div>
+
+      <div class="db-alert" id="dbAlert">
+        <b>⚠️ 已超过 85dB 听力损伤警戒线</b>
+        85dB 每天最多连续听 8 小时；到 100dB 只能听 15 分钟。建议立刻远离声源或佩戴耳塞。
+      </div>
+
+      <div class="db-controls">
+        <button class="db-btn main" id="dbToggle">开始测量</button>
+        <button class="db-btn sub" id="dbReset">清零统计</button>
+      </div>
+
+      <div class="db-ref open" id="dbRef">
+        <div class="db-ref-head" id="dbRefHead">
+          <span>音量等级参考</span>
+          <span id="dbRefArrow">收起 ▲</span>
+        </div>
+        <div class="db-ref-body">
+          <div class="db-zones" id="dbZones"></div>
+          <div class="db-note">数值由手机麦克风估算并校准，仅供参考，不能替代专业声级计。长期处于噪音环境请注意护耳。</div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      // 分级（含用户提供的完整护耳数据）
+      var ZONES = [
+        { min: 0, max: 30, color: '#22C55E', name: '很安静', desc: '0dB 是人耳听觉下限；20-30dB 相当于安静卧室、深夜图书馆，几乎听不见杂音。' },
+        { min: 30, max: 40, color: '#4ADE80', name: '推荐睡眠', desc: '轻声耳语约 30dB，这是最适合睡眠的环境音量。' },
+        { min: 40, max: 55, color: '#A3E635', name: '日常舒适', desc: '安静办公室、室内轻声交谈、日常居家环境。' },
+        { min: 55, max: 65, color: '#EAB308', name: '正常说话', desc: '普通室内聊天的音量。超过 55dB，长期在夜间会影响睡眠。' },
+        { min: 65, max: 75, color: '#F97316', name: '偏嘈杂', desc: '马路车流、吸尘器的水平，持续听容易烦躁。' },
+        { min: 75, max: 85, color: '#EA580C', name: '嘈杂', desc: '繁忙街道、餐厅嘈杂人声。85dB 是听力损伤警戒线。' },
+        { min: 85, max: 100, color: '#EF4444', name: '高分贝·危险', desc: '摩托车、吹风机、KTV 音响。85dB 每天 8 小时是安全上限；100dB 只能听 15 分钟。' },
+        { min: 100, max: 110, color: '#DC2626', name: '很高·伤耳', desc: '迪厅、摇滚现场，短时间就会耳鸣。' },
+        { min: 110, max: 120, color: '#991B1B', name: '极高·危险', desc: '电锯、鞭炮，几分钟就可能造成永久听力下降。' },
+        { min: 120, max: 200, color: '#7F1D1D', name: '疼痛阈值', desc: '超过 120dB 属于爆炸声级别，瞬间就可能致聋。' },
+      ];
+
+      document.getElementById('dbZones').innerHTML = ZONES.map(function (z) {
+        return '<div class="db-zone"><span class="dot" style="background:' + z.color + '"></span>' +
+          '<span class="r">' + z.min + (z.max < 200 ? '-' + z.max : '+' ) + 'dB</span>' +
+          '<span class="t"><b>' + z.name + '</b><br>' + z.desc + '</span></div>';
+      }).join('');
+      document.getElementById('dbRefHead').addEventListener('click', function () {
+        var box = document.getElementById('dbRef');
+        var open = box.classList.toggle('open');
+        document.getElementById('dbRefArrow').textContent = open ? '收起 ▲' : '展开 ▼';
+      });
+
+      var CALIB = 94; // dBFS→dB SPL 经验校准偏移（手机麦克风，非专业仪器）
+      var audioCtx = null, analyser = null, stream = null, buf = null, rafId = null;
+      var running = false;
+      var smooth = 0, maxV = 0, sumV = 0, countV = 0;
+      var alertCooldown = 0;
+
+      function zoneOf(db) {
+        for (var i = 0; i < ZONES.length; i++) {
+          if (db >= ZONES[i].min && db < ZONES[i].max) return ZONES[i];
+        }
+        return ZONES[ZONES.length - 1];
+      }
+
+      function paint(db) {
+        var display = Math.round(db);
+        var z = zoneOf(db);
+        var numEl = document.getElementById('dbNum');
+        numEl.textContent = display;
+        document.getElementById('dbLevel').textContent = z.name;
+        document.getElementById('dbDesc').textContent = z.desc;
+        document.body.style.setProperty('--db-c', z.color);
+        document.body.style.setProperty('--db-p', Math.min(100, (db / 120) * 100));
+        document.getElementById('dbMarker').style.left = 'calc(' + Math.min(100, (db / 120) * 100) + '% - 2px)';
+      }
+
+      function frame() {
+        if (!running || !analyser) return;
+        analyser.getFloatTimeDomainData(buf);
+        var sum = 0;
+        for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+        var rms = Math.sqrt(sum / buf.length);
+        var db = rms > 1e-7 ? 20 * Math.log10(rms) + CALIB : 0;
+        db = Math.max(0, Math.min(140, db));
+        // 指数平滑，数字不乱跳
+        smooth = smooth ? smooth * 0.82 + db * 0.18 : db;
+        paint(smooth);
+        if (smooth > maxV) maxV = smooth;
+        sumV += smooth; countV++;
+        document.getElementById('dbMax').textContent = Math.round(maxV);
+        document.getElementById('dbAvg').textContent = Math.round(sumV / countV);
+
+        if (smooth >= 85 && Date.now() > alertCooldown) {
+          document.getElementById('dbAlert').classList.add('show');
+          alertCooldown = Date.now() + 8000;
+          try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) {}
+        }
+        rafId = requestAnimationFrame(frame);
+      }
+
+      async function start() {
+        if (running) return;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
+          });
+        } catch (e) {
+          App.showModal({
+            title: '需要麦克风权限',
+            desc: '请在浏览器弹窗中允许使用麦克风；本地页面（file://）无法调用麦克风，需通过 https 访问。',
+            confirmText: '知道了',
+            onConfirm: function () { App.closeModal(); },
+          });
+          return;
+        }
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) { App.toast('当前浏览器不支持音频分析'); return; }
+        audioCtx = new AC();
+        var srcNode = audioCtx.createMediaStreamSource(stream);
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.3;
+        srcNode.connect(analyser);
+        buf = new Float32Array(analyser.fftSize);
+        running = true;
+        smooth = 0;
+        var btn = document.getElementById('dbToggle');
+        btn.textContent = '停止测量';
+        btn.classList.add('on');
+        rafId = requestAnimationFrame(frame);
+      }
+
+      function stop() {
+        running = false;
+        cancelAnimationFrame(rafId);
+        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+        if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
+        analyser = null;
+        var btn = document.getElementById('dbToggle');
+        btn.textContent = '开始测量';
+        btn.classList.remove('on');
+        document.getElementById('dbNum').textContent = '--';
+        document.getElementById('dbLevel').textContent = '已停止';
+        document.getElementById('dbDesc').textContent = '麦克风已关闭，点「开始测量」继续';
+        document.body.style.setProperty('--db-c', '#94A3B8');
+        document.body.style.setProperty('--db-p', '0');
+        document.getElementById('dbMarker').style.left = '-4px';
+        document.getElementById('dbAlert').classList.remove('show');
+      }
+
+      document.getElementById('dbToggle').addEventListener('click', function () {
+        if (running) stop(); else start();
+      });
+      document.getElementById('dbReset').addEventListener('click', function () {
+        maxV = 0; sumV = 0; countV = 0;
+        document.getElementById('dbMax').textContent = '--';
+        document.getElementById('dbAvg').textContent = '--';
+        App.toast('统计已清零');
+      });
+
+      // 切后台立即释放麦克风，回来不自动重开（保护隐私 + 省电）
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && running) stop();
+      });
+      window.addEventListener('pagehide', function () { if (running) stop(); });
+
+      document.body.style.setProperty('--db-c', '#94A3B8');
+
+      App.showGuide('decibel', {
+        emoji: '🔊',
+        title: '分贝仪 · 使用提示',
+        items: [
+          '点「开始测量」并允许麦克风，数值每帧刷新并做平滑处理',
+          '超过 85dB 警戒线会红色提醒并震动，注意保护听力',
+          '切到后台会自动关闭麦克风，不录音、不上传',
+        ],
+      });
+    })();
+  </script>
+</body>
+</html>

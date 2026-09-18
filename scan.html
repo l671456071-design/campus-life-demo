@@ -42,29 +42,29 @@
     .scan-nav-btn svg { width:22px; height:22px; }
     .scan-nav-btn.active { color:#34D399; background:rgba(16,185,129,.24); }
 
-    /* 识别区：垂直居中上移，不被底部元素遮挡 */
+    /* 识别区：屏幕垂直居中偏上，与底部操作条留出安全留白，不被遮挡 */
     .scan-center {
-      position:absolute; left:0; right:0; top:45%; transform:translateY(-50%);
+      position:absolute; left:0; right:0; top:38%; transform:translateY(-50%);
       display:flex; flex-direction:column; align-items:center; z-index:3; padding:0 24px;
     }
     .scan-frame {
-      width:min(66vw,248px); height:min(66vw,248px);
-      position:relative; border-radius:8px;
+      width:min(64vw,240px); height:min(64vw,240px);
+      position:relative; border-radius:14px;
       box-shadow:0 0 0 9999px rgba(2,6,23,.52);  /* 四周压暗、中心透明 */
       -webkit-tap-highlight-color:transparent;
       transition:transform .25s;
     }
 
-    /* 四角：2px 白色圆角 + 品牌绿呼吸灯（1.5s 循环） */
+    /* 四角：2px 白色圆角（全站统一 14px 圆角规范）+ 品牌绿呼吸灯（1.5s 循环） */
     .scan-corner {
-      position:absolute; width:26px; height:26px;
+      position:absolute; width:24px; height:24px;
       border:2px solid #fff;
       animation:cornerBreath 1.5s ease-in-out infinite;
     }
-    .scan-corner--tl { top:0; left:0; border-right:none; border-bottom:none; border-radius:8px 0 0 0; animation-delay:0s; }
-    .scan-corner--tr { top:0; right:0; border-left:none; border-bottom:none; border-radius:0 8px 0 0; animation-delay:.18s; }
-    .scan-corner--br { bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 8px 0; animation-delay:.36s; }
-    .scan-corner--bl { bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 8px; animation-delay:.54s; }
+    .scan-corner--tl { top:0; left:0; border-right:none; border-bottom:none; border-radius:14px 0 0 0; animation-delay:0s; }
+    .scan-corner--tr { top:0; right:0; border-left:none; border-bottom:none; border-radius:0 14px 0 0; animation-delay:.18s; }
+    .scan-corner--br { bottom:0; right:0; border-left:none; border-top:none; border-radius:0 0 14px 0; animation-delay:.36s; }
+    .scan-corner--bl { bottom:0; left:0; border-right:none; border-top:none; border-radius:0 0 0 14px; animation-delay:.54s; }
     @keyframes cornerBreath {
       0%, 100% { box-shadow:0 0 3px rgba(52,211,153,.35); }
       50% { box-shadow:0 0 12px rgba(52,211,153,.95), 0 0 24px rgba(52,211,153,.45); }
@@ -92,10 +92,18 @@
     @keyframes checkPop { to { transform:scale(1); } }
 
     .scan-tip {
-      color:rgba(255,255,255,.88); font-size:13.5px; text-align:center;
-      margin-top:26px; padding:0 12px; line-height:1.55;
+      color:rgba(255,255,255,.88); font-size:13px; text-align:center;
+      margin-top:18px; padding:0 12px; line-height:1.5;
       text-shadow:0 1px 4px rgba(0,0,0,.5);
       position:relative; z-index:2;
+    }
+    /* 矮屏设备：压缩识别区间距、隐藏冗余模式横幅，保证与底部操作条不重叠 */
+    @media (max-height:700px) {
+      .scan-center { top:36%; }
+      .scan-tip { margin-top:13px; font-size:12.5px; }
+      .mode-switch { margin-top:10px; padding:6px 12px; }
+      .mode-banner { display:none; }
+      .scan-hint { margin-top:10px; padding:8px 14px; }
     }
 
     /* 模式切换：玻璃胶囊 */
@@ -148,25 +156,47 @@
     /* 旧引擎标识：不再常驻展示（3s 慢提示兜底） */
     .scan-engine-hint { display:none !important; }
 
-    /* 底部手动输入按钮：上移 + 全面屏安全区 */
-    .scan-bottom {
-      position:absolute; left:0; right:0; z-index:6; text-align:center;
-      bottom:calc(104px + env(safe-area-inset-bottom));
+    /* 底部操作区：半透明深色底条做层级隔离，双按钮横排，与取景框保持安全留白 */
+    .scan-actions {
+      position:absolute; left:0; right:0; z-index:6;
+      bottom:calc(72px + env(safe-area-inset-bottom));
+      display:flex; flex-direction:column; gap:9px;
+      padding:12px 16px 13px;
+      background:rgba(8,15,32,.6);
+      -webkit-backdrop-filter:blur(18px) saturate(150%); backdrop-filter:blur(18px) saturate(150%);
+      border-top:1px solid rgba(255,255,255,.1);
     }
-    .scan-manual-btn {
-      display:inline-flex; align-items:center; gap:7px;
-      background:rgba(255,255,255,.14);
-      -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
-      border:1px solid rgba(255,255,255,.28); color:#fff;
-      font-size:14.5px; font-weight:600; padding:13px 24px; border-radius:999px;
-      box-shadow:0 6px 20px rgba(0,0,0,.28);
-      transition:transform .15s;
-      -webkit-tap-highlight-color:transparent;
+    .scan-act-row { display:flex; gap:12px; }
+    .scan-act-btn {
+      flex:1; min-width:0;
+      display:inline-flex; align-items:center; justify-content:center; gap:7px;
+      font-size:14px; font-weight:600; font-family:inherit;
+      padding:12px 10px; border-radius:14px;
+      transition:transform .15s, background .2s;
+      -webkit-tap-highlight-color:transparent; white-space:nowrap;
     }
-    .scan-manual-btn:active { transform:scale(.96); }
-    .scan-manual-btn svg { width:17px; height:17px; }
-    .scan-demo-tip { margin-top:12px; font-size:12px; color:rgba(255,255,255,.75); line-height:1.8; }
+    .scan-act-btn:active { transform:scale(.97); }
+    .scan-act-btn svg { width:17px; height:17px; flex-shrink:0; }
+    .scan-act-btn.primary {
+      background:#fff; color:#0F172A; border:1px solid rgba(255,255,255,.6);
+      box-shadow:0 6px 18px rgba(0,0,0,.28);
+    }
+    .scan-act-btn.ghost {
+      background:rgba(255,255,255,.13);
+      border:1px solid rgba(255,255,255,.26); color:#fff;
+    }
+    .scan-demo-tip { font-size:11.5px; color:rgba(255,255,255,.72); line-height:1.6; text-align:center; }
     .scan-demo-tip b { color:#93C5FD; }
+
+    /* 扫码页局部压缩底部 Tab，减少垂直占用（不改全局 tab-bar 结构） */
+    body[data-page="scan"] .tab-bar {
+      height:54px; bottom:10px; padding:4px 8px; border-radius:27px;
+      box-shadow:0 8px 28px rgba(0,0,0,.18);
+    }
+    body[data-page="scan"] .tab-item { height:46px; }
+    body[data-page="scan"] .tab-item .tab-icon { width:20px; height:20px; }
+    body[data-page="scan"] .tab-item .tab-label { font-size:9.5px; }
+    body[data-page="scan"] .tab-scan-btn { width:46px; height:46px; margin-top:-22px; }
 
     /* 无相机权限页的文字链接 */
     .manual-link {
@@ -372,9 +402,6 @@
             <button class="scan-nav-btn" id="flashBtn" onclick="toggleFlash()" aria-label="闪光灯">
               <svg id="flashIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             </button>
-            <button class="scan-nav-btn" onclick="openAlbum()" aria-label="相册识别">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            </button>
           </div>
         </div>
 
@@ -404,12 +431,18 @@
           </button>
         </div>
 
-        <!-- 底部手动输入：上移并适配全面屏 -->
-        <div class="scan-bottom">
-          <button type="button" class="scan-manual-btn" onclick="showManualInput()">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
-            手动输入取件码
-          </button>
+        <!-- 底部操作区：深色底条层级隔离，双按钮横排，安全留白不压取景框 -->
+        <div class="scan-actions">
+          <div class="scan-act-row">
+            <button type="button" class="scan-act-btn primary" onclick="showManualInput()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"/></svg>
+              手动输入取件码
+            </button>
+            <button type="button" class="scan-act-btn ghost" onclick="openAlbum()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+              相册识别
+            </button>
+          </div>
         </div>
         <div class="scan-engine-hint" id="engineHint"></div>
       </div>
@@ -577,6 +610,7 @@
       detector: null,          // BarcodeDetector 实例
       useNativeDetector: false,
       scanning: false,         // 识别循环是否运行
+      loopGen: 0,              // 帧循环代际：暂停/重启 +1，旧回调自动失效（防双循环卡顿）
       busy: false,             // 单帧解码进行中
       lastScanAt: 0,
       torchOn: false,
@@ -627,7 +661,7 @@
             tip.className = 'scan-demo-tip';
             tip.innerHTML = '演示提示：点「手动输入取件码」，输入 <b>' +
               codes.join('</b> / <b>') + '</b> 即可体验完整取件流程';
-            var bottom = document.querySelector('.scan-bottom');
+            var bottom = document.querySelector('.scan-actions');
             if (bottom) bottom.appendChild(tip);
           }
         } catch (e) { /* Storage 不可用时忽略 */ }
@@ -775,23 +809,44 @@
     // 不支持时回退 requestAnimationFrame 节流循环
     function scheduleDetect() {
       if (!SCAN.scanning) return;
+      var gen = SCAN.loopGen;
       var v = SCAN.video;
       if (v && typeof v.requestVideoFrameCallback === 'function') {
         v.requestVideoFrameCallback(function () {
-          if (!SCAN.scanning) return;
+          // 代际过期（期间发生过暂停/重启）则直接丢弃，避免出现两条识别链抢 CPU 造成卡顿
+          if (!SCAN.scanning || gen !== SCAN.loopGen) return;
           detectFrame(performance.now());
         });
       } else {
-        requestAnimationFrame(detectFrame);
+        requestAnimationFrame(function (ts) {
+          if (!SCAN.scanning || gen !== SCAN.loopGen) return;
+          detectFrame(ts);
+        });
       }
     }
 
-    function pauseScan() { SCAN.scanning = false; stopSlowHints(); }
+    function pauseScan() {
+      SCAN.loopGen++;
+      SCAN.scanning = false;
+      stopSlowHints();
+    }
 
     function resumeScan() {
       if (!SCAN.stream) { retryCamera(); return; }
+      if (SCAN.scanning) return; // 已在跑：绝不重复起链
+      // 重置调度时间戳：恢复后立刻分析一帧，而不是补齐暂停期间欠下的 OCR/解码
+      SCAN.lastScanAt = 0;
+      SCAN.lastOcrAt = 0;
       startDetectLoop();
       startSlowHints();
+    }
+
+    // 切换模式时的软重启：丢弃在途帧回调，下一帧重新起链，避免切号瞬间掉帧卡顿
+    function softRestartLoop() {
+      pauseScan();
+      requestAnimationFrame(function () {
+        if (SCAN.stream) resumeScan();
+      });
     }
 
     function detectFrame(ts) {
@@ -1443,6 +1498,14 @@
         banner.classList.remove('mode-import');
         bannerText.textContent = '当前为「取件模式」：扫描已到站快递的取件码完成取件';
         tip.textContent = '将取件码对准扫描框，支持二维码与面单数字';
+      }
+      // 清掉上一模式遗留的 OCR 文案与节流时间戳，软重启识别链，防止切换瞬间卡顿/误触发
+      SCAN.lastOcrText = '';
+      SCAN.lastScanAt = 0;
+      SCAN.lastOcrAt = 0;
+      stopSlowHints();
+      if (SCAN.stream && !document.getElementById('importSheet').classList.contains('show')) {
+        softRestartLoop();
       }
     }
 

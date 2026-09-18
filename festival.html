@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>节日倒计时 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    /* 生活功能二级页：隐藏底部悬浮 tab-bar */
+    body[data-page="festival"] .tab-bar { display: none !important; }
+    body[data-page="festival"] .app-content { padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+
+    .f-page { padding: 14px 16px 0; }
+
+    /* ---- 最近节日主卡 ---- */
+    .f-hero {
+      position: relative; border-radius: 20px; overflow: hidden;
+      background: linear-gradient(135deg, #7C3AED, #2563EB);
+      color: #fff; min-height: 168px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .f-hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
+    .f-hero-mask { position:absolute; inset:0; background:linear-gradient(180deg,rgba(15,23,42,0.05) 0%,rgba(15,23,42,0.62) 100%); }
+    .f-hero-body { position:relative; padding: 16px 18px 18px; }
+    .f-hero-tag { display:inline-flex; align-items:center; gap:4px; font-size:11px; background:rgba(255,255,255,0.22); border-radius:99px; padding:3px 10px; }
+    .f-hero-name { font-size:22px; font-weight:800; margin-top:10px; display:flex; align-items:center; gap:7px; }
+    .f-hero-date { font-size:12px; opacity:.85; margin-top:3px; }
+    .f-hero-count { font-size:30px; font-weight:800; font-family:var(--font-mono); letter-spacing:1px; margin-top:8px; line-height:1.1; }
+    .f-hero-count small { font-size:13px; font-weight:600; opacity:.85; margin:0 2px; }
+    .f-hero-count .seg { opacity:.5; margin:0 3px; }
+
+    /* ---- 分区标题 ---- */
+    .f-sec { margin-top:20px; }
+    .f-sec-title { font-size:15px; font-weight:700; color:var(--color-text); display:flex; align-items:center; justify-content:space-between; }
+    .f-sec-title .f-add { font-size:12.5px; font-weight:600; color:var(--color-primary); display:inline-flex; align-items:center; gap:3px; border:none; background:none; font-family:inherit; }
+
+    /* ---- 日历 ---- */
+    .f-cal { background:var(--color-surface); border-radius:18px; border:1px solid var(--color-border-light); padding:14px 14px 12px; }
+    .f-cal-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .f-cal-month { font-size:15px; font-weight:700; color:var(--color-text); }
+    .f-cal-nav { width:30px; height:30px; border-radius:10px; border:none; background:var(--color-surface-alt); color:var(--color-text-sub); display:flex; align-items:center; justify-content:center; }
+    .f-cal-nav:active { background:var(--color-primary-lighter); color:var(--color-primary); }
+    .f-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:2px; }
+    .f-cal-wd { text-align:center; font-size:11px; color:var(--color-text-hint); padding:6px 0 4px; }
+    .f-cal-day { aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:12px; position:relative; cursor:pointer; }
+    .f-cal-day span { font-size:13.5px; color:var(--color-text); line-height:1; }
+    .f-cal-day.muted span { color:var(--color-text-hint); opacity:.45; }
+    .f-cal-day.today { background:var(--color-primary-lighter); }
+    .f-cal-day.today span { color:var(--color-primary); font-weight:800; }
+    .f-cal-day.selected { background:var(--color-primary); }
+    .f-cal-day.selected span { color:#fff; font-weight:700; }
+    .f-cal-dots { display:flex; gap:2px; height:4px; }
+    .f-cal-dots i { width:4px; height:4px; border-radius:50%; background:var(--color-primary); }
+    .f-cal-day.selected .f-cal-dots i { background:#fff; }
+    .f-cal-day.today .f-cal-dots i { background:var(--color-primary); }
+    .f-cal-pick { margin-top:10px; border-top:1px dashed var(--color-border-light); padding-top:10px; font-size:12.5px; color:var(--color-text-sub); display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+    .f-cal-pick b { color:var(--color-text); }
+    .f-cal-pick .f-mini-add { margin-left:auto; border:none; background:var(--color-primary-lighter); color:var(--color-primary); font-size:11.5px; font-weight:700; border-radius:99px; padding:4px 10px; font-family:inherit; }
+
+    /* ---- 节日卡片网格 ---- */
+    .f-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .f-card {
+      border-radius:16px; padding:13px 14px; position:relative; overflow:hidden;
+      background:var(--color-surface); border:1px solid var(--color-border-light);
+      min-height:96px; display:flex; flex-direction:column; cursor:pointer;
+    }
+    .f-card.custom { background:linear-gradient(135deg,#EEF2FF,#F5F3FF); border-color:#E0E7FF; }
+    .f-card--wide { grid-column:1 / -1; min-height:120px; }
+    .f-card-bg { position:absolute; inset:0; background-size:cover; background-position:center; }
+    .f-card-bg-mask { position:absolute; inset:0; background:linear-gradient(180deg,rgba(15,23,42,0.18),rgba(15,23,42,0.66)); }
+    .f-card-body { position:relative; flex:1; display:flex; flex-direction:column; color:var(--color-text); }
+    .f-card--wide .f-card-body { justify-content:flex-end; }
+    .f-card.has-bg .f-card-body, .f-card.has-bg .f-card-name, .f-card.has-bg .f-card-date, .f-card.has-bg .f-card-count { color:#fff; }
+    .f-card-name { font-size:14px; font-weight:700; color:var(--color-text); display:flex; align-items:center; gap:5px; }
+    .f-card-date { font-size:11px; color:var(--color-text-hint); margin-top:2px; }
+    .f-card-note { font-size:11.5px; color:var(--color-text-hint); margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .f-card.has-bg .f-card-note { color:rgba(255,255,255,.82); }
+    .f-card-count { margin-top:auto; padding-top:8px; font-size:14px; font-weight:800; color:var(--color-primary); font-family:var(--font-mono); }
+    .f-card-count small { font-size:10.5px; font-weight:500; color:var(--color-text-hint); }
+    .f-card.has-bg .f-card-count small { color:rgba(255,255,255,.75); }
+    .f-card-badge { position:absolute; top:9px; right:9px; font-size:10px; background:rgba(255,255,255,.85); color:var(--color-primary); border-radius:99px; padding:1px 7px; font-weight:700; z-index:2; }
+    .f-card.has-bg .f-card-badge { background:rgba(255,255,255,.25); color:#fff; }
+    .f-card-add {
+      border:1.5px dashed var(--color-border); border-radius:16px; min-height:96px;
+      background:transparent; cursor:pointer; font-family:inherit;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+      color:var(--color-text-sub); font-size:13px; font-weight:600;
+    }
+    .f-card-add:active { background:var(--color-surface-alt); }
+
+    /* ---- 弹窗 ---- */
+    .f-mask { position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .f-mask.show { opacity:1; pointer-events:auto; }
+    .f-sheet {
+      position:fixed; left:0; right:0; bottom:0; z-index:51;
+      background:var(--color-surface); border-radius:20px 20px 0 0;
+      padding:18px 18px calc(20px + env(safe-area-inset-bottom));
+      transform:translateY(105%); transition:transform .3s cubic-bezier(.32,.72,.32,1);
+      max-height:86vh; overflow-y:auto;
+    }
+    .f-sheet.show { transform:none; }
+    .f-grabber { width:36px; height:4px; border-radius:99px; background:var(--color-border); margin:0 auto 14px; }
+    .f-sheet-title { font-size:16px; font-weight:700; text-align:center; color:var(--color-text); }
+    .f-label { font-size:12.5px; font-weight:600; color:var(--color-text-sub); margin:16px 0 8px; }
+    .f-input {
+      width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px;
+      padding:11px 14px; font-size:15px; font-family:inherit; color:var(--color-text);
+      background:var(--color-surface-alt); outline:none;
+    }
+    .f-input:focus { border-color:var(--color-primary); background:var(--color-surface); }
+    .f-chips { display:flex; gap:8px; }
+    .f-opt {
+      flex:1; padding:10px 0; text-align:center; border-radius:99px; font-size:13.5px; cursor:pointer;
+      background:var(--color-surface-alt); color:var(--color-text-sub); border:1.5px solid transparent; font-family:inherit;
+    }
+    .f-opt.active { background:var(--color-primary-lighter); color:var(--color-primary); border-color:var(--color-primary); font-weight:700; }
+    .f-bg-row { display:flex; align-items:center; gap:12px; }
+    .f-bg-thumb { width:64px; height:64px; border-radius:14px; background:var(--color-surface-alt) center/cover no-repeat; border:1px solid var(--color-border-light); flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:22px; }
+    .f-bg-btns { display:flex; flex-direction:column; gap:8px; flex:1; }
+    .f-bg-btn { border:1.5px solid var(--color-border); background:var(--color-surface); color:var(--color-text-sub); border-radius:12px; padding:9px 12px; font-size:13px; font-family:inherit; width:100%; text-align:center; }
+    .f-bg-btn.danger { color:var(--color-danger); border-color:#FECACA; }
+    .f-confirm { width:100%; margin-top:20px; border:none; border-radius:14px; padding:14px; background:var(--color-primary); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; }
+    .f-confirm:active { background:var(--color-primary-hover); }
+    .f-del { width:100%; margin-top:10px; border:none; border-radius:14px; padding:12px; background:transparent; color:var(--color-danger); font-size:14px; cursor:pointer; font-family:inherit; }
+    .f-cancel { width:100%; margin-top:4px; border:none; border-radius:14px; padding:10px; background:transparent; color:var(--color-text-hint); font-size:14px; cursor:pointer; font-family:inherit; }
+  </style>
+</head>
+<body data-page="festival">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">节日倒计时</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <div class="f-page">
+        <div id="festHero"></div>
+
+        <div class="f-sec anim-fade-in-up stagger-1">
+          <div class="f-cal">
+            <div class="f-cal-head">
+              <button class="f-cal-nav" id="calPrev" aria-label="上个月">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div class="f-cal-month" id="calMonth"></div>
+              <button class="f-cal-nav" id="calNext" aria-label="下个月">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="f-cal-grid" id="calGrid"></div>
+            <div class="f-cal-pick" id="calPick"></div>
+          </div>
+        </div>
+
+        <div class="f-sec anim-fade-in-up stagger-2" style="margin-bottom:8px;">
+          <div class="f-sec-title">
+            全部节日
+            <button class="f-add" onclick="openFestSheet()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              添加自定义
+            </button>
+          </div>
+          <div class="f-grid" id="festGrid"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 固定 tab bar（本页隐藏，结构保留不可修改） -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <!-- 添加 / 编辑自定义节日 -->
+  <div class="f-mask" id="festMask" onclick="closeFestSheet()"></div>
+  <div class="f-sheet" id="festSheet">
+    <div class="f-grabber"></div>
+    <div class="f-sheet-title" id="sheetTitle">添加自定义节日</div>
+    <div class="f-label">名称</div>
+    <input class="f-input" id="fName" type="text" maxlength="12" placeholder="如：我的生日 / 期末考">
+    <div class="f-label">日期（每年循环）</div>
+    <input class="f-input" id="fDate" type="date">
+    <div class="f-label">卡片布局</div>
+    <div class="f-chips">
+      <button class="f-opt active" id="fLayoutWide" onclick="setLayout('wide')">宽卡大图</button>
+      <button class="f-opt" id="fLayoutCompact" onclick="setLayout('compact')">紧凑小卡</button>
+    </div>
+    <div class="f-label">背景图片（可选，调用本机相册）</div>
+    <div class="f-bg-row">
+      <div class="f-bg-thumb" id="fBgThumb">🖼️</div>
+      <div class="f-bg-btns">
+        <button class="f-bg-btn" onclick="document.getElementById('fBgFile').click()">从相册选择</button>
+        <button class="f-bg-btn danger" id="fBgClear" onclick="clearBg()" style="display:none;">移除背景图</button>
+      </div>
+      <input type="file" id="fBgFile" accept="image/*" style="display:none;">
+    </div>
+    <div class="f-label">一句寄语（可选）</div>
+    <input class="f-input" id="fNote" type="text" maxlength="40" placeholder="如：愿所有美好如期而至">
+    <div style="font-size:11.5px;color:var(--color-text-hint);margin-top:8px;">图片经压缩后仅保存在本机，不会上传</div>
+    <button class="f-confirm" id="fConfirm">添加节日</button>
+    <button class="f-del" id="fDelete" style="display:none;">删除这个节日</button>
+    <button class="f-cancel" onclick="closeFestSheet()">取消</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    // ================= 内置公历节日 =================
+    var FEST_PRESETS = [
+      { name: '元旦', m: 1, d: 1, emoji: '🎊' },
+      { name: '情人节', m: 2, d: 14, emoji: '💝' },
+      { name: '妇女节', m: 3, d: 8, emoji: '🌷' },
+      { name: '劳动节', m: 5, d: 1, emoji: '🌿' },
+      { name: '青年节', m: 5, d: 4, emoji: '🔥' },
+      { name: '儿童节', m: 6, d: 1, emoji: '🎈' },
+      { name: '建党节', m: 7, d: 1, emoji: '⭐' },
+      { name: '建军节', m: 8, d: 1, emoji: '🎖️' },
+      { name: '教师节', m: 9, d: 10, emoji: '📚' },
+      { name: '国庆节', m: 10, d: 1, emoji: '🇨🇳' },
+      { name: '双十一', m: 11, d: 11, emoji: '🛒' },
+      { name: '圣诞节', m: 12, d: 25, emoji: '🎄' },
+      { name: '跨年夜', m: 12, d: 31, emoji: '🥂' },
+    ];
+
+    var calCursor = (function () { var n = new Date(); return { y: n.getFullYear(), m: n.getMonth() }; })();
+    var selectedDay = (function () { var n = new Date(); return { y: n.getFullYear(), m: n.getMonth(), d: n.getDate() }; })();
+    var sheetState = { editId: null, bg: null, layout: 'wide' };
+
+    document.addEventListener('DOMContentLoaded', function () {
+      App.initTheme();
+      renderAll();
+      document.getElementById('calPrev').addEventListener('click', function () { shiftMonth(-1); });
+      document.getElementById('calNext').addEventListener('click', function () { shiftMonth(1); });
+      document.getElementById('fBgFile').addEventListener('change', onBgPicked);
+      document.getElementById('fConfirm').addEventListener('click', saveFest);
+      document.getElementById('fDelete').addEventListener('click', deleteFest);
+      setInterval(tickCountdowns, 1000);
+      App.showGuide('festival', {
+        emoji: '🎉',
+        title: '节日倒计时',
+        items: ['最近节日精确到秒，置顶展示', '日历打点，点日期可直达当天节日', 'DIY 卡片支持本机相册背景与宽/紧凑布局'],
+      });
+    });
+
+    // ---------- 数据 ----------
+    function allFests() {
+      var list = [];
+      FEST_PRESETS.forEach(function (f) {
+        list.push({ id: f.name + '-' + f.m + '-' + f.d, name: f.name, m: f.m, d: f.d, emoji: f.emoji || '🎉', custom: false, at: nextOccur(f.m, f.d), today: isToday(f.m, f.d) });
+      });
+      Storage.festGetCustom().forEach(function (f) {
+        list.push({ id: f.id, name: f.name, m: f.m, d: f.d, emoji: '✨', custom: true, bg: f.bg || null, layout: f.layout || 'wide', note: f.note || '', at: nextOccur(f.m, f.d), today: isToday(f.m, f.d) });
+      });
+      list.sort(function (a, b) {
+        if (a.today !== b.today) return a.today ? -1 : 1;
+        return a.at - b.at;
+      });
+      return list;
+    }
+
+    function nextOccur(m, d) {
+      var now = new Date();
+      var t = new Date(now.getFullYear(), m - 1, d, 0, 0, 0);
+      if (t.getTime() <= now.getTime()) t.setFullYear(t.getFullYear() + 1);
+      return t;
+    }
+    function isToday(m, d) {
+      var n = new Date();
+      return n.getMonth() === m - 1 && n.getDate() === d;
+    }
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+    function renderAll() {
+      renderHero();
+      renderCalendar();
+      renderGrid();
+      tickCountdowns();
+    }
+
+    // ---------- 主卡 ----------
+    function renderHero() {
+      var f = allFests()[0];
+      if (!f) return;
+      var bg = f.bg
+        ? '<div class="f-hero-bg" style="background-image:url(' + f.bg + ');"></div><div class="f-hero-mask"></div>'
+        : '';
+      var tag = f.custom ? '✨ 我的自定义' : '🎉 公历节日';
+      document.getElementById('festHero').innerHTML =
+        '<div class="f-hero anim-fade-in-up">' +
+          bg +
+          '<div class="f-hero-body">' +
+            '<span class="f-hero-tag">' + tag + '</span>' +
+            '<div class="f-hero-name">' + f.emoji + ' ' + f.name + '</div>' +
+            '<div class="f-hero-date">' + f.m + ' 月 ' + f.d + ' 日' + (f.note ? ' · ' + f.note : '') + '</div>' +
+            '<div class="f-hero-count" data-fest-at="' + f.at.getTime() + '"' + (f.today ? ' data-fest-today="1"' : '') + ' data-fest-hero="1">--</div>' +
+          '</div>' +
+        '</div>';
+    }
+
+    // ---------- 日历 ----------
+    function shiftMonth(delta) {
+      var d0 = new Date(calCursor.y, calCursor.m + delta, 1);
+      calCursor = { y: d0.getFullYear(), m: d0.getMonth() };
+      renderCalendar();
+    }
+
+    function renderCalendar() {
+      var y = calCursor.y, m = calCursor.m;
+      document.getElementById('calMonth').textContent = y + ' 年 ' + (m + 1) + ' 月';
+      var today = new Date();
+      var festMap = {};
+      allFests().forEach(function (f) {
+        var key = f.m + '-' + f.d;
+        if (!festMap[key]) festMap[key] = [];
+        festMap[key].push(f);
+      });
+
+      var wd = ['日', '一', '二', '三', '四', '五', '六'];
+      var html = '';
+      wd.forEach(function (w) { html += '<div class="f-cal-wd">' + w + '</div>'; });
+
+      var firstWd = new Date(y, m, 1).getDay();
+      var daysInMonth = new Date(y, m + 1, 0).getDate();
+      var prevDays = new Date(y, m, 0).getDate();
+      var total = firstWd + daysInMonth;
+      var cells = Math.ceil(total / 7) * 7;
+
+      for (var i = 0; i < cells; i++) {
+        var dayNum, muted = false, cellY = y, cellM = m;
+        if (i < firstWd) {
+          dayNum = prevDays - firstWd + i + 1;
+          cellM = m - 1; if (cellM < 0) { cellM = 11; cellY = y - 1; }
+          muted = true;
+        } else if (i >= total) {
+          dayNum = i - total + 1;
+          cellM = m + 1; if (cellM > 11) { cellM = 0; cellY = y + 1; }
+          muted = true;
+        } else {
+          dayNum = i - firstWd + 1;
+        }
+        var isToday = !muted && cellY === today.getFullYear() && cellM === today.getMonth() && dayNum === today.getDate();
+        var isSelected = cellY === selectedDay.y && cellM === selectedDay.m && dayNum === selectedDay.d;
+        var key = (cellM + 1) + '-' + dayNum;
+        var dots = festMap[key] ? '<div class="f-cal-dots">' + festMap[key].slice(0, 3).map(function () { return '<i></i>'; }).join('') + '</div>' : '<div class="f-cal-dots"></div>';
+        var cls = 'f-cal-day' + (muted ? ' muted' : '') + (isToday ? ' today' : '') + (isSelected ? ' selected' : '');
+        html += '<div class="' + cls + '" onclick="pickDay(' + cellY + ',' + cellM + ',' + dayNum + ')">' +
+          '<span>' + dayNum + '</span>' + dots +
+        '</div>';
+      }
+      document.getElementById('calGrid').innerHTML = html;
+
+      // 选中日期详情
+      var sKey = (selectedDay.m + 1) + '-' + selectedDay.d;
+      var fests = festMap[sKey] || [];
+      var pickEl = document.getElementById('calPick');
+      var isSelToday = selectedDay.y === today.getFullYear() && selectedDay.m === today.getMonth() && selectedDay.d === today.getDate();
+      var label = (selectedDay.m + 1) + ' 月 ' + selectedDay.d + ' 日' + (isSelToday ? '（今天）' : '');
+      if (fests.length) {
+        pickEl.innerHTML = '<b>' + label + '</b><span>' + fests.map(function (f) { return f.emoji + f.name; }).join('、') + '</span>' +
+          '<button class="f-mini-add" onclick="openFestSheetForDay(' + (selectedDay.m + 1) + ',' + selectedDay.d + ')">＋ 添加</button>';
+      } else {
+        pickEl.innerHTML = '<b>' + label + '</b><span style="color:var(--color-text-hint);">这一天暂无节日</span>' +
+          '<button class="f-mini-add" onclick="openFestSheetForDay(' + (selectedDay.m + 1) + ',' + selectedDay.d + ')">＋ 添加</button>';
+      }
+    }
+
+    window.pickDay = function (y, m, d) {
+      selectedDay = { y: y, m: m, d: d };
+      if (y !== calCursor.y || m !== calCursor.m) calCursor = { y: y, m: m };
+      renderCalendar();
+    };
+
+    // ---------- 节日网格 ----------
+    function renderGrid() {
+      var list = allFests();
+      var html = '';
+      list.forEach(function (f) {
+        var wide = f.custom && f.layout !== 'compact';
+        var hasBg = !!f.bg;
+        var cls = 'f-card' + (f.custom ? ' custom' : '') + (wide ? ' f-card--wide' : '') + (hasBg ? ' has-bg' : '');
+        var onclick = f.custom ? ' onclick="openFestSheet(\'' + f.id + '\')"' : '';
+        var badge = f.custom ? '<span class="f-card-badge">DIY</span>' : '';
+        var bg = hasBg ? '<div class="f-card-bg" style="background-image:url(' + f.bg + ');"></div><div class="f-card-bg-mask"></div>' : '';
+        html += '<div class="' + cls + '"' + onclick + '>' +
+          bg + badge +
+          '<div class="f-card-body">' +
+            '<div class="f-card-name">' + f.emoji + ' ' + f.name + '</div>' +
+            '<div class="f-card-date">' + pad(f.m) + '-' + pad(f.d) + '</div>' +
+            (wide && f.note ? '<div class="f-card-note">' + f.note + '</div>' : '') +
+            '<div class="f-card-count" data-fest-at="' + f.at.getTime() + '"' + (f.today ? ' data-fest-today="1"' : '') + '>--</div>' +
+          '</div>' +
+        '</div>';
+      });
+      html += '<button class="f-card-add" onclick="openFestSheet()">' +
+        '<span style="font-size:20px;line-height:1;">＋</span>添加节日' +
+      '</button>';
+      document.getElementById('festGrid').innerHTML = html;
+    }
+
+    // ---------- 秒级倒计时 ----------
+    function tickCountdowns() {
+      var els = document.querySelectorAll('[data-fest-at]');
+      var now = Date.now();
+      for (var i = 0; i < els.length; i++) {
+        var at = parseInt(els[i].getAttribute('data-fest-at'), 10);
+        if (els[i].getAttribute('data-fest-today') === '1') {
+          els[i].innerHTML = '就是今天 🎉';
+          continue;
+        }
+        var diff = Math.max(0, at - now);
+        var sec = Math.floor(diff / 1000);
+        var dd = Math.floor(sec / 86400);
+        var hh = Math.floor((sec % 86400) / 3600);
+        var mm = Math.floor((sec % 3600) / 60);
+        var ss = sec % 60;
+        if (els[i].hasAttribute('data-fest-hero')) {
+          els[i].innerHTML = '<small>还有</small> ' + dd + ' <small>天</small><span class="seg">·</span>' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+        } else {
+          els[i].innerHTML = dd + '<small> 天 </small>' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+        }
+      }
+    }
+
+    // ---------- 添加 / 编辑弹窗 ----------
+    window.openFestSheet = function (editId) {
+      var n = new Date();
+      sheetState = { editId: editId || null, bg: null, layout: 'wide' };
+      document.getElementById('sheetTitle').textContent = editId ? '编辑节日卡片' : '添加自定义节日';
+      document.getElementById('fDelete').style.display = editId ? 'block' : 'none';
+      document.getElementById('fConfirm').textContent = editId ? '保存修改' : '添加节日';
+
+      var nameEl = document.getElementById('fName');
+      var dateEl = document.getElementById('fDate');
+      var noteEl = document.getElementById('fNote');
+      if (editId) {
+        var item = Storage.festGetCustom().filter(function (x) { return x.id === editId; })[0];
+        if (!item) return;
+        nameEl.value = item.name;
+        var yr = new Date().getFullYear();
+        dateEl.value = yr + '-' + pad(item.m) + '-' + pad(item.d);
+        noteEl.value = item.note || '';
+        sheetState.bg = item.bg || null;
+        sheetState.layout = item.layout || 'wide';
+      } else {
+        nameEl.value = '';
+        noteEl.value = '';
+        dateEl.value = n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate());
+      }
+      updateLayoutChips();
+      updateBgThumb();
+      document.getElementById('festMask').classList.add('show');
+      document.getElementById('festSheet').classList.add('show');
+    };
+
+    window.openFestSheetForDay = function (m, d) {
+      openFestSheet();
+      var yr = new Date().getFullYear();
+      document.getElementById('fDate').value = yr + '-' + pad(m) + '-' + pad(d);
+    };
+
+    window.closeFestSheet = function () {
+      document.getElementById('festMask').classList.remove('show');
+      document.getElementById('festSheet').classList.remove('show');
+    };
+
+    window.setLayout = function (layout) {
+      sheetState.layout = layout;
+      updateLayoutChips();
+    };
+    function updateLayoutChips() {
+      document.getElementById('fLayoutWide').classList.toggle('active', sheetState.layout === 'wide');
+      document.getElementById('fLayoutCompact').classList.toggle('active', sheetState.layout === 'compact');
+    }
+
+    function onBgPicked(e) {
+      var file = e.target.files && e.target.files[0];
+      if (!file) return;
+      App.compressImage(file, 720, 0.62).then(function (dataUrl) {
+        sheetState.bg = dataUrl;
+        updateBgThumb();
+        App.toastSuccess('背景已添加');
+      }).catch(function () {
+        App.toast('图片读取失败，请换一张');
+      });
+      e.target.value = '';
+    }
+
+    window.clearBg = function () {
+      sheetState.bg = null;
+      updateBgThumb();
+    };
+
+    function updateBgThumb() {
+      var thumb = document.getElementById('fBgThumb');
+      var clearBtn = document.getElementById('fBgClear');
+      if (sheetState.bg) {
+        thumb.style.backgroundImage = 'url(' + sheetState.bg + ')';
+        thumb.textContent = '';
+        clearBtn.style.display = 'block';
+      } else {
+        thumb.style.backgroundImage = 'none';
+        thumb.textContent = '🖼️';
+        clearBtn.style.display = 'none';
+      }
+    }
+
+    function saveFest() {
+      var name = document.getElementById('fName').value.trim();
+      var dateVal = document.getElementById('fDate').value;
+      var note = document.getElementById('fNote').value.trim();
+      if (!name) { App.toast('请填写节日名称'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) { App.toast('请选择日期'); return; }
+      var parts = dateVal.split('-');
+      var m = parseInt(parts[1], 10), d = parseInt(parts[2], 10);
+      var opts = { bg: sheetState.bg, layout: sheetState.layout, note: note };
+      if (sheetState.editId) {
+        var patchOpts = Object.assign({ name: name, m: m, d: d }, opts);
+        var r = Storage.festUpdateCustom(sheetState.editId, patchOpts);
+        if (!r.success) { App.toast(r.message || '保存失败'); return; }
+        App.toastSuccess('已保存修改');
+      } else {
+        var res = Storage.festAddCustom(name, m, d, opts);
+        if (!res.success) { App.toast(res.message || '添加失败'); return; }
+        App.toastSuccess('已添加「' + name + '」');
+      }
+      closeFestSheet();
+      renderAll();
+    }
+
+    window.deleteFest = function () {
+      if (!sheetState.editId) return;
+      Storage.festRemoveCustom(sheetState.editId);
+      closeFestSheet();
+      renderAll();
+      App.toast('已删除该节日');
+    };
+  </script>
+</body>
+</html>

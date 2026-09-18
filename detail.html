@@ -102,25 +102,113 @@
         return html;
       }
 
-      function pickupCodeCard(pkg) {
-        if (pkg.status === 'incoming') {
-          return '<div class="card anim-fade-in-up stagger-1" style="margin-bottom:16px;text-align:center;padding:24px;">' +
-            '<svg style="margin:0 auto 12px;color:var(--color-text-hint);" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>' +
-            '<div style="font-size:14px;color:var(--color-text-sub);">快递运输中，暂无取件码</div>' +
-            '<div style="font-size:13px;color:var(--color-text-hint);margin-top:6px;">' + (pkg.estimatedTime || '') + '</div>' +
-          '</div>';
-        }
-        if (!pkg.pickupCode) return '';
+      // 取件身份码卡（用户级身份凭证，替代原按件生成的取件码；支持本地导入）
+      function identityCodeCard() {
+        var user = Storage.getUser();
+        var idc = Storage.getIdentityCode();
+        var code = idc.code;
+        var grouped = code.replace(/(.{4})/g, '$1 ').trim();
+        var sourcePill = idc.source === 'imported'
+          ? '<span style="font-size:11px;background:rgba(255,255,255,0.22);color:#fff;border-radius:999px;padding:3px 10px;">已本地导入</span>'
+          : '<span style="font-size:11px;background:rgba(255,255,255,0.16);color:#fff;border-radius:999px;padding:3px 10px;">系统生成</span>';
+        var avatar = App.avatarHtml(user, 40, 'rgba(255,255,255,0.28)', '#fff');
+        var importBtn = idc.source === 'imported'
+          ? '<button class="btn btn-outline btn-sm" style="flex:1;gap:5px;padding:9px 0;" onclick="openImportIdentity()">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+              '重新导入' +
+            '</button>'
+          : '<button class="btn btn-outline btn-sm" style="flex:1;gap:5px;padding:9px 0;" onclick="openImportIdentity()">' +
+              '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+              '本地导入' +
+            '</button>';
         return '<div class="anim-fade-in-up stagger-1" style="margin-bottom:16px;">' +
-          '<div class="pickup-code-box">' +
-            '<div class="pickup-code-label">取件码</div>' +
-            '<div class="pickup-code-value">' + pkg.pickupCode + '</div>' +
-            '<button class="btn btn-outline btn-sm" style="margin-top:12px;gap:6px;" onclick="copyCode(\'' + pkg.pickupCode + '\')">' +
-              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
-              '复制取件码' +
-            '</button>' +
+          '<div style="border-radius:18px;overflow:hidden;background:#fff;box-shadow:var(--shadow-sm,var(--card-shadow));">' +
+            '<div style="display:flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));padding:14px 16px;color:#fff;">' +
+              avatar +
+              '<div style="flex:1;min-width:0;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
+                  '<span style="font-size:15px;font-weight:700;">' + (user.name || '用户') + '</span>' +
+                  sourcePill +
+                '</div>' +
+                '<div style="font-size:11px;opacity:0.85;margin-top:2px;">取件身份码 · 向工作人员出示即可</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="padding:18px 16px 16px;text-align:center;">' +
+              '<div id="detailQrBox" onclick="App.showIdentityCode()" style="width:148px;height:148px;margin:0 auto;display:flex;align-items:center;justify-content:center;border:1px solid var(--color-border-light);border-radius:14px;padding:8px;box-sizing:border-box;cursor:pointer;background:#fff;">' +
+                '<div class="spinner" style="width:26px;height:26px;border-width:3px;"></div>' +
+              '</div>' +
+              '<div style="font-size:12px;color:var(--color-text-hint);margin-top:8px;">点击二维码可放大查看</div>' +
+              '<div style="font-size:22px;font-weight:800;letter-spacing:3px;font-family:var(--font-mono);color:var(--color-text);margin-top:6px;">' + grouped + '</div>' +
+              '<div style="display:flex;gap:10px;margin-top:14px;">' +
+                '<button class="btn btn-outline btn-sm" style="flex:1;gap:5px;padding:9px 0;" onclick="copyCode(\'' + code + '\')">' +
+                  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>' +
+                  '复制' +
+                '</button>' +
+                importBtn +
+              '</div>' +
+            '</div>' +
           '</div>' +
         '</div>';
+      }
+
+      // 本地导入身份码弹窗：手动录入快递 App / 纸质卡片上的身份码
+      window.openImportIdentity = function () {
+        var current = Storage.getIdentityCode();
+        var backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        var clearBtn = current.source === 'imported'
+          ? '<button type="button" id="idcClear" style="border:none;background:none;font-size:13px;color:var(--color-text-hint);padding:4px 2px;">恢复系统码</button>'
+          : '<span style="width:1px;"></span>';
+        backdrop.innerHTML =
+          '<div class="modal">' +
+            '<div class="modal-title">本地导入身份码</div>' +
+            '<div class="modal-desc">录入你的取件身份码（4-24 位字母或数字，可含短横线），仅保存在本机</div>' +
+            '<input id="idcInput" type="text" maxlength="24" placeholder="例如：A8K2-9921-03" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-border);border-radius:12px;padding:12px 14px;font-size:16px;font-weight:700;letter-spacing:2px;font-family:var(--font-mono);color:var(--color-text);background:var(--color-surface-alt);outline:none;text-transform:uppercase;" />' +
+            '<div id="idcErr" style="font-size:12px;color:var(--color-danger);margin-top:8px;display:none;">格式不正确，请输入 4-24 位字母/数字/短横线</div>' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">' + clearBtn + '<span></span></div>' +
+            '<div class="modal-actions">' +
+              '<button class="btn btn-outline" id="idcCancel">取消</button>' +
+              '<button class="btn btn-primary" id="idcOk">保存</button>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(backdrop);
+        requestAnimationFrame(function () {
+          backdrop.classList.add('show');
+          var input = backdrop.querySelector('#idcInput');
+          if (input) { input.focus(); input.value = current.source === 'imported' ? current.code : ''; }
+        });
+        function close() {
+          backdrop.classList.remove('show');
+          setTimeout(function () { backdrop.remove(); }, 250);
+        }
+        backdrop.querySelector('#idcCancel').addEventListener('click', close);
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+        var clearEl = backdrop.querySelector('#idcClear');
+        if (clearEl) {
+          clearEl.addEventListener('click', function () {
+            Storage.clearIdentityCode();
+            close();
+            App.toastSuccess('已恢复系统身份码');
+            rerenderIdentity();
+          });
+        }
+        backdrop.querySelector('#idcOk').addEventListener('click', function () {
+          var val = (backdrop.querySelector('#idcInput').value || '').trim();
+          var err = backdrop.querySelector('#idcErr');
+          var r = Storage.saveIdentityCode(val);
+          if (!r.success) { err.textContent = r.message; err.style.display = 'block'; return; }
+          close();
+          App.toastSuccess('身份码已导入');
+          rerenderIdentity();
+        });
+      };
+
+      // 只重绘身份码卡，避免整页刷新造成的闪烁
+      function rerenderIdentity() {
+        var slot = document.getElementById('identityCardSlot');
+        if (!slot) return;
+        slot.innerHTML = identityCodeCard();
+        App.mountQr('detailQrBox', Storage.getIdentityCode().code, { cellSize: 6 });
       }
 
       function infoCard(pkg) {
@@ -255,7 +343,7 @@
         }
         var html = '';
         html += statusBanner(pkg);
-        html += pickupCodeCard(pkg);
+        html += '<div id="identityCardSlot">' + identityCodeCard() + '</div>';
         html += infoCard(pkg);
         html += addressCard(pkg);
         if (pkg.status === 'incoming') {
@@ -263,6 +351,7 @@
         }
         html += actionButtons(pkg);
         contentEl.innerHTML = html;
+        App.mountQr('detailQrBox', Storage.getIdentityCode().code, { cellSize: 6 });
       }
 
       function loadDetail() {

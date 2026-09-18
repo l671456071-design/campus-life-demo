@@ -476,11 +476,13 @@ var Storage = {
     return this._life().festivals;
   },
 
-  festAddCustom: function (name, month, day) {
+  // opts: { bg?: 压缩后 dataURL 背景图, layout?: 'wide'|'compact', note?: 寄语 }
+  festAddCustom: function (name, month, day, opts) {
     var m = parseInt(month, 10), d = parseInt(day, 10);
     if (!name || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) {
       return { success: false, message: '名称或日期无效' };
     }
+    opts = opts || {};
     var data = this._life();
     var item = {
       id: 'V' + Date.now(),
@@ -488,11 +490,33 @@ var Storage = {
       m: m,
       d: d,
       custom: true,
+      bg: opts.bg || null,
+      layout: opts.layout === 'compact' ? 'compact' : 'wide',
+      note: opts.note ? String(opts.note).slice(0, 40) : '',
       createdAt: Date.now(),
     };
     data.festivals.unshift(item);
     this._saveLife(data);
     return { success: true, item: item };
+  },
+
+  // 更新自定义卡片（名称 / 日期 / 背景图 / 布局 / 寄语）
+  festUpdateCustom: function (id, patch) {
+    patch = patch || {};
+    var data = this._life();
+    for (var i = 0; i < data.festivals.length; i++) {
+      if (data.festivals[i].id === id) {
+        if (patch.name) data.festivals[i].name = String(patch.name).slice(0, 12);
+        if (patch.m >= 1 && patch.m <= 12) data.festivals[i].m = parseInt(patch.m, 10);
+        if (patch.d >= 1 && patch.d <= 31) data.festivals[i].d = parseInt(patch.d, 10);
+        if (Object.prototype.hasOwnProperty.call(patch, 'bg')) data.festivals[i].bg = patch.bg || null;
+        if (patch.layout) data.festivals[i].layout = patch.layout === 'compact' ? 'compact' : 'wide';
+        if (Object.prototype.hasOwnProperty.call(patch, 'note')) data.festivals[i].note = String(patch.note || '').slice(0, 40);
+        this._saveLife(data);
+        return { success: true, item: data.festivals[i] };
+      }
+    }
+    return { success: false, message: '未找到该节日' };
   },
 
   festRemoveCustom: function (id) {
@@ -502,6 +526,161 @@ var Storage = {
       if (data.festivals[i].id !== id) kept.push(data.festivals[i]);
     }
     data.festivals = kept;
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // ---- 秒表：数字段 DIY 配色（8 段：时时分分秒秒厘厘）----
+  swGetColors: function () {
+    var c = this._life().stopwatch.colors;
+    return Array.isArray(c) && c.length === 8 ? c : ['#2563EB', '#2563EB', '#2563EB', '#2563EB', '#2563EB', '#2563EB', '#94A3B8', '#94A3B8'];
+  },
+  swSaveColors: function (arr) {
+    if (!Array.isArray(arr) || arr.length !== 8) return { success: false, message: '配色段数量不正确' };
+    var data = this._life();
+    data.stopwatch.colors = arr.map(function (c) { return /^#[0-9A-Fa-f]{6}$/.test(c) ? c : '#2563EB'; });
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // ---- 备忘录 ----
+  notesGetAll: function () {
+    return this._life().notes.slice().sort(function (a, b) { return b.updatedAt - a.updatedAt; });
+  },
+  notesAdd: function (note) {
+    var title = String((note && note.title) || '').trim().slice(0, 30);
+    var content = String((note && note.content) || '').trim();
+    if (!title && !content) return { success: false, message: '内容为空' };
+    var data = this._life();
+    var now = Date.now();
+    var item = {
+      id: 'N' + now + '_' + Math.random().toString(36).slice(2, 7),
+      title: title || content.slice(0, 12),
+      content: content.slice(0, 5000),
+      createdAt: now,
+      updatedAt: now,
+    };
+    data.notes.unshift(item);
+    this._saveLife(data);
+    return { success: true, item: item };
+  },
+  notesUpdate: function (id, patch) {
+    patch = patch || {};
+    var data = this._life();
+    for (var i = 0; i < data.notes.length; i++) {
+      if (data.notes[i].id === id) {
+        if (Object.prototype.hasOwnProperty.call(patch, 'title')) {
+          data.notes[i].title = String(patch.title || '').trim().slice(0, 30) || data.notes[i].content.slice(0, 12);
+        }
+        if (Object.prototype.hasOwnProperty.call(patch, 'content')) {
+          data.notes[i].content = String(patch.content || '').slice(0, 5000);
+        }
+        data.notes[i].updatedAt = Date.now();
+        this._saveLife(data);
+        return { success: true, item: data.notes[i] };
+      }
+    }
+    return { success: false, message: '备忘录不存在' };
+  },
+  notesRemove: function (id) {
+    var data = this._life();
+    data.notes = data.notes.filter(function (n) { return n.id !== id; });
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // ---- 健身：周计划（1-7）+ 增肌/减脂目标 + 自定义饮食 ----
+  fitGet: function () {
+    return this._life().fitness;
+  },
+  fitAddItem: function (day, item) {
+    day = parseInt(day, 10);
+    if (!(day >= 1 && day <= 7)) return { success: false, message: '星期无效' };
+    var name = String((item && item.name) || '').trim().slice(0, 12);
+    if (!name) return { success: false, message: '动作名称为空' };
+    var data = this._life();
+    var row = {
+      id: 'F' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      name: name,
+      detail: String((item && item.detail) || '').trim().slice(0, 20),
+    };
+    data.fitness.plan[day].push(row);
+    this._saveLife(data);
+    return { success: true, item: row };
+  },
+  fitRemoveItem: function (day, id) {
+    day = parseInt(day, 10);
+    if (!(day >= 1 && day <= 7)) return { success: false };
+    var data = this._life();
+    data.fitness.plan[day] = data.fitness.plan[day].filter(function (x) { return x.id !== id; });
+    this._saveLife(data);
+    return { success: true };
+  },
+  fitSetGoal: function (goal) {
+    if (goal !== 'gain' && goal !== 'cut') return { success: false, message: '目标无效' };
+    var data = this._life();
+    data.fitness.dietGoal = goal;
+    this._saveLife(data);
+    return { success: true };
+  },
+  fitSetFocus: function (day, idx) {
+    day = parseInt(day, 10);
+    idx = parseInt(idx, 10);
+    if (!(day >= 1 && day <= 7)) return { success: false, message: '星期无效' };
+    if (!(idx >= 0 && idx <= 6)) return { success: false, message: '部位无效' };
+    var data = this._life();
+    data.fitness.focusMap[day] = idx;
+    this._saveLife(data);
+    return { success: true };
+  },
+  fitAddCustomFood: function (food) {
+    var name = String((food && food.name) || '').trim().slice(0, 12);
+    if (!name) return { success: false, message: '食物名称为空' };
+    var data = this._life();
+    var item = {
+      id: 'FD' + Date.now() + '_' + Math.random().toString(36).slice(2, 5),
+      name: name,
+      kcal: String((food && food.kcal) || '').slice(0, 10),
+      goal: food.goal === 'cut' ? 'cut' : 'gain',
+    };
+    data.fitness.customFoods.push(item);
+    this._saveLife(data);
+    return { success: true, item: item };
+  },
+  fitRemoveCustomFood: function (id) {
+    var data = this._life();
+    data.fitness.customFoods = data.fitness.customFoods.filter(function (x) { return x.id !== id; });
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // ---- 上课摸鱼：录音整理记录（仅文本入库，音频不落盘）----
+  lazyGetRecordings: function () {
+    return this._life().lazy.recordings.slice().sort(function (a, b) { return b.createdAt - a.createdAt; });
+  },
+  lazyAddRecording: function (rec) {
+    rec = rec || {};
+    var transcript = String(rec.transcript || '').trim();
+    var summary = String(rec.summary || '').trim();
+    if (!transcript && !summary) return { success: false, message: '内容为空' };
+    var data = this._life();
+    var now = Date.now();
+    var item = {
+      id: 'LZ' + now + '_' + Math.random().toString(36).slice(2, 7),
+      title: String(rec.title || '').trim().slice(0, 30) || ('课堂记录 ' + this.formatNow()),
+      transcript: transcript.slice(0, 20000),
+      summary: summary.slice(0, 20000),
+      duration: Math.max(0, parseInt(rec.duration, 10) || 0),
+      createdAt: now,
+      time: this.formatNow(),
+    };
+    data.lazy.recordings.unshift(item);
+    this._saveLife(data);
+    return { success: true, item: item };
+  },
+  lazyRemoveRecording: function (id) {
+    var data = this._life();
+    data.lazy.recordings = data.lazy.recordings.filter(function (x) { return x.id !== id; });
     this._saveLife(data);
     return { success: true };
   },
@@ -872,6 +1051,43 @@ var Storage = {
   },
 
   // =========================================================
+  // 取件身份码（纯本地）
+  // 未手动导入时，用唯一数字 ID 作为系统生成的身份码；
+  // 用户本地导入后优先展示导入码，可随时清除恢复系统码。
+  // =========================================================
+  getIdentityCode: function () {
+    var user = this.getUser();
+    if (user.identityCode && user.identityCode.code) {
+      return {
+        code: String(user.identityCode.code),
+        source: 'imported',
+        importedAt: user.identityCode.importedAt || null,
+      };
+    }
+    return { code: this.getUserId(), source: 'system', importedAt: null };
+  },
+
+  saveIdentityCode: function (code) {
+    code = String(code || '').trim().toUpperCase().replace(/\s+/g, '');
+    if (!/^[A-Z0-9-]{4,24}$/.test(code)) {
+      return { success: false, message: '身份码格式不正确（4-24 位字母/数字/短横线）' };
+    }
+    var user = this.getUser();
+    user.identityCode = { code: code, importedAt: Date.now() };
+    this.saveUser(user);
+    return { success: true, code: code };
+  },
+
+  clearIdentityCode: function () {
+    var user = this.getUser();
+    if (user.identityCode) {
+      delete user.identityCode;
+      this.saveUser(user);
+    }
+    return { success: true };
+  },
+
+  // =========================================================
   // 个人空间 · 相册（图片以压缩后 dataURL 存储，可发布到自己的帖子）
   // =========================================================
   lifeGetAlbum: function () {
@@ -950,6 +1166,15 @@ var Storage = {
       album: [],
       bath: { showers: [] },
       festivals: [],
+      notes: [],
+      stopwatch: { colors: [] }, // 数字段 DIY 配色
+      fitness: {
+        plan: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] },
+        dietGoal: 'gain', // gain 增肌 | cut 减脂
+        customFoods: [],
+        focusMap: {}, // 每日训练部位自定义（{1: 索引}，缺省 day-1）
+      },
+      lazy: { recordings: [] }, // 上课摸鱼：录音转写整理记录（音频不入库，仅存文本）
     };
   },
 
@@ -966,6 +1191,21 @@ var Storage = {
     if (!data.bath) data.bath = { showers: [] };
     if (!data.bath.showers) data.bath.showers = [];
     if (!data.festivals) data.festivals = [];
+    if (!data.notes) data.notes = [];
+    if (!data.stopwatch) data.stopwatch = { colors: [] };
+    if (!data.fitness) {
+      data.fitness = { plan: { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] }, dietGoal: 'gain', customFoods: [] };
+    } else {
+      var fp = data.fitness.plan || {};
+      var freshPlan = { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] };
+      Object.keys(freshPlan).forEach(function (d) { freshPlan[d] = Array.isArray(fp[d]) ? fp[d] : []; });
+      data.fitness.plan = freshPlan;
+      if (!data.fitness.dietGoal) data.fitness.dietGoal = 'gain';
+      if (!Array.isArray(data.fitness.customFoods)) data.fitness.customFoods = [];
+      if (!data.fitness.focusMap || typeof data.fitness.focusMap !== 'object') data.fitness.focusMap = {};
+    }
+    if (!data.lazy) data.lazy = { recordings: [] };
+    if (!Array.isArray(data.lazy.recordings)) data.lazy.recordings = [];
     return data;
   },
 
@@ -1049,12 +1289,35 @@ var Storage = {
 
   // ---- 课程表 ----
   lifeGetCourses: function () {
-    return this._life().schedule || [];
+    // 新课程模型已去除「周次」：读取时顺带清理旧数据残留的 weeks 字段
+    var list = this._life().schedule || [];
+    var changed = false;
+    list.forEach(function (c) {
+      if (Object.prototype.hasOwnProperty.call(c, 'weeks')) { delete c.weeks; changed = true; }
+    });
+    if (changed) {
+      var data = this._life();
+      data.schedule = list;
+      this._saveLife(data);
+    }
+    return list;
   },
 
   lifeSaveCourses: function (list) {
     var data = this._life();
-    data.schedule = list || [];
+    // 统一去除周次字段，保证「按真实日期星期匹配」
+    data.schedule = (list || []).map(function (c) {
+      return {
+        id: c.id || ('C' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+        name: c.name,
+        teacher: c.teacher || '',
+        position: c.position || '',
+        weekday: parseInt(c.weekday, 10) || 1,
+        start: parseInt(c.start, 10) || 1,
+        end: parseInt(c.end, 10) || c.start || 1,
+        color: c.color || '',
+      };
+    });
     this._saveLife(data);
     return { success: true, count: data.schedule.length };
   },
@@ -1065,14 +1328,13 @@ var Storage = {
     }
     var data = this._life();
     data.schedule.push({
-      id: 'C' + Date.now(),
+      id: 'C' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
       name: course.name,
       teacher: course.teacher || '',
       position: course.position || '',
       weekday: parseInt(course.weekday, 10) || 1,
       start: parseInt(course.start, 10) || 1,
       end: parseInt(course.end, 10) || course.start || 1,
-      weeks: course.weeks || '1-16周',
       color: course.color || '#0A6EFF',
     });
     this._saveLife(data);

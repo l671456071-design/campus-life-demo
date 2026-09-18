@@ -1314,8 +1314,9 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('savings.html 含收支流水（工资/记账）', savSrc.indexOf('ledgerList') !== -1 && savSrc.indexOf('lifeAddLedger') !== -1);
   check('savings.html 支持目标存入', savSrc.indexOf('lifeContributeGoal') !== -1);
 
-  // 14.6 课程表页能力（贝蒂导入）
-  check('schedule.html 含贝蒂课程表导入入口', schSrc.indexOf('导入贝蒂课程表') !== -1);
+  // 14.6 课程表页能力（贝蒂 JSON / XLS 导入，v6 重写后保留双通道）
+  check('schedule.html 含课程表导入入口（导入课程表 + 贝蒂 JSON 说明）',
+    schSrc.indexOf('导入课程表') !== -1 && schSrc.indexOf('贝蒂 JSON') !== -1);
   check('schedule.html 支持 JSON 文件选择', /type="file"[^>]*accept="\.json/.test(schSrc));
   check('schedule.html 支持粘贴 JSON 双通道', schSrc.indexOf('importText') !== -1 && schSrc.indexOf('FileReader') !== -1);
   check('schedule.html 含容错字段映射解析（parseSchedule）', schSrc.indexOf('function parseSchedule') !== -1);
@@ -1413,7 +1414,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 升级为 v5', /var VERSION = 'v5'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v6', /var VERSION = 'v6'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1522,7 +1523,9 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   // 16.1 课程表 XLS/JSON 统一导入管线
   const scheduleSrc2 = fs.readFileSync(path.join(ROOT, 'schedule.html'), 'utf8');
   check('schedule.html 使用 XLSX 库解析表格', scheduleSrc2.indexOf('xlsx.full.min.js') !== -1);
-  check('schedule.html 含 extractWeeks 周次提取', scheduleSrc2.indexOf('function extractWeeks') !== -1);
+  // v6 起周次模型彻底移除：改为严格忽略「周次行」，按真实日期 × 节次匹配
+  check('schedule.html v6 无 extractWeeks 周次提取（改为 isWeekLine 忽略周次行）',
+    scheduleSrc2.indexOf('function extractWeeks') === -1 && scheduleSrc2.indexOf('isWeekLine') !== -1);
 
   // 16.2 攒钱目标 DIY（图标字段 + 更新 API）
   const storageSrc5 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
@@ -1637,18 +1640,13 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('storage.js 含洗澡记录 API（bathGetShowers/bathAddShower/bathRemoveShower）',
     ['bathGetShowers', 'bathAddShower', 'bathRemoveShower'].every(s => storageSrc6.indexOf(s) !== -1));
 
-  // 17.2 节日倒计时：精确到秒 + 分区展示 + DIY 自定义
-  check('bathroom.html 含节日倒计时区（FEST_PRESETS + data-fest-at）',
-    bathSrc.indexOf('FEST_PRESETS') !== -1 && bathSrc.indexOf('data-fest-at') !== -1);
-  check('bathroom.html 倒计时精确到秒（秒段渲染 dd天·HH:MM:SS）',
-    bathSrc.indexOf('tickCountdowns') !== -1 && /pad\d?\(/.test(bathSrc));
-  check('bathroom.html 倒计时分区（featured 主卡 + 小卡网格 + DIY 添加卡）',
-    bathSrc.indexOf('fest-featured') !== -1 && bathSrc.indexOf('fest-add') !== -1);
-  check('bathroom.html DIY 节日弹窗（festSheet + festAddCustom/festRemoveCustom）',
-    bathSrc.indexOf('festSheet') !== -1 && bathSrc.indexOf('festAddCustom') !== -1 &&
-    bathSrc.indexOf('festRemoveCustom') !== -1);
-  check('storage.js 含自定义节日 API（festGetCustom/festAddCustom/festRemoveCustom）',
-    ['festGetCustom', 'festAddCustom', 'festRemoveCustom'].every(s => storageSrc6.indexOf(s) !== -1));
+  // 17.2 节日倒计时（v6 已独立到 festival.html，bathroom 不再承载倒计时）
+  const festSrc17 = fs.readFileSync(path.join(ROOT, 'festival.html'), 'utf8');
+  check('bathroom.html 已移除节日倒计时（FEST_PRESETS/tickCountdowns/festSheet/fest-featured 均不存在）',
+    ['FEST_PRESETS', 'tickCountdowns', 'festSheet', 'fest-featured', 'data-fest-at'].every(s => bathSrc.indexOf(s) === -1));
+  check('festival.html 独立页存在（festSheet + 月历 f-cal + 相册压缩 + 布局）',
+    festSrc17.indexOf('festSheet') !== -1 && festSrc17.indexOf('f-cal') !== -1 &&
+    festSrc17.indexOf('compressImage') !== -1);
 
   // 17.3 仙游校区：只显示男生/女生宿舍 + 只写几号楼
   check('campus-data.js 仙游校区 male/female 宿舍（无具体苑区）',
@@ -1723,7 +1721,149 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     /body\[data-page="detail"\] \.tab-bar\s*\{\s*display:\s*none/.test(detailSrc));
 
   // 17.10 缓存版本
-  check('sw.js 版本已升级 v5', /var VERSION = 'v5';/.test(swSrc2));
+  check('sw.js 版本已升级 v6（[17] 发布时为 v5，v6 见 [18]）', /var VERSION = 'v6';/.test(swSrc2));
+})();
+
+// ============================================================
+// [18] v6 改版：身份码+本地导入 / 节日独立 / 课程表重写 / 扫码优化与卡顿 /
+//              秒表 / 备忘录 / 分贝仪 / 健身 / 懒人模式 / 个人卡平滑过渡
+// ============================================================
+(function () {
+  console.log('\n[18] v6：身份码/节日独立/课程表/扫码/5个新功能/个人卡');
+  const detailSrc2 = fs.readFileSync(path.join(ROOT, 'detail.html'), 'utf8');
+  const festSrc = fs.readFileSync(path.join(ROOT, 'festival.html'), 'utf8');
+  const schedSrc = fs.readFileSync(path.join(ROOT, 'schedule.html'), 'utf8');
+  const scanSrc4 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  const swSrc3 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const storageSrc7 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const idxSrc6 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const stopSrc = fs.readFileSync(path.join(ROOT, 'stopwatch.html'), 'utf8');
+  const notesSrc = fs.readFileSync(path.join(ROOT, 'notes.html'), 'utf8');
+  const dbSrc = fs.readFileSync(path.join(ROOT, 'decibel.html'), 'utf8');
+  const fitSrc = fs.readFileSync(path.join(ROOT, 'fitness.html'), 'utf8');
+  const lazySrc = fs.readFileSync(path.join(ROOT, 'lazy.html'), 'utf8');
+  const profSrc6 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+
+  // 18.1 详情页：取件码 → 身份码 + 本地导入
+  check('detail.html 身份码卡（identityCodeCard + 取件身份码文案）',
+    detailSrc2.indexOf('identityCodeCard') !== -1 && detailSrc2.indexOf('取件身份码') !== -1);
+  check('detail.html 身份码本地导入弹窗（本地导入身份码 + 已本地导入标记）',
+    detailSrc2.indexOf('本地导入身份码') !== -1 && detailSrc2.indexOf('已本地导入') !== -1);
+  check('storage.js 用户身份码存取（user.identityCode + 重置）',
+    storageSrc7.indexOf('identityCode') !== -1);
+  check('detail.html 身份码卡支持恢复系统码', detailSrc2.indexOf('恢复系统身份码') !== -1);
+
+  // 18.2 节日倒计时独立页
+  check('festival.html DIY 卡片支持相册背景（compressImage）与宽/紧凑布局',
+    festSrc.indexOf('compressImage') !== -1 && /compact|wide/.test(festSrc));
+  check('festival.html 月历（f-cal-grid + 节日打点 f-cal-dots）',
+    festSrc.indexOf('f-cal-grid') !== -1 && festSrc.indexOf('f-cal-dots') !== -1);
+  check('index.html 首页有节日倒计时入口', idxSrc6.indexOf('festival.html') !== -1);
+
+  // 18.3 课程表：XLS 修复 + 当前日期匹配 + 日历 + 去周次
+  check('schedule.html XLS 解析重写（extractSections/findSectionCol/parseCourseBlock/mergeAdjacent）',
+    ['extractSections', 'findSectionCol', 'parseCourseBlock', 'mergeAdjacent']
+      .every(s => schedSrc.indexOf(s) !== -1));
+  check('schedule.html 月历视图（sch-cal-grid + 月视图切换 + 回到今天）',
+    schedSrc.indexOf('sch-cal-grid') !== -1 && schedSrc.indexOf('回到今天') !== -1);
+  check('schedule.html 真实日期模型（mondayOf/weekdayOf + 日期条显示真实日期）',
+    schedSrc.indexOf('mondayOf') !== -1 && schedSrc.indexOf('weekdayOf') !== -1);
+  check('schedule.html 实时上课状态卡（sch-now live/next/done）',
+    ['sch-now', 'live', 'next', 'done'].every(s => schedSrc.indexOf(s) !== -1));
+  check('schedule.html 无「1-15周」周次 UI', schedSrc.indexOf('1-15周') === -1);
+  check('storage.js 课程模型去除 weeks 字段（统一 weekday/start/end）',
+    /lifeSaveCourses[\s\S]{0,600}weekday/.test(storageSrc7) &&
+    !/lifeSaveCourses[\s\S]{0,600}weeks:/.test(storageSrc7));
+
+  // 18.4 扫码：取景框上移 + 安全留白 + 横排按钮 + 深色底条 + 圆角统一 + tab 压缩 + 卡顿修复
+  check('scan.html 取景框垂直居中偏上（.scan-center top:38%）',
+    /\.scan-center\s*\{[\s\S]{0,200}top:38%/.test(scanSrc4));
+  check('scan.html 底部半透明深色操作底条（scan-actions + rgba(8,15,32,.6) + 模糊）',
+    scanSrc4.indexOf('scan-actions') !== -1 && scanSrc4.indexOf('rgba(8,15,32,.6)') !== -1);
+  check('scan.html 双功能按钮横排（scan-act-row + primary/ghost）',
+    scanSrc4.indexOf('scan-act-row') !== -1 &&
+    scanSrc4.indexOf('scan-act-btn primary') !== -1 &&
+    scanSrc4.indexOf('scan-act-btn ghost') !== -1);
+  check('scan.html 底部 tab 局部压缩（height:54px + border-radius:27px）',
+    scanSrc4.indexOf('height:54px') !== -1 && scanSrc4.indexOf('border-radius:27px') !== -1);
+  check('scan.html 切换扫码模式卡顿修复（loopGen 代际 + softRestartLoop + resume 防重入）',
+    scanSrc4.indexOf('loopGen') !== -1 && scanSrc4.indexOf('softRestartLoop') !== -1 &&
+    /if\s*\(SCAN\.scanning\)\s*return/.test(scanSrc4));
+
+  // 18.5 秒表：高精度 + 数字逐段 DIY 配色
+  check('stopwatch.html 8 数字段独立渲染（sw-digit × 8 + swGetColors/swSaveColors）',
+    stopSrc.indexOf('sw-digit') !== -1 &&
+    stopSrc.indexOf('swGetColors') !== -1 && stopSrc.indexOf('swSaveColors') !== -1);
+  check('stopwatch.html performance.now 高精度计时 + 计次',
+    stopSrc.indexOf('performance.now') !== -1 && /lap/i.test(stopSrc));
+  check('storage.js 秒表配色 API（swGetColors 返回 8 段 + 校验 hex）',
+    /swGetColors[\s\S]{0,400}#[0-9A-Fa-f]{6}/.test(storageSrc7));
+
+  // 18.6 备忘录
+  check('notes.html 备忘录增删改查 + 搜索（notesGetAll/notesAdd/notesUpdate/notesRemove）',
+    ['notesGetAll', 'notesAdd', 'notesUpdate', 'notesRemove']
+      .every(s => notesSrc.indexOf(s) !== -1) && notesSrc.indexOf('ntSearchInput') !== -1);
+
+  // 18.7 分贝仪
+  check('decibel.html 麦克风分析（getUserMedia + AnalyserNode + RMS→dB 校准）',
+    dbSrc.indexOf('getUserMedia') !== -1 && dbSrc.indexOf('createAnalyser') !== -1 &&
+    dbSrc.indexOf('getFloatTimeDomainData') !== -1);
+  check('decibel.html 85dB 警戒线提醒 + 震动 + 完整分级（0-120dB）',
+    dbSrc.indexOf('dbAlert') !== -1 && dbSrc.indexOf('85') !== -1 &&
+    dbSrc.indexOf('vibrate') !== -1 && dbSrc.indexOf('疼痛阈值') !== -1);
+  check('decibel.html 权限拒绝与 file:// 兜底 + 切后台停麦克',
+    dbSrc.indexOf('需要麦克风权限') !== -1 && /visibilitychange/.test(dbSrc));
+
+  // 18.8 健身
+  check('fitness.html 周一到周日部位训练（FOCUSES + fitAddItem/fitRemoveItem + 换部位）',
+    fitSrc.indexOf('FOCUSES') !== -1 && fitSrc.indexOf('fitAddItem') !== -1 &&
+    fitSrc.indexOf('换部位') !== -1);
+  check('fitness.html 增肌/减脂饮食切换（fitSetGoal gain/cut + MEALS）',
+    fitSrc.indexOf('fitSetGoal') !== -1 && fitSrc.indexOf("'gain'") !== -1 &&
+    fitSrc.indexOf("'cut'") !== -1 && fitSrc.indexOf('fitAddCustomFood') !== -1);
+  check('storage.js 健身 API 齐全（fitGet/fitSetFocus/focusMap 兼容补齐）',
+    ['fitGet', 'fitSetFocus', 'fitSetGoal', 'fitAddCustomFood'].every(s => storageSrc7.indexOf(s) !== -1) &&
+    storageSrc7.indexOf('focusMap') !== -1);
+
+  // 18.9 懒人模式：小游戏 + 录音 + 本地 AI 整理 + 导出
+  check('lazy.html 三个摸鱼小游戏（反应/打地鼠/贪吃蛇）+ 老板键伪装',
+    ['startReact', 'startWhack', 'startSnake'].every(s => lazySrc.indexOf(s) !== -1) &&
+    lazySrc.indexOf('lzFake') !== -1 && lazySrc.indexOf('老师来了') !== -1);
+  check('lazy.html 录音（MediaRecorder + SpeechRecognition 转写 + 切后台自动停）',
+    lazySrc.indexOf('MediaRecorder') !== -1 && lazySrc.indexOf('webkitSpeechRecognition') !== -1 &&
+    /visibilitychange/.test(lazySrc));
+  check('lazy.html 本地 AI 整理（aiOrganize：去口头禅/关键词/分点）',
+    lazySrc.indexOf('aiOrganize') !== -1 && lazySrc.indexOf('extractKeywords') !== -1 &&
+    lazySrc.indexOf('FILLERS') !== -1);
+  check('lazy.html 导出 Markdown / Word(.doc) / PDF(print)',
+    lazySrc.indexOf('text/markdown') !== -1 && lazySrc.indexOf('application/msword') !== -1 &&
+    lazySrc.indexOf('window.print') !== -1);
+  check('lazy.html 音频不落盘（recChunks 停止即清空）+ 记录走 lazyAddRecording',
+    /recChunks\s*=\s*\[\]/.test(lazySrc) && lazySrc.indexOf('lazyAddRecording') !== -1);
+  check('storage.js 摸鱼记录 API（lazyGetRecordings/lazyAddRecording/lazyRemoveRecording）',
+    ['lazyGetRecordings', 'lazyAddRecording', 'lazyRemoveRecording']
+      .every(s => storageSrc7.indexOf(s) !== -1));
+
+  // 18.10 个人卡片：头像/背景平滑过渡 + 文字精简
+  check('profile.html 背景图层交叉淡入（profile-bg-layer + opacity transition）',
+    profSrc6.indexOf('profile-bg-layer') !== -1 &&
+    /\.profile-bg-layer\s*\{[\s\S]{0,200}transition:\s*opacity/.test(profSrc6));
+  check('profile.html 头像替换淡出淡入（#userAvatarBox opacity transition）',
+    /#userAvatarBox[^}]*transition:\s*opacity/.test(profSrc6));
+  check('profile.html 校区/宿舍合并单行省略（userFoot + text-overflow:ellipsis）',
+    profSrc6.indexOf('userFoot') !== -1 && profSrc6.indexOf('text-overflow:ellipsis') !== -1 &&
+    profSrc6.indexOf('userCampus') === -1 && profSrc6.indexOf('userDorm') === -1);
+
+  // 18.11 首页 5 个新功能入口齐全
+  check('index.html 新功能入口齐全（秒表/备忘录/分贝仪/健身/懒人模式）',
+    ['stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
+      .every(s => idxSrc6.indexOf(s) !== -1));
+
+  // 18.12 缓存与离线
+  check('sw.js v6 且预缓存 6 个新页面',
+    /var VERSION = 'v6';/.test(swSrc3) &&
+    ['festival.html', 'stopwatch.html', 'notes.html', 'decibel.html', 'fitness.html', 'lazy.html']
+      .every(s => swSrc3.indexOf(s) !== -1));
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>健身 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    body[data-page="fitness"] .tab-bar { display:none !important; }
+    body[data-page="fitness"] .app-content { padding-bottom:calc(28px + env(safe-area-inset-bottom)) !important; }
+
+    .ft-toggle { display:flex; margin:10px 16px 0; background:var(--color-surface-alt); border-radius:99px; padding:3px; }
+    .ft-toggle button {
+      flex:1; border:none; background:transparent; font-family:inherit;
+      font-size:13.5px; font-weight:600; color:var(--color-text-sub);
+      padding:8px 0; border-radius:99px; transition:all .2s;
+    }
+    .ft-toggle button.on { background:var(--color-surface); color:#EA580C; box-shadow:var(--shadow-sm); font-weight:700; }
+
+    /* 星期条 */
+    .ft-days { display:flex; gap:7px; overflow-x:auto; padding:12px 16px 2px; scrollbar-width:none; }
+    .ft-day { flex-shrink:0; width:42px; padding:7px 0 8px; border-radius:14px; text-align:center;
+      border:1.5px solid var(--color-border-light); background:var(--color-surface);
+      color:var(--color-text-sub); font-size:13px; cursor:pointer; transition:all .2s; font-family:inherit; }
+    .ft-day .n { display:block; font-size:15px; font-weight:700; margin-top:2px; }
+    .ft-day.rest .n { font-size:13px; }
+    .ft-day.on { background:#EA580C; border-color:#EA580C; color:#fff; }
+    .ft-day.today:not(.on) { border-color:#EA580C; color:#EA580C; }
+    .ft-day:active { transform:scale(.94); }
+
+    .ft-focus {
+      margin:12px 16px 0; border-radius:16px; padding:13px 15px;
+      background:linear-gradient(135deg,#FFF7ED,#FFEDD5);
+      border:1px solid #FED7AA;
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .ft-focus .lb { font-size:11.5px; color:#C2410C; font-weight:700; }
+    .ft-focus .fc { font-size:16px; font-weight:800; color:#9A3412; margin-top:2px; }
+    .ft-focus button { flex-shrink:0; border:1px solid #FDBA74; background:#fff; color:#C2410C;
+      border-radius:99px; font-size:12px; font-weight:600; padding:7px 12px; font-family:inherit; }
+
+    .ft-list { padding:12px 16px 0; display:flex; flex-direction:column; gap:9px; }
+    .ft-ex { display:flex; align-items:center; gap:12px; background:var(--color-surface);
+      border-radius:15px; border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm); padding:12px 14px; }
+    .ft-ex .em { font-size:22px; width:30px; text-align:center; flex-shrink:0; }
+    .ft-ex .info { flex:1; min-width:0; }
+    .ft-ex .nm { font-size:14.5px; font-weight:700; color:var(--color-text); }
+    .ft-ex .dt { font-size:12px; color:var(--color-text-hint); margin-top:2px; }
+    .ft-ex .del { flex-shrink:0; border:none; background:var(--color-surface-alt); color:var(--color-danger);
+      width:30px; height:30px; border-radius:50%; font-size:15px; }
+    .ft-add-btn { margin:12px 16px 0; width:calc(100% - 32px); border:1.5px dashed var(--color-border);
+      background:transparent; color:var(--color-text-sub); border-radius:15px; padding:13px 0;
+      font-size:14px; font-weight:600; font-family:inherit; }
+    .ft-add-btn:active { background:var(--color-surface-alt); }
+
+    /* 饮食 */
+    .ft-goal { margin:14px 16px 0; background:var(--color-surface); border-radius:18px; border:1px solid var(--color-border-light);
+      box-shadow:var(--shadow-sm); padding:14px; }
+    .ft-goal-row { display:flex; gap:10px; }
+    .ft-goal-btn { flex:1; border:1.5px solid var(--color-border); border-radius:14px; padding:11px 0; background:transparent;
+      font-family:inherit; font-size:14px; font-weight:700; color:var(--color-text-sub); }
+    .ft-goal-btn.on.gain { background:#1D4ED8; border-color:#1D4ED8; color:#fff; }
+    .ft-goal-btn.on.cut { background:#16A34A; border-color:#16A34A; color:#fff; }
+    .ft-goal-tip { margin-top:11px; font-size:12.5px; color:var(--color-text-sub); line-height:1.75; }
+    .ft-goal-tip b { color:var(--color-text); }
+
+    .ft-meals { margin:14px 16px 0; display:flex; flex-direction:column; gap:10px; }
+    .ft-meal { background:var(--color-surface); border-radius:16px; border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm); overflow:hidden; }
+    .ft-meal-h { display:flex; align-items:center; gap:8px; padding:12px 15px; font-size:14px; font-weight:800; color:var(--color-text);
+      border-bottom:1px solid var(--color-border-light); }
+    .ft-meal-h span.tag { margin-left:auto; font-size:11px; font-weight:600; color:var(--color-text-hint); }
+    .ft-meal ul { list-style:none; margin:0; padding:6px 15px 10px; }
+    .ft-meal li { font-size:13px; color:var(--color-text-sub); line-height:1.7; padding:5px 0 5px 16px; position:relative; }
+    .ft-meal li::before { content:''; position:absolute; left:2px; top:13px; width:6px; height:6px; border-radius:50%; background:#FB923C; }
+
+    .ft-custom { margin:14px 16px 0; background:var(--color-surface); border-radius:16px; border:1px solid var(--color-border-light); box-shadow:var(--shadow-sm); padding:6px 15px 12px; }
+    .ft-custom-h { display:flex; align-items:center; justify-content:space-between; padding:10px 0; font-size:14px; font-weight:800; }
+    .ft-custom-h button { border:none; background:#FFF7ED; color:#C2410C; border-radius:99px; font-size:12px; font-weight:700; padding:6px 12px; font-family:inherit; }
+    .ft-food { display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-top:1px dashed var(--color-border-light); font-size:13px; }
+    .ft-food .nm { color:var(--color-text); font-weight:600; }
+    .ft-food .kc { color:var(--color-text-hint); font-size:12px; }
+    .ft-food button { border:none; background:none; color:var(--color-danger); font-size:15px; padding:0 4px; }
+    .ft-empty2 { font-size:12.5px; color:var(--color-text-hint); text-align:center; padding:8px 0 4px; }
+
+    .ft-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .ft-mask.show { opacity:1; pointer-events:auto; }
+    .ft-sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0;
+      padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%);
+      transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:86vh; overflow-y:auto; }
+    .ft-sheet.show { transform:translateY(0); }
+    .ft-sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:14px; }
+    .ft-field { margin-bottom:12px; }
+    .ft-field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
+    .ft-field input { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px;
+      padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
+    .ft-field input:focus { border-color:#EA580C; }
+    .ft-quick { display:flex; flex-wrap:wrap; gap:7px; }
+    .ft-quick button { border:1px solid #FED7AA; background:#FFF7ED; color:#C2410C; border-radius:99px; font-size:12px;
+      padding:6px 11px; font-family:inherit; }
+    .ft-save { width:100%; border:none; border-radius:14px; padding:13px 0; background:#EA580C; color:#fff;
+      font-size:15px; font-weight:700; font-family:inherit; margin-top:4px; }
+  </style>
+</head>
+<body data-page="fitness">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">健身</div>
+      <div class="header-spacer"></div>
+      <div class="header-right"></div>
+    </header>
+
+    <main class="app-content" id="mainContent">
+      <div class="ft-toggle">
+        <button id="tabPlan" class="on">训练计划</button>
+        <button id="tabDiet">饮食方案</button>
+      </div>
+
+      <div id="panePlan">
+        <div class="ft-days" id="ftDays"></div>
+        <div class="ft-focus">
+          <div>
+            <div class="lb">今日训练部位</div>
+            <div class="fc" id="ftFocusName"></div>
+          </div>
+          <button id="btnCycleFocus">换部位</button>
+        </div>
+        <div class="ft-list" id="ftList"></div>
+        <button class="ft-add-btn" id="btnAddEx">＋ 添加训练动作</button>
+      </div>
+
+      <div id="paneDiet" style="display:none;">
+        <div class="ft-goal">
+          <div class="ft-goal-row">
+            <button class="ft-goal-btn gain" id="goalGain">💪 增肌</button>
+            <button class="ft-goal-btn cut" id="goalCut">🔥 减脂</button>
+          </div>
+          <div class="ft-goal-tip" id="goalTip"></div>
+        </div>
+        <div class="ft-meals" id="ftMeals"></div>
+        <div class="ft-custom">
+          <div class="ft-custom-h"><span id="customTitle">我的增肌食谱</span><button id="btnAddFood">＋ 添加</button></div>
+          <div id="ftFoods"></div>
+        </div>
+      </div>
+    </main>
+
+    <div class="ft-mask" id="ftMask"></div>
+    <div class="ft-sheet" id="exSheet">
+      <div class="ft-sheet-title">添加训练动作</div>
+      <div class="ft-field">
+        <label>动作名称</label>
+        <input type="text" id="exName" placeholder="如：平板卧推" maxlength="12">
+      </div>
+      <div class="ft-field">
+        <label>组数 / 次数 / 重量备注</label>
+        <input type="text" id="exDetail" placeholder="如：4组 × 10次 · 40kg" maxlength="20">
+      </div>
+      <div class="ft-field">
+        <label>常用动作（点一下自动填入）</label>
+        <div class="ft-quick" id="ftQuick"></div>
+      </div>
+      <button class="ft-save" id="exSave">保存</button>
+    </div>
+
+    <div class="ft-sheet" id="foodSheet">
+      <div class="ft-sheet-title" id="foodSheetTitle">添加增肌食物</div>
+      <div class="ft-field">
+        <label>食物名称</label>
+        <input type="text" id="foodName" placeholder="如：即食鸡胸肉" maxlength="12">
+      </div>
+      <div class="ft-field">
+        <label>热量 / 备注</label>
+        <input type="text" id="foodKcal" placeholder="如：130 kcal/100g" maxlength="10">
+      </div>
+      <button class="ft-save" id="foodSave">保存</button>
+    </div>
+
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var DAYS = ['一', '二', '三', '四', '五', '六', '日'];
+      // 默认周部位循环（可「换部位」切换）
+      var FOCUSES = [
+        { name: '胸 + 三头', emoji: '💪', quick: [['平板卧推', '4组×10次'], ['上斜哑铃卧推', '4组×10次'], ['俯卧撑', '4组×力竭'], ['双杠臂屈伸', '3组×10次'], ['绳索下压', '4组×12次']] },
+        { name: '背 + 二头', emoji: '🔙', quick: [['引体向上', '4组×力竭'], ['高位下拉', '4组×12次'], ['杠铃划船', '4组×10次'], ['坐姿划船', '4组×12次'], ['哑铃弯举', '4组×12次']] },
+        { name: '肩 + 腹', emoji: '🏋️', quick: [['坐姿推举', '4组×10次'], ['哑铃侧平举', '4组×15次'], ['面拉', '4组×15次'], ['平板支撑', '4组×60秒'], ['卷腹', '4组×20次']] },
+        { name: '腿 + 臀', emoji: '🦵', quick: [['杠铃深蹲', '4组×10次'], ['腿举', '4组×12次'], ['罗马尼亚硬拉', '4组×10次'], ['弓步蹲', '3组×12次'], ['提踵', '4组×20次']] },
+        { name: '胸 + 背', emoji: '🔥', quick: [['哑铃卧推', '4组×10次'], ['夹胸', '4组×15次'], ['高位下拉', '4组×12次'], ['单臂划船', '4组×12次/侧']] },
+        { name: '手臂 + 核心', emoji: '💥', quick: [['杠铃弯举', '4组×12次'], ['锤式弯举', '4组×12次'], ['窄距卧推', '4组×10次'], ['仰卧臂屈伸', '4组×12次'], ['悬垂举腿', '4组×15次']] },
+        { name: '休息 / 有氧', emoji: '🧘', quick: [['慢跑', '30分钟'], ['跳绳', '4组×3分钟'], ['拉伸放松', '20分钟'], ['泡沫轴放松', '15分钟']] },
+      ];
+
+      var MEALS = {
+        gain: [
+          { h: '🌅 早餐', tag: '高蛋白启动', items: ['全蛋 2 个 + 蛋清 2 个 + 全麦面包 2 片', '纯牛奶 300ml 或无糖豆浆', '香蕉 1 根（训练日快碳）'] },
+          { h: '🍱 午餐', tag: '约 800-900 kcal', items: ['米饭 1.5 拳，杂粮饭更佳', '鸡胸 / 牛肉 / 鱼虾 150-200g（生重）', '西兰花、彩椒等蔬菜 2 拳，少油烹饪'] },
+          { h: '💪 练后加餐', tag: '30 分钟黄金窗口', items: ['乳清蛋白 1 勺 或 鸡蛋 2 个', '香蕉 / 面包等快碳一份'] },
+          { h: '🍲 晚餐', tag: '约 700 kcal', items: ['米饭 / 红薯 / 玉米 1 拳', '瘦肉或豆制品 150g', '深色蔬菜 2 拳，睡前可喝 200ml 牛奶'] },
+        ],
+        cut: [
+          { h: '🌅 早餐', tag: '约 300-400 kcal', items: ['水煮蛋 1-2 个 + 玉米 / 紫薯 1 份', '无糖豆浆 / 黑咖啡，增加饱腹感'] },
+          { h: '🍱 午餐', tag: '制造热量缺口', items: ['米饭半碗到 1 拳，粗细搭配', '鸡胸肉 / 鱼虾 / 瘦牛肉 120-150g', '先吃蔬菜和蛋白质，最后吃主食'] },
+          { h: '🥗 加餐', tag: '防止暴食', items: ['小番茄、黄瓜、生菜不限量', '原味坚果 10g（约 7 粒）或无糖酸奶'] },
+          { h: '🍲 晚餐', tag: '低碳高蛋白', items: ['不吃或少吃精米白面，用半拳粗粮代替', '蛋白质 120g + 大量绿叶菜', '晚餐距睡觉至少 3 小时，每天饮水 2L+'] },
+        ],
+      };
+      var TIPS = {
+        gain: '<b>增肌原则：</b>热量盈余 300-500 kcal/天；蛋白质约 <b>1.6-2.2g/kg 体重</b>；每周每个大肌群练 2 次，力量训练后补充快碳 + 蛋白，睡眠 7-8 小时。',
+        cut: '<b>减脂原则：</b>热量缺口 300-500 kcal/天（别节食）；蛋白质保持 <b>1.5-2g/kg 体重</b>防止掉肌肉；有氧每周 3-4 次 × 30 分钟配合力量训练，循序渐进。',
+      };
+
+      function weekdayOf(d) { return d.getDay() === 0 ? 7 : d.getDay(); }
+      var today = weekdayOf(new Date());
+      var selectedDay = today;
+      var tab = 'plan';
+      var data = Storage.fitGet();
+
+      function escapeHtml(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      // ---- 计划 ----
+      function focusIdx(day) {
+        var m = data.focusMap || {};
+        return m[day] !== undefined ? m[day] : day - 1;
+      }
+
+      function renderDays() {
+        var html = '';
+        for (var i = 1; i <= 7; i++) {
+          var rest = i === 7;
+          var cls = 'ft-day' + (i === selectedDay ? ' on' : '') + (i === today ? ' today' : '') + (rest ? ' rest' : '');
+          html += '<button class="' + cls + '" data-d="' + i + '">周' + DAYS[i - 1] + '<span class="n">' + (rest ? '休' : FOCUSES[focusIdx(i)].emoji) + '</span></button>';
+        }
+        document.getElementById('ftDays').innerHTML = html;
+        document.querySelectorAll('.ft-day').forEach(function (el) {
+          el.addEventListener('click', function () { selectedDay = parseInt(this.dataset.d, 10); renderPlan(); });
+        });
+      }
+
+      function renderPlan() {
+        renderDays();
+        var f = FOCUSES[focusIdx(selectedDay)];
+        document.getElementById('ftFocusName').textContent = f.emoji + ' ' + f.name;
+        var items = data.plan[selectedDay];
+        var el = document.getElementById('ftList');
+        if (!items || !items.length) {
+          el.innerHTML = App.emptyState(selectedDay === 7 ? '休息日也可以做点轻松有氧' : '还没安排动作', '点下方按钮，给自己加一组训练');
+        } else {
+          el.innerHTML = items.map(function (x) {
+            return '<div class="ft-ex anim-fade-in-up"><span class="em">' + f.emoji + '</span>' +
+              '<div class="info"><div class="nm">' + escapeHtml(x.name) + '</div>' +
+              (x.detail ? '<div class="dt">' + escapeHtml(x.detail) + '</div>' : '') + '</div>' +
+              '<button class="del" data-id="' + x.id + '">✕</button></div>';
+          }).join('');
+          el.querySelectorAll('.del').forEach(function (b) {
+            b.addEventListener('click', function (e) {
+              e.stopPropagation();
+              Storage.fitRemoveItem(selectedDay, this.dataset.id);
+              data = Storage.fitGet();
+              renderPlan();
+            });
+          });
+        }
+      }
+
+      document.getElementById('btnCycleFocus').addEventListener('click', function () {
+        var next = (focusIdx(selectedDay) + 1) % FOCUSES.length;
+        Storage.fitSetFocus(selectedDay, next);
+        data = Storage.fitGet();
+        renderPlan();
+      });
+
+      // 添加动作
+      var mask = document.getElementById('ftMask');
+      var exSheet = document.getElementById('exSheet');
+      var foodSheet = document.getElementById('foodSheet');
+      function openSheet(s) { mask.classList.add('show'); s.classList.add('show'); }
+      function closeSheets() { mask.classList.remove('show'); exSheet.classList.remove('show'); foodSheet.classList.remove('show'); }
+      mask.addEventListener('click', closeSheets);
+
+      document.getElementById('btnAddEx').addEventListener('click', function () {
+        document.getElementById('exName').value = '';
+        document.getElementById('exDetail').value = '';
+        var f = FOCUSES[focusIdx(selectedDay)];
+        document.getElementById('ftQuick').innerHTML = f.quick.map(function (q) {
+          return '<button data-n="' + q[0] + '" data-d="' + q[1] + '">' + q[0] + '</button>';
+        }).join('');
+        document.querySelectorAll('#ftQuick button').forEach(function (b) {
+          b.addEventListener('click', function () {
+            document.getElementById('exName').value = this.dataset.n;
+            document.getElementById('exDetail').value = this.dataset.d;
+          });
+        });
+        openSheet(exSheet);
+      });
+      document.getElementById('exSave').addEventListener('click', function () {
+        var name = document.getElementById('exName').value.trim();
+        if (!name) { App.toast('请填写动作名称'); return; }
+        var res = Storage.fitAddItem(selectedDay, { name: name, detail: document.getElementById('exDetail').value.trim() });
+        if (!res.success) { App.toast(res.message); return; }
+        data = Storage.fitGet();
+        closeSheets();
+        renderPlan();
+        App.toastSuccess('已加入计划');
+      });
+
+      // ---- 饮食 ----
+      function renderGoal() {
+        var goal = data.dietGoal;
+        document.getElementById('goalGain').classList.toggle('on', goal === 'gain');
+        document.getElementById('goalCut').classList.toggle('on', goal === 'cut');
+        document.getElementById('goalTip').innerHTML = TIPS[goal];
+        document.getElementById('customTitle').textContent = goal === 'gain' ? '我的增肌食谱' : '我的减脂食谱';
+        document.getElementById('foodSheetTitle').textContent = goal === 'gain' ? '添加增肌食物' : '添加减脂食物';
+        document.getElementById('ftMeals').innerHTML = MEALS[goal].map(function (m) {
+          return '<div class="ft-meal"><div class="ft-meal-h">' + m.h + '<span class="tag">' + m.tag + '</span></div>' +
+            '<ul>' + m.items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul></div>';
+        }).join('');
+        var foods = data.customFoods.filter(function (f) { return f.goal === goal; });
+        var box = document.getElementById('ftFoods');
+        if (!foods.length) {
+          box.innerHTML = '<div class="ft-empty2">还没添加，食堂 / 外卖常吃的健康食物都可以记下来</div>';
+        } else {
+          box.innerHTML = foods.map(function (f) {
+            return '<div class="ft-food"><span><span class="nm">' + escapeHtml(f.name) + '</span>' +
+              (f.kcal ? ' <span class="kc">' + escapeHtml(f.kcal) + '</span>' : '') + '</span>' +
+              '<button data-id="' + f.id + '">✕</button></div>';
+          }).join('');
+          box.querySelectorAll('button').forEach(function (b) {
+            b.addEventListener('click', function () {
+              Storage.fitRemoveCustomFood(this.dataset.id);
+              data = Storage.fitGet();
+              renderGoal();
+            });
+          });
+        }
+      }
+
+      document.getElementById('goalGain').addEventListener('click', function () {
+        Storage.fitSetGoal('gain'); data = Storage.fitGet(); renderGoal();
+      });
+      document.getElementById('goalCut').addEventListener('click', function () {
+        Storage.fitSetGoal('cut'); data = Storage.fitGet(); renderGoal();
+      });
+      document.getElementById('btnAddFood').addEventListener('click', function () {
+        document.getElementById('foodName').value = '';
+        document.getElementById('foodKcal').value = '';
+        openSheet(foodSheet);
+      });
+      document.getElementById('foodSave').addEventListener('click', function () {
+        var name = document.getElementById('foodName').value.trim();
+        if (!name) { App.toast('请填写食物名称'); return; }
+        Storage.fitAddCustomFood({ name: name, kcal: document.getElementById('foodKcal').value.trim(), goal: data.dietGoal });
+        data = Storage.fitGet();
+        closeSheets();
+        renderGoal();
+        App.toastSuccess('已加入食谱');
+      });
+
+      // ---- Tab ----
+      function switchTab(t) {
+        tab = t;
+        document.getElementById('tabPlan').classList.toggle('on', t === 'plan');
+        document.getElementById('tabDiet').classList.toggle('on', t === 'diet');
+        document.getElementById('panePlan').style.display = t === 'plan' ? 'block' : 'none';
+        document.getElementById('paneDiet').style.display = t === 'diet' ? 'block' : 'none';
+        if (t === 'diet') renderGoal();
+      }
+      document.getElementById('tabPlan').addEventListener('click', function () { switchTab('plan'); });
+      document.getElementById('tabDiet').addEventListener('click', function () { switchTab('diet'); });
+
+      renderPlan();
+      switchTab('plan');
+
+      App.showGuide('fitness', {
+        emoji: '💪',
+        title: '健身 · 玩法指引',
+        items: [
+          '周一到周日已按胸 / 背 / 肩 / 腿等部位排好，点「换部位」可调整',
+          '每天可自由添加动作，记录组数次数，点 ✕ 删除',
+          '切到「饮食方案」选择增肌或减脂目标，按大数据方案吃饭',
+        ],
+      });
+    })();
+  </script>
+</body>
+</html>

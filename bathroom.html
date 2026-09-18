@@ -87,40 +87,6 @@
     .bath-record-del:active { background: var(--color-surface-alt); color: var(--color-danger); }
     .bath-empty { padding: 22px 16px; text-align:center; font-size: 12.5px; color: var(--color-text-hint); }
 
-    /* 节日倒计时 */
-    .bath-fest-featured {
-      border-radius: 18px; padding: 18px 16px;
-      background: linear-gradient(135deg, #1E3A8A, #2563EB);
-      color: #fff; position:relative; overflow:hidden;
-    }
-    .bath-fest-name { font-size: 15px; font-weight: 700; display:flex; align-items:center; gap:8px; }
-    .bath-fest-date { font-size: 11.5px; opacity: 0.8; margin-top: 3px; }
-    .bath-fest-count { font-size: 26px; font-weight: 800; font-family: var(--font-mono); letter-spacing: 1px; margin-top: 10px; }
-    .bath-fest-count small { font-size: 13px; font-weight: 600; opacity: 0.85; margin: 0 2px; }
-    .bath-fest-count .seg { opacity: 0.5; margin: 0 3px; }
-    .bath-fest-close {
-      position:absolute; top:10px; right:10px; border:none; cursor:pointer;
-      width:26px; height:26px; border-radius:50%; background: rgba(255,255,255,0.18); color:#fff;
-      display:flex; align-items:center; justify-content:center;
-    }
-    .bath-fest-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .bath-fest-card {
-      background: var(--color-surface); border-radius: 14px; padding: 12px 14px;
-      border: 1px solid var(--color-border-light); position:relative;
-    }
-    .bath-fest-card-name { font-size: 13.5px; font-weight: 700; color: var(--color-text); display:flex; align-items:center; gap:6px; }
-    .bath-fest-card-date { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
-    .bath-fest-card-count { font-size: 13px; font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); margin-top: 6px; }
-    .bath-fest-card-count small { font-weight: 500; color: var(--color-text-hint); }
-    .bath-fest-card .bath-fest-close { background: var(--color-surface-alt); color: var(--color-text-hint); width:22px; height:22px; top:8px; right:8px; }
-    .bath-fest-add {
-      border: 1.5px dashed var(--color-border); border-radius: 14px; padding: 12px 14px;
-      background: transparent; cursor:pointer; font-family:inherit;
-      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
-      color: var(--color-text-sub); font-size: 13px; font-weight: 600;
-    }
-    .bath-fest-add:active { background: var(--color-surface-alt); }
-
     /* 底部集中操作栏 */
     .bath-actions {
       position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
@@ -254,21 +220,6 @@
     <button class="bath-sheet-cancel" onclick="closeSheet('shower')">取消</button>
   </div>
 
-  <!-- 弹窗 3：DIY 自定义节日 -->
-  <div class="bath-mask" id="festMask" onclick="closeSheet('fest')"></div>
-  <div class="bath-sheet" id="festSheet">
-    <div class="bath-sheet-grabber"></div>
-    <div class="bath-sheet-title">自定义节日</div>
-    <div class="bath-sheet-sub">生日 / 纪念日 / 考试日，按年循环倒数</div>
-    <div class="bath-field-label">名称</div>
-    <input class="bath-input" id="festName" type="text" maxlength="12" placeholder="如：我的生日">
-    <div class="bath-field-label">日期（每年循环）</div>
-    <input class="bath-input" id="festDate" type="date">
-    <div style="font-size:11.5px;color:var(--color-text-hint);margin-top:8px;">农历节日请按当年的公历日期添加</div>
-    <button class="bath-sheet-confirm" onclick="saveFest()">添加节日</button>
-    <button class="bath-sheet-cancel" onclick="closeSheet('fest')">取消</button>
-  </div>
-
   <script src="config.js"></script>
   <script src="campus-data.js"></script>
   <script src="mock.js"></script>
@@ -278,26 +229,12 @@
   <script src="api-client.js"></script>
   <script src="app.js"></script>
   <script>
-    // ================= 内置节日（公历固定日期，按年循环） =================
-    var FEST_PRESETS = [
-      { name: '元旦', m: 1, d: 1 },
-      { name: '情人节', m: 2, d: 14 },
-      { name: '劳动节', m: 5, d: 1 },
-      { name: '儿童节', m: 6, d: 1 },
-      { name: '国庆节', m: 10, d: 1 },
-      { name: '双十一', m: 11, d: 11 },
-      { name: '圣诞节', m: 12, d: 25 },
-      { name: '跨年夜', m: 12, d: 31 },
-    ];
-
     var BATH = null;          // 当前浴室
     var dormPick = { campusId: '', areaId: '', building: '' };
 
     document.addEventListener('DOMContentLoaded', function () {
       App.initTheme();
       renderBathroom();
-      // 秒级倒计时：1s tick
-      setInterval(tickCountdowns, 1000);
     });
 
     // ---------- 渲染 ----------
@@ -369,16 +306,9 @@
 
       // ---- 最近记录 ----
       html +=
-        '<div class="bath-sec anim-fade-in-up stagger-3">' +
+        '<div class="bath-sec anim-fade-in-up stagger-3" style="margin-bottom:20px;">' +
           '<div class="bath-sec-title">最近记录</div>' +
           '<div class="bath-records">' + recordsHtml(showers) + '</div>' +
-        '</div>';
-
-      // ---- 节日倒计时（分区：最近主卡 + 后续小卡 + DIY） ----
-      html +=
-        '<div class="bath-sec anim-fade-in-up stagger-4">' +
-          '<div class="bath-sec-title">节日倒计时 <span class="tip">精确到秒</span></div>' +
-          '<div id="festArea">' + festAreaHtml() + '</div>' +
         '</div>';
 
       container.innerHTML = html;
@@ -472,97 +402,6 @@
         '</div>';
       }
       return html;
-    }
-
-    // ---- 节日倒计时：最近主卡 + 其余小卡（含 DIY） ----
-    function festList() {
-      var list = [];
-      var all = FEST_PRESETS.concat(Storage.festGetCustom());
-      for (var i = 0; i < all.length; i++) {
-        var f = all[i];
-        list.push({
-          id: f.id || (f.name + '-' + f.m + '-' + f.d),
-          name: f.name, m: f.m, d: f.d,
-          custom: !!f.custom,
-          at: nextOccur(f.m, f.d),
-          today: isToday(f.m, f.d),
-        });
-      }
-      list.sort(function (a, b) {
-        if (a.today !== b.today) return a.today ? -1 : 1;
-        return a.at - b.at;
-      });
-      return list;
-    }
-
-    function nextOccur(m, d) {
-      var now = new Date();
-      var t = new Date(now.getFullYear(), m - 1, d, 0, 0, 0);
-      if (t.getTime() <= now.getTime()) t.setFullYear(t.getFullYear() + 1);
-      return t;
-    }
-
-    function isToday(m, d) {
-      var n = new Date();
-      return n.getMonth() === m - 1 && n.getDate() === d;
-    }
-
-    function festAreaHtml() {
-      var list = festList();
-      if (!list.length) return '';
-      var f = list[0];
-      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-      var html = '<div class="bath-fest-featured anim-fade-in-up">' +
-        '<div class="bath-fest-name">🎉 距离 ' + f.name + '</div>' +
-        '<div class="bath-fest-date">' + (f.m + ' 月 ' + f.d + ' 日 · ' + (f.custom ? '自定义' : '公历节日')) + '</div>' +
-        (f.custom ? '<button class="bath-fest-close" title="删除" onclick="removeFest(\'' + f.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' : '') +
-        '<div class="bath-fest-count" data-fest-at="' + f.at.getTime() + '"' + (f.today ? ' data-fest-today="1"' : '') + '>--</div>' +
-      '</div>';
-
-      var rest = list.slice(1, 5);
-      if (rest.length) {
-        html += '<div class="bath-fest-grid">';
-        rest.forEach(function (it) {
-          html += '<div class="bath-fest-card">' +
-            (it.custom ? '<button class="bath-fest-close" title="删除" onclick="removeFest(\'' + it.id + '\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' : '') +
-            '<div class="bath-fest-card-name">' + it.name + '</div>' +
-            '<div class="bath-fest-card-date">' + pad(it.m) + '-' + pad(it.d) + '</div>' +
-            '<div class="bath-fest-card-count" data-fest-at="' + it.at.getTime() + '"' + (it.today ? ' data-fest-today="1"' : '') + '>--</div>' +
-          '</div>';
-        });
-        html += '</div>';
-      }
-
-      html += '<button class="bath-fest-add anim-fade-in-up" style="margin-top:10px;width:100%;" onclick="openFestSheet()">' +
-        '<span style="font-size:18px;">＋</span> 自定义节日卡片' +
-      '</button>';
-      return html;
-    }
-
-    // 秒级 tick：更新所有倒计时元素
-    function tickCountdowns() {
-      var els = document.querySelectorAll('[data-fest-at]');
-      var now = Date.now();
-      for (var i = 0; i < els.length; i++) {
-        var at = parseInt(els[i].getAttribute('data-fest-at'), 10);
-        var isTodayFest = els[i].getAttribute('data-fest-today') === '1';
-        if (isTodayFest) {
-          els[i].innerHTML = '就是今天 🎉';
-          continue;
-        }
-        var diff = Math.max(0, at - now);
-        var sec = Math.floor(diff / 1000);
-        var dd = Math.floor(sec / 86400);
-        var hh = Math.floor((sec % 86400) / 3600);
-        var mm = Math.floor((sec % 3600) / 60);
-        var ss = sec % 60;
-        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-        if (els[i].classList.contains('bath-fest-count')) {
-          els[i].innerHTML = '<small>还有</small> ' + dd + ' <small>天</small><span class="seg">·</span>' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
-        } else {
-          els[i].innerHTML = dd + '天 ' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
-        }
-      }
     }
 
     // ---------- 弹窗开关 ----------
@@ -669,36 +508,6 @@
       Storage.bathRemoveShower(id);
       renderBathroom();
       App.toast('已删除该条记录');
-    }
-
-    // ---------- 弹窗 3：DIY 节日 ----------
-    function openFestSheet() {
-      document.getElementById('festName').value = '';
-      var d = new Date();
-      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-      document.getElementById('festDate').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
-      openSheet('fest');
-    }
-
-    function saveFest() {
-      var name = document.getElementById('festName').value.trim();
-      var dateVal = document.getElementById('festDate').value;
-      if (!name) { App.toast('请填写节日名称'); return; }
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) { App.toast('请选择日期'); return; }
-      var parts = dateVal.split('-');
-      var res = Storage.festAddCustom(name, parseInt(parts[1], 10), parseInt(parts[2], 10));
-      if (!res.success) { App.toast(res.message || '添加失败'); return; }
-      closeSheet('fest');
-      App.toastSuccess('已添加「' + name + '」');
-      var area = document.getElementById('festArea');
-      if (area) area.innerHTML = festAreaHtml();
-    }
-
-    function removeFest(id) {
-      Storage.festRemoveCustom(id);
-      var area = document.getElementById('festArea');
-      if (area) area.innerHTML = festAreaHtml();
-      App.toast('已删除自定义节日');
     }
 
     // ---------- 收藏 / 常用 ----------

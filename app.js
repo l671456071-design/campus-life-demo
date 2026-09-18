@@ -450,28 +450,83 @@ var App = {
     return '<span style="' + base + 'background:' + fallbackBg + ';color:' + fallbackColor + ';font-size:' + Math.round(size * 0.42) + 'px;font-weight:700;">' + ch + '</span>';
   },
 
+  // ---- QR 工具：按需加载本地 qr-encoder，把文本渲染为 SVG 二维码 ----
+  _qrLoading: null,
+  _qrReady: function () {
+    if (typeof qrcode === 'function') return Promise.resolve();
+    if (this._qrLoading) return this._qrLoading;
+    var self = this;
+    this._qrLoading = new Promise(function (resolve, reject) {
+      var s1 = document.createElement('script');
+      s1.src = 'libs/qr-encoder/qrcode.js';
+      s1.onload = function () {
+        var s2 = document.createElement('script');
+        s2.src = 'libs/qr-encoder/qrcode_UTF8.js';
+        s2.onload = function () { self._qrLoading = null; resolve(); };
+        s2.onerror = function () { self._qrLoading = null; resolve(); };
+        document.head.appendChild(s2);
+      };
+      s1.onerror = function () { self._qrLoading = null; reject(new Error('qr lib load failed')); };
+      document.head.appendChild(s1);
+    });
+    return this._qrLoading;
+  },
+  mountQr: function (el, text, opts) {
+    if (typeof el === 'string') el = document.getElementById(el);
+    if (!el) return;
+    opts = opts || {};
+    var cellSize = opts.cellSize || 4;
+    var failHtml = '<div style="font-size:12px;color:var(--color-text-hint);padding:20px 0;">二维码生成失败</div>';
+    this._qrReady().then(function () {
+      if (typeof qrcode !== 'function') { el.innerHTML = failHtml; return; }
+      try {
+        var qr = qrcode(0, 'M');
+        qr.addData(String(text || ''), 'Byte');
+        qr.make();
+        el.innerHTML = qr.createSvgTag({ cellSize: cellSize, margin: 2, scalable: true });
+        var svg = el.querySelector('svg');
+        if (svg) {
+          svg.style.width = '100%';
+          svg.style.height = '100%';
+          svg.style.display = 'block';
+          svg.removeAttribute('width');
+          svg.removeAttribute('height');
+        }
+      } catch (e) {
+        el.innerHTML = failHtml;
+      }
+    }).catch(function () { el.innerHTML = failHtml; });
+  },
+
   // ---- Identity Code Modal ----
   showIdentityCode: function () {
     var user = Storage.getUser();
-    var studentId = user.studentId || '';
-    var avatarHtml = this.avatarHtml(user, 60, 'rgba(255,255,255,0.25)', '#fff');
+    var idc = Storage.getIdentityCode();
+    var code = idc.code;
+    var avatarHtml = this.avatarHtml(user, 56, 'rgba(255,255,255,255,0.25)', '#fff');
+    var sourceTag = idc.source === 'imported'
+      ? '<span style="display:inline-block;font-size:11px;background:rgba(255,255,255,0.22);border-radius:999px;padding:2px 10px;margin-top:6px;">已本地导入</span>'
+      : '<span style="display:inline-block;font-size:11px;background:rgba(255,255,255,0.16);border-radius:999px;padding:2px 10px;margin-top:6px;">系统身份码</span>';
 
     var backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML =
       '<div class="modal" style="max-width:320px;padding:0;overflow:hidden;">' +
-        '<div style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));padding:24px 24px 20px;text-align:center;color:#fff;">' +
-          '<div style="margin:0 auto 10px;width:60px;">' + avatarHtml + '</div>' +
+        '<div style="background:linear-gradient(135deg,var(--color-primary),var(--color-primary-hover));padding:22px 24px 18px;text-align:center;color:#fff;">' +
+          '<div style="margin:0 auto 10px;width:56px;">' + avatarHtml + '</div>' +
           '<div style="font-size:17px;font-weight:700;">' + (user.name || '') + '</div>' +
-          '<div style="font-size:12px;opacity:0.85;margin-top:3px;">学号 ' + studentId + '</div>' +
+          sourceTag +
         '</div>' +
-        '<div style="padding:20px 24px 24px;text-align:center;">' +
+        '<div style="padding:20px 24px 22px;text-align:center;">' +
           '<div style="font-size:12px;color:var(--color-text-sub);margin-bottom:10px;">取件身份码（请向工作人员出示）</div>' +
-          '<div id="identityQrBox" style="display:flex;align-items:center;justify-content:center;min-height:150px;">' +
+          '<div id="identityQrBox" style="width:168px;height:168px;margin:0 auto;display:flex;align-items:center;justify-content:center;">' +
             '<div class="spinner" style="width:28px;height:28px;border-width:3px;"></div>' +
           '</div>' +
-          '<div style="font-size:11px;color:var(--color-text-hint);margin-top:8px;font-family:var(--font-mono);letter-spacing:1px;">' + studentId + '</div>' +
-          '<button class="btn btn-outline btn-block" style="margin-top:16px;" onclick="App.closeModal()">关闭</button>' +
+          '<div id="identityCodeText" style="font-size:15px;color:var(--color-text);margin-top:10px;font-family:var(--font-mono);letter-spacing:2px;font-weight:700;">' + code.replace(/(.{4})/g, '$1 ').trim() + '</div>' +
+          '<div style="display:flex;gap:10px;margin-top:16px;">' +
+            '<button class="btn btn-outline" style="flex:1;" onclick="App.copyText(\'' + code + '\')">复制</button>' +
+            '<button class="btn btn-primary" style="flex:1;" onclick="App.closeModal()">关闭</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
 
@@ -482,38 +537,31 @@ var App = {
       if (e.target === backdrop) App.closeModal();
     });
 
-    var generateQR = function () {
-      try {
-        var qr = qrcode(0, 'M');
-        qr.addData(studentId, 'Byte');
-        qr.make();
-        var svg = qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true });
-        var box = document.getElementById('identityQrBox');
-        if (box) box.innerHTML = svg;
-      } catch (e) {
-        var box2 = document.getElementById('identityQrBox');
-        if (box2) box2.innerHTML = '<div style="font-size:13px;color:var(--color-text-hint);">二维码生成失败</div>';
-      }
-    };
+    this.mountQr('identityQrBox', code, { cellSize: 5 });
+  },
 
-    if (typeof qrcode === 'function') {
-      generateQR();
+  // ---- 通用复制（供内联事件使用）----
+  copyText: function (text, label) {
+    var self = this;
+    var done = function () { App.toastSuccess((label || '已复制') + '：' + text); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () {
+        self._fallbackCopy(text); done();
+      });
     } else {
-      var script = document.createElement('script');
-      script.src = 'libs/qr-encoder/qrcode.js';
-      script.onload = function () {
-        var s2 = document.createElement('script');
-        s2.src = 'libs/qr-encoder/qrcode_UTF8.js';
-        s2.onload = generateQR;
-        s2.onerror = generateQR;
-        document.head.appendChild(s2);
-      };
-      script.onerror = function () {
-        var box3 = document.getElementById('identityQrBox');
-        if (box3) box3.innerHTML = '<div style="font-size:13px;color:var(--color-text-hint);">二维码库加载失败</div>';
-      };
-      document.head.appendChild(script);
+      this._fallbackCopy(text);
+      done();
     }
+  },
+  _fallbackCopy: function (text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
   },
 
   // ---- Map Navigation Action Sheet ----

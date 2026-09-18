@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>秒表 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    body[data-page="stopwatch"] .tab-bar { display:none !important; }
+    body[data-page="stopwatch"] .app-content { padding-bottom:calc(28px + env(safe-area-inset-bottom)) !important; }
+
+    .sw-hero {
+      margin:18px 16px 4px;
+      background:var(--color-surface);
+      border-radius:24px;
+      box-shadow:var(--shadow-sm);
+      border:1px solid var(--color-border-light);
+      padding:30px 14px 24px;
+      text-align:center;
+    }
+    .sw-display {
+      display:flex; align-items:baseline; justify-content:center;
+      gap:2px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+      font-weight:800; letter-spacing:1px; user-select:none;
+    }
+    .sw-digit {
+      font-size:clamp(38px, 12.5vw, 54px);
+      line-height:1.1;
+      min-width:0.62em; text-align:center;
+      display:inline-block; transition:transform .12s;
+    }
+    .sw-colon {
+      font-size:clamp(30px, 9vw, 42px);
+      color:var(--color-text-hint); font-weight:700;
+      margin:0 1px; transform:translateY(-3px);
+    }
+    .sw-cs-prefix { font-size:clamp(22px,6vw,30px); color:var(--color-text-hint); font-weight:700; margin:0 2px 0 4px; transform:translateY(-6px); display:inline-block; }
+    .sw-digit.cs { font-size:clamp(26px, 7.5vw, 34px); }
+    body[data-page="stopwatch"] .sw-edit .sw-digit {
+      box-shadow:0 0 0 2px var(--color-primary); border-radius:8px;
+      cursor:pointer; animation:swPulse 1.2s ease-in-out infinite;
+    }
+    @keyframes swPulse { 0%,100%{ box-shadow:0 0 0 2px var(--color-primary);} 50%{ box-shadow:0 0 0 3px var(--color-primary);} }
+    .sw-edit-tip { margin-top:12px; font-size:12.5px; color:var(--color-primary); font-weight:600; display:none; }
+    .sw-edit .sw-edit-tip { display:block; }
+    .sw-status { margin-top:14px; font-size:13px; color:var(--color-text-hint); letter-spacing:2px; }
+    .sw-status.run { color:#16A34A; font-weight:700; }
+
+    /* 调色板 */
+    .sw-palette {
+      margin:14px 16px 0;
+      background:var(--color-surface);
+      border-radius:18px;
+      border:1px solid var(--color-border-light);
+      box-shadow:var(--shadow-sm);
+      padding:14px;
+      display:none;
+    }
+    .sw-edit .sw-palette { display:block; animation:fadeIn .2s; }
+    .sw-palette-title { font-size:13px; font-weight:700; color:var(--color-text); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+    .sw-palette-title button { border:none; background:none; color:var(--color-primary); font-size:12px; font-family:inherit; font-weight:600; }
+    .sw-swatches { display:flex; flex-wrap:wrap; gap:11px; }
+    .sw-swatch { width:32px; height:32px; border-radius:50%; border:2px solid var(--color-surface); outline:2px solid transparent; transition:transform .12s,outline-color .15s; cursor:pointer; }
+    .sw-swatch:active { transform:scale(.88); }
+    .sw-swatch.on { outline-color:var(--color-primary); }
+
+    /* 控制按钮 */
+    .sw-controls { display:flex; gap:12px; padding:16px 16px 0; }
+    .sw-btn {
+      flex:1; border:none; border-radius:16px; padding:15px 0;
+      font-size:15px; font-weight:700; font-family:inherit;
+      display:flex; align-items:center; justify-content:center; gap:6px;
+      transition:transform .12s, opacity .2s;
+    }
+    .sw-btn:active { transform:scale(.96); }
+    .sw-btn:disabled { opacity:.4; }
+    .sw-btn-main { background:linear-gradient(135deg,#2563EB,#3B82F6); color:#fff; box-shadow:0 8px 20px rgba(37,99,235,.28); flex:1.6; }
+    .sw-btn-main.pause { background:linear-gradient(135deg,#F59E0B,#F97316); box-shadow:0 8px 20px rgba(245,158,11,.28); }
+    .sw-btn-sub { background:var(--color-surface); color:var(--color-text); border:1.5px solid var(--color-border); }
+
+    /* 计次列表 */
+    .sw-laps { margin:18px 16px 0; display:flex; flex-direction:column; gap:8px; }
+    .sw-lap {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--color-surface); border-radius:14px;
+      border:1px solid var(--color-border-light);
+      padding:11px 15px; font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    }
+    .sw-lap-no { font-size:13px; color:var(--color-text-sub); font-weight:700; font-family:inherit; }
+    .sw-lap-time { font-size:15px; font-weight:700; color:var(--color-text); }
+    .sw-lap-delta { font-size:12px; color:var(--color-text-hint); min-width:72px; text-align:right; }
+    .sw-lap.fastest { border-color:#86EFAC; background:#F0FDF4; }
+    .sw-lap.slowest { border-color:#FECACA; background:#FEF2F2; }
+    .sw-lap.fastest .sw-lap-no { color:#16A34A; }
+    .sw-lap.slowest .sw-lap-no { color:#DC2626; }
+  </style>
+</head>
+<body data-page="stopwatch">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">秒表</div>
+      <div class="header-spacer"></div>
+      <div class="header-right">
+        <button class="header-back-btn" id="btnEdit" title="DIY 配色" style="border:none;background:none;cursor:pointer;font-size:20px;">🎨</button>
+      </div>
+    </header>
+
+    <main class="app-content" id="mainContent">
+      <div class="sw-hero">
+        <div class="sw-display" id="swDisplay"></div>
+        <div class="sw-edit-tip">点任意数字，换一个颜色试试 ✨</div>
+        <div class="sw-status" id="swStatus">就绪</div>
+      </div>
+
+      <div class="sw-palette" id="swPalette">
+        <div class="sw-palette-title">
+          <span>数字配色（自动保存）</span>
+          <button id="btnResetColors">恢复默认</button>
+        </div>
+        <div class="sw-swatches" id="swatches"></div>
+      </div>
+
+      <div class="sw-controls">
+        <button class="sw-btn sw-btn-sub" id="btnLap" disabled>计次</button>
+        <button class="sw-btn sw-btn-main" id="btnMain">开始</button>
+        <button class="sw-btn sw-btn-sub" id="btnReset" disabled>重置</button>
+      </div>
+
+      <div class="sw-laps" id="lapList"></div>
+    </main>
+
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      // 8 个数字位：时时 分分 秒秒 厘厘（百分秒）
+      var PALETTE = ['#2563EB', '#EF4444', '#94A3B8', '#16A34A', '#F59E0B', '#7C3AED', '#0F172A', '#0891B2', '#DB2777', '#000000'];
+      var DEFAULT_COLORS = ['#2563EB', '#2563EB', '#2563EB', '#2563EB', '#2563EB', '#2563EB', '#94A3B8', '#94A3B8'];
+      var colors = Storage.swGetColors();
+      var editMode = false;
+      var currentColor = PALETTE[0];
+
+      var elapsed = 0;        // 毫秒
+      var running = false;
+      var startStamp = 0;     // performance.now() 起点
+      var baseElapsed = 0;
+      var rafId = null;
+      var laps = [];
+
+      function pad2(n) { return (n < 10 ? '0' : '') + n; }
+
+      function parts(ms) {
+        var cs = Math.floor(ms / 10) % 100;
+        var totalSec = Math.floor(ms / 1000);
+        var s = totalSec % 60;
+        var m = Math.floor(totalSec / 60) % 60;
+        var h = Math.floor(totalSec / 3600);
+        var str = pad2(h) + pad2(m) + pad2(s) + pad2(cs);
+        return str.split('');
+      }
+
+      function renderDisplay() {
+        var d = parts(elapsed);
+        var html = '';
+        // 时时 : 分分 : 秒秒 . 厘厘
+        for (var i = 0; i < 8; i++) {
+          var cls = 'sw-digit' + (i >= 6 ? ' cs' : '');
+          html += '<span class="' + cls + '" data-i="' + i + '" style="color:' + colors[i] + '">' + d[i] + '</span>';
+          if (i === 1 || i === 3) html += '<span class="sw-colon">:</span>';
+          if (i === 5) html += '<span class="sw-cs-prefix">.</span>';
+        }
+        document.getElementById('swDisplay').innerHTML = html;
+        bindDigits();
+      }
+
+      function bindDigits() {
+        document.querySelectorAll('.sw-digit').forEach(function (el) {
+          el.addEventListener('click', function () {
+            if (!editMode) return;
+            var i = parseInt(this.dataset.i, 10);
+            colors[i] = currentColor;
+            Storage.swSaveColors(colors);
+            renderSwatches();
+            renderDisplay();
+          });
+        });
+      }
+
+      function tick() {
+        if (!running) return;
+        elapsed = baseElapsed + (performance.now() - startStamp);
+        renderDisplay();
+        rafId = requestAnimationFrame(tick);
+      }
+
+      function setStatus() {
+        var st = document.getElementById('swStatus');
+        st.textContent = running ? '计 时 中' : (elapsed > 0 ? '已暂停' : '就绪');
+        st.className = 'sw-status' + (running ? ' run' : '');
+      }
+
+      function renderControls() {
+        var main = document.getElementById('btnMain');
+        main.textContent = running ? '暂停' : (elapsed > 0 ? '继续' : '开始');
+        main.classList.toggle('pause', running);
+        document.getElementById('btnLap').disabled = !running;
+        document.getElementById('btnReset').disabled = elapsed === 0 && !running;
+      }
+
+      function fmtLap(ms) {
+        var cs = pad2(Math.floor(ms / 10) % 100);
+        var s = pad2(Math.floor(ms / 1000) % 60);
+        var m = pad2(Math.floor(ms / 60000) % 60);
+        var h = Math.floor(ms / 3600000);
+        return (h ? pad2(h) + ':' : '') + m + ':' + s + '.' + cs;
+      }
+
+      function renderLaps() {
+        var el = document.getElementById('lapList');
+        if (!laps.length) { el.innerHTML = ''; return; }
+        var deltas = laps.map(function (l, i) { return l - (laps[i - 1] || 0); });
+        var minD = Math.min.apply(null, deltas);
+        var maxD = Math.max.apply(null, deltas);
+        var html = '';
+        laps.forEach(function (t, i) {
+          var cls = 'sw-lap';
+          var tag = '';
+          if (laps.length > 1) {
+            if (deltas[i] === minD) { cls += ' fastest'; tag = '最快'; }
+            else if (deltas[i] === maxD) { cls += ' slowest'; tag = '最慢'; }
+          }
+          html += '<div class="' + cls + '">' +
+            '<span class="sw-lap-no">第 ' + (i + 1) + ' 次</span>' +
+            '<span class="sw-lap-time">' + fmtLap(t) + '</span>' +
+            '<span class="sw-lap-delta">' + tag + (i > 0 ? '+' + fmtLap(deltas[i]) : '—') + '</span>' +
+            '</div>';
+        });
+        el.innerHTML = html;
+      }
+
+      function renderSwatches() {
+        document.getElementById('swatches').innerHTML = PALETTE.map(function (c) {
+          return '<button class="sw-swatch' + (c === currentColor ? ' on' : '') + '" data-c="' + c + '" style="background:' + c + '" title="' + c + '"></button>';
+        }).join('');
+        document.querySelectorAll('.sw-swatch').forEach(function (el) {
+          el.addEventListener('click', function () {
+            currentColor = this.dataset.c;
+            renderSwatches();
+          });
+        });
+      }
+
+      document.getElementById('btnMain').addEventListener('click', function () {
+        if (running) {
+          baseElapsed = elapsed;
+          running = false;
+          cancelAnimationFrame(rafId);
+        } else {
+          startStamp = performance.now();
+          running = true;
+          rafId = requestAnimationFrame(tick);
+        }
+        setStatus();
+        renderControls();
+      });
+
+      document.getElementById('btnLap').addEventListener('click', function () {
+        if (!running) return;
+        laps.unshift(elapsed); // 最新在最上
+        renderLaps();
+      });
+
+      document.getElementById('btnReset').addEventListener('click', function () {
+        running = false;
+        cancelAnimationFrame(rafId);
+        elapsed = 0;
+        baseElapsed = 0;
+        laps = [];
+        renderDisplay();
+        renderLaps();
+        setStatus();
+        renderControls();
+      });
+
+      document.getElementById('btnEdit').addEventListener('click', function () {
+        editMode = !editMode;
+        document.body.classList.toggle('sw-edit', editMode);
+        if (!editMode) renderDisplay();
+      });
+      document.getElementById('btnResetColors').addEventListener('click', function () {
+        colors = DEFAULT_COLORS.slice();
+        Storage.swSaveColors(colors);
+        renderDisplay();
+        App.toast('已恢复默认配色');
+      });
+
+      document.addEventListener('visibilitychange', function () {
+        // 后台时暂停刷新省电，回来后继续（暂停期间时间戳用差值自动校正）
+        if (document.hidden && running) {
+          baseElapsed = elapsed;
+          running = false;
+          cancelAnimationFrame(rafId);
+          setStatus();
+          renderControls();
+        }
+      });
+
+      renderDisplay();
+      renderSwatches();
+      setStatus();
+      renderControls();
+
+      App.showGuide('stopwatch', {
+        emoji: '⏱️',
+        title: '秒表 · 玩法指引',
+        items: [
+          '大数字精确到百分秒，支持开始 / 暂停 / 继续 / 计次 / 重置',
+          '点右上角 🎨 进入配色模式，再点任意数字即可换色',
+          '例如：时设蓝色、分设红色、秒设灰色，全部自动保存在本机',
+        ],
+      });
+    })();
+  </script>
+</body>
+</html>

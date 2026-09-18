@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>备忘录 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    body[data-page="notes"] .tab-bar { display:none !important; }
+    body[data-page="notes"] .app-content { padding-bottom:calc(84px + env(safe-area-inset-bottom)) !important; }
+
+    .nt-search { margin:12px 16px 0; position:relative; }
+    .nt-search input {
+      width:100%; box-sizing:border-box;
+      border:1.5px solid var(--color-border-light);
+      background:var(--color-surface); color:var(--color-text);
+      border-radius:14px; padding:11px 14px 11px 38px;
+      font-size:14px; font-family:inherit; outline:none;
+    }
+    .nt-search input:focus { border-color:var(--color-primary); }
+    .nt-search svg { position:absolute; left:13px; top:50%; transform:translateY(-50%); width:17px; height:17px; color:var(--color-text-hint); }
+
+    .nt-list { padding:14px 16px 0; display:flex; flex-direction:column; gap:10px; }
+    .nt-card {
+      background:var(--color-surface); border-radius:16px;
+      border:1px solid var(--color-border-light);
+      box-shadow:var(--shadow-sm);
+      padding:13px 15px; cursor:pointer; transition:transform .12s;
+    }
+    .nt-card:active { transform:scale(.985); }
+    .nt-title { font-size:15px; font-weight:700; color:var(--color-text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .nt-body { font-size:13px; color:var(--color-text-sub); line-height:1.6; margin-top:4px;
+      display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; word-break:break-all; }
+    .nt-meta { font-size:11.5px; color:var(--color-text-hint); margin-top:7px; display:flex; justify-content:space-between; }
+
+    .nt-fab {
+      position:fixed; right:20px; bottom:calc(24px + env(safe-area-inset-bottom));
+      width:56px; height:56px; border-radius:50%; border:none;
+      background:linear-gradient(135deg,#16A34A,#22C55E);
+      color:#fff; font-size:28px; line-height:1; font-weight:300;
+      box-shadow:0 10px 24px rgba(22,163,74,.4);
+      display:flex; align-items:center; justify-content:center; z-index:50;
+    }
+    .nt-fab:active { transform:scale(.92); }
+
+    /* 编辑抽屉 */
+    .nt-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .nt-mask.show { opacity:1; pointer-events:auto; }
+    .nt-sheet {
+      position:fixed; left:0; right:0; bottom:0; z-index:101;
+      background:var(--color-surface); border-radius:22px 22px 0 0;
+      padding:18px 18px calc(22px + env(safe-area-inset-bottom));
+      transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1);
+      max-height:88vh; display:flex; flex-direction:column;
+    }
+    .nt-sheet.show { transform:translateY(0); }
+    .nt-sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:14px; }
+    .nt-sheet input {
+      width:100%; box-sizing:border-box; border:none; border-bottom:1.5px solid var(--color-border-light);
+      padding:8px 2px 10px; font-size:16px; font-weight:700; color:var(--color-text);
+      background:transparent; outline:none; font-family:inherit;
+    }
+    .nt-sheet textarea {
+      width:100%; box-sizing:border-box; border:none; outline:none; resize:none;
+      padding:12px 2px; font-size:14.5px; line-height:1.7; color:var(--color-text);
+      background:transparent; font-family:inherit; min-height:46vh;
+    }
+    .nt-sheet-bar { display:flex; gap:10px; margin-top:10px; }
+    .nt-sheet-bar button { flex:1; border-radius:14px; padding:13px 0; font-size:15px; font-weight:700; font-family:inherit; border:none; }
+    #ntSave { background:var(--color-primary); color:#fff; }
+    #ntDelete { background:transparent; color:var(--color-danger); flex:0 0 56px; border:1.5px solid var(--color-danger-light); }
+  </style>
+</head>
+<body data-page="notes">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">备忘录</div>
+      <div class="header-spacer"></div>
+      <div class="header-right"></div>
+    </header>
+
+    <main class="app-content" id="mainContent">
+      <div class="nt-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="search" id="ntSearchInput" placeholder="搜索标题或内容…">
+      </div>
+      <div class="nt-list" id="ntList"></div>
+    </main>
+
+    <button class="nt-fab" id="ntAdd" aria-label="新建备忘录">＋</button>
+
+    <div class="nt-mask" id="ntMask"></div>
+    <div class="nt-sheet" id="ntSheet">
+      <div class="nt-sheet-title" id="ntSheetTitle">新建备忘录</div>
+      <input type="text" id="ntTitleInput" placeholder="标题（可不填，自动取正文开头）" maxlength="30">
+      <textarea id="ntContentInput" placeholder="写点什么…作业、灵感、待办都行"></textarea>
+      <div class="nt-sheet-bar">
+        <button id="ntDelete" style="display:none;">删除</button>
+        <button id="ntSave">保存</button>
+      </div>
+    </div>
+
+    <!-- 固定 tab bar —— 以下代码完全不可修改 -->
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      var editingId = null;
+      var keyword = '';
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (ch) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+        });
+      }
+      function fmtTime(ts) {
+        var d = new Date(ts), now = new Date();
+        var hm = (d.getHours() < 10 ? '0' : '') + d.getHours() + ':' + (d.getMinutes() < 10 ? '0' : '') + d.getMinutes();
+        if (d.toDateString() === now.toDateString()) return '今天 ' + hm;
+        var y = new Date(now); y.setDate(now.getDate() - 1);
+        if (d.toDateString() === y.toDateString()) return '昨天 ' + hm;
+        return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+      }
+
+      function render() {
+        var list = Storage.notesGetAll();
+        var kw = keyword.trim().toLowerCase();
+        if (kw) {
+          list = list.filter(function (n) {
+            return n.title.toLowerCase().indexOf(kw) !== -1 || n.content.toLowerCase().indexOf(kw) !== -1;
+          });
+        }
+        var el = document.getElementById('ntList');
+        if (!list.length) {
+          el.innerHTML = App.emptyState(kw ? '没搜到相关备忘' : '还没有备忘录', kw ? '换个关键词试试' : '点右下角＋，把待办和灵感记下来');
+          return;
+        }
+        el.innerHTML = list.map(function (n) {
+          return '<div class="nt-card anim-fade-in-up" data-id="' + n.id + '">' +
+            '<div class="nt-title">' + esc(n.title) + '</div>' +
+            (n.content ? '<div class="nt-body">' + esc(n.content).replace(/\n/g, '<br>') + '</div>' : '') +
+            '<div class="nt-meta"><span>' + fmtTime(n.updatedAt) + '</span><span>' + n.content.length + ' 字</span></div>' +
+            '</div>';
+        }).join('');
+        document.querySelectorAll('.nt-card').forEach(function (card) {
+          card.addEventListener('click', function () { openSheet(this.dataset.id); });
+        });
+      }
+
+      var mask = document.getElementById('ntMask');
+      var sheet = document.getElementById('ntSheet');
+      function openSheet(id) {
+        editingId = id || null;
+        var del = document.getElementById('ntDelete');
+        if (id) {
+          var n = Storage.notesGetAll().filter(function (x) { return x.id === id; })[0];
+          if (!n) return;
+          document.getElementById('ntSheetTitle').textContent = '编辑备忘录';
+          document.getElementById('ntTitleInput').value = n.title;
+          document.getElementById('ntContentInput').value = n.content;
+          del.style.display = 'block';
+        } else {
+          document.getElementById('ntSheetTitle').textContent = '新建备忘录';
+          document.getElementById('ntTitleInput').value = '';
+          document.getElementById('ntContentInput').value = '';
+          del.style.display = 'none';
+        }
+        mask.classList.add('show');
+        sheet.classList.add('show');
+        setTimeout(function () { document.getElementById('ntTitleInput').focus(); }, 320);
+      }
+      function closeSheet() {
+        mask.classList.remove('show');
+        sheet.classList.remove('show');
+      }
+      mask.addEventListener('click', closeSheet);
+
+      document.getElementById('ntAdd').addEventListener('click', function () { openSheet(null); });
+
+      document.getElementById('ntSave').addEventListener('click', function () {
+        var title = document.getElementById('ntTitleInput').value.trim();
+        var content = document.getElementById('ntContentInput').value.trim();
+        if (!title && !content) { App.toast('内容不能为空'); return; }
+        if (editingId) Storage.notesUpdate(editingId, { title: title, content: content });
+        else Storage.notesAdd({ title: title, content: content });
+        closeSheet();
+        render();
+        App.toastSuccess('已保存');
+      });
+
+      document.getElementById('ntDelete').addEventListener('click', function () {
+        if (!editingId) return;
+        App.showModal({
+          title: '删除备忘录',
+          desc: '删除后不可恢复',
+          confirmText: '删除',
+          onConfirm: function () {
+            Storage.notesRemove(editingId);
+            closeSheet();
+            render();
+            App.toast('已删除');
+          },
+        });
+      });
+
+      document.getElementById('ntSearchInput').addEventListener('input', function () {
+        keyword = this.value;
+        render();
+      });
+
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        render();
+        App.toastSuccess('已刷新');
+        return Promise.resolve();
+      });
+
+      render();
+      App.showGuide('notes', {
+        emoji: '📝',
+        title: '备忘录 · 小提示',
+        items: [
+          '点右下角＋新建，标题可留空，会自动取正文开头',
+          '支持按标题和内容关键字搜索',
+          '所有内容只存在本机，不上传云端',
+        ],
+      });
+    })();
+  </script>
+</body>
+</html>

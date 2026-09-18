@@ -21,21 +21,20 @@
 | 记录/消息 | `records.html` / `messages.html` | 取件记录、消息中心（已读状态持久化） |
 | 我的 | `profile.html` / `settings.html` / `profile-edit.html` | 个人中心、分享作品、通知/外观设置 |
 
-## 二、本地开发
+## 二、本地运行
+
+后端同时提供静态站点与 API（HTTPS 自签证书，摄像头/定位等安全上下文能力必需）：
 
 ```bash
-npm start        # 等价于 node server.js（零依赖，需 Node.js ≥ 14）
+cd backend
+npm install      # 首次运行安装依赖
+npm start        # 等价于 node server.js
 ```
 
-然后访问 http://localhost:3000/
+然后访问 https://localhost:3000/ （首次打开自签证书提示，点"高级 → 继续访问"）。
+Windows 开机自启：双击 `backend/start-backend.cmd` 后，登录系统即自动拉起服务（快捷方式在当前用户"启动"文件夹）。
 
-> 摄像头和定位属于浏览器「安全上下文能力」，`file://` 直接打开会被浏览器禁止调用，请通过本地服务器运行。服务器只读取项目目录内的静态文件，不上传任何数据。换端口：`set PORT=3001 && node server.js`（Windows）。
-
-可选：`backend/` 目录是一套 Koa + JWT 后端（验证码登录等），仅用于本地开发调试，**静态部署不需要它**：
-
-```bash
-cd backend && npm install && npm start
-```
+> 手机访问：同 WiFi 用局域网 IP（如 https://192.168.x.x:3000/），外网用 Tailscale IP（如 https://100.x.x.x:3000/），首次同样信任证书。换端口：在 `backend/.env` 中设置 `PORT=3001`。
 
 局域网真机测试（手机访问电脑 IP / Tailscale IP）时，`config.js` 会自动识别 `192.168.*` 和 `100.*` 网段并保持 local 模式。
 
@@ -150,7 +149,6 @@ campus-package-app/
 ├── app.js                # 共享工具（toast/modal/tab bar）
 ├── theme-init.js         # 主题初始化（防闪烁）
 ├── styles.css            # 全局样式
-├── server.js             # 零依赖 Node 本地静态服务器
 ├── verify.js             # 验收脚本
 ├── package.json
 ├── .nojekyll             # GitHub Pages 兼容
@@ -166,17 +164,18 @@ campus-package-app/
 │   ├── icons/favicon.svg
 │   └── map/campus-data.json       # POI + 道路数据
 │
-└── backend/              # 可选 Koa+JWT 后端（仅本地开发，静态部署不需要）
+└── backend/              # Express + JWT 后端（静态站点 + API + HTTPS，本地运行入口）
     ├── server.js / routes/ / services/ / middleware/
-    ├── config.js / db.js / data.json
+    ├── config.js / db.js / db/sqlite.js
+    ├── .env / start-backend.cmd / certs/（自签证书，已 gitignore）
     └── node_modules/      # 已被 .gitignore 排除
 ```
 
 ## 八、如何测试真实扫码
 
-1. 启动本地服务器后打开 http://localhost:3000/test-qr.html
+1. 启动后端后打开 https://localhost:3000/test-qr.html
 2. 该页面为所有「待取快递」实时生成二维码（格式 `{"qrCode":"8-3-267","packageId":"PK001"}` 或纯取件码）
-3. 打开 http://localhost:3000/scan.html：
+3. 打开 https://localhost:3000/scan.html：
    - 用另一台设备打开 test-qr.html，将其屏幕对准摄像头；或
    - 将生成的二维码截图，用扫码页的「相册识别」选择该图片
 4. 识别成功 → 确认取件 → 首页待取数量 -1，取件记录新增一条，消息中心新增未读通知
