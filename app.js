@@ -16,6 +16,88 @@ var App = {
       if (item.dataset.nav === page) item.classList.add('active');
       else item.classList.remove('active');
     });
+    // 主页 tab 点击时迸出微小光粒（极简反馈动效）
+    document.querySelectorAll('.tab-bar .tab-item').forEach(function (item) {
+      item.addEventListener('click', function (e) {
+        App.tabSparks(e.clientX || (window.innerWidth / 2), e.clientY || window.innerHeight);
+      });
+    });
+  },
+
+  // tab 光粒：从点击点迸出 5 个小光点，向上漂浮渐隐后移除
+  tabSparks: function (x, y) {
+    var COLORS = ['#60A5FA', '#93C5FD', '#FCD34D', '#F9A8D4', '#86EFAC'];
+    for (var i = 0; i < 5; i++) {
+      var s = document.createElement('span');
+      s.className = 'tab-spark';
+      var dx = (Math.random() - 0.5) * 36;
+      var dy = -(18 + Math.random() * 26);
+      var size = 3 + Math.random() * 3;
+      s.style.cssText = 'left:' + x + 'px;top:' + y + 'px;width:' + size + 'px;height:' + size + 'px;' +
+        'background:' + COLORS[i % COLORS.length] + ';' +
+        '--sx:' + dx.toFixed(1) + 'px;--sy:' + dy.toFixed(1) + 'px;';
+      document.body.appendChild(s);
+      (function (el) {
+        setTimeout(function () { el.remove(); }, 700);
+      })(s);
+    }
+  },
+
+  // ---- 指引模式：每个功能首次进入显示一次轻量引导 ----
+  showGuide: function (key, opts) {
+    opts = opts || {};
+    try {
+      if (typeof Storage === 'undefined' || typeof Storage.isGuideShown !== 'function') return;
+      if (Storage.isGuideShown(key)) return;
+    } catch (e) { return; }
+    var itemsHtml = (opts.items || []).map(function (it, i) {
+      return '<div class="guide-item"><span class="guide-no">' + (i + 1) + '</span><span>' + it + '</span></div>';
+    }).join('');
+    var backdrop = document.createElement('div');
+    backdrop.className = 'guide-mask';
+    backdrop.innerHTML =
+      '<div class="guide-card">' +
+        '<div class="guide-icon">' + (opts.emoji || '✨') + '</div>' +
+        '<div class="guide-title">' + (opts.title || '功能指引') + '</div>' +
+        '<div class="guide-body">' + itemsHtml + '</div>' +
+        '<button class="btn btn-primary btn-block" id="guideOk">' + (opts.okText || '开始使用') + '</button>' +
+      '</div>';
+    document.body.appendChild(backdrop);
+    requestAnimationFrame(function () { backdrop.classList.add('show'); });
+    function close() {
+      try { Storage.markGuideShown(key); } catch (e) {}
+      backdrop.classList.remove('show');
+      setTimeout(function () { backdrop.remove(); }, 250);
+      if (opts.onClose) opts.onClose();
+    }
+    backdrop.querySelector('#guideOk').addEventListener('click', close);
+  },
+
+  // ---- 图片压缩：File → 压缩后 dataURL（canvas 限制最大边长与质量，防止 localStorage 超限）----
+  compressImage: function (file, maxSide, quality) {
+    maxSide = maxSide || 900;
+    quality = quality || 0.72;
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type)) { reject(new Error('不是图片文件')); return; }
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('读取失败')); };
+      reader.onload = function () {
+        var img = new Image();
+        img.onerror = function () { reject(new Error('解析失败')); };
+        img.onload = function () {
+          var w = img.width, h = img.height;
+          var scale = Math.min(1, maxSide / Math.max(w, h));
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(w * scale);
+          canvas.height = Math.round(h * scale);
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
   },
 
   // ---- Toast ----

@@ -71,7 +71,7 @@
       <div class="header-right" style="width:32px;"></div>
     </header>
 
-    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+    <main class="app-content" id="mainContent" style="padding-bottom:32px;">
       <div style="padding:14px 16px 0;">
         <!-- 总览 -->
         <div class="sav-hero anim-fade-in-up">
@@ -105,31 +105,6 @@
         <div class="card" id="ledgerList" style="padding:4px 16px;"></div>
       </div>
     </main>
-
-    <nav class="tab-bar">
-      <a href="index.html" class="tab-item" data-nav="home">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
-        <span class="tab-label">首页</span>
-      </a>
-      <a href="packages.html" class="tab-item" data-nav="packages">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        <span class="tab-label">快递</span>
-      </a>
-      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
-        <div class="tab-scan-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-        </div>
-        <span class="tab-label">扫码</span>
-      </a>
-      <a href="food.html" class="tab-item" data-nav="food">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-        <span class="tab-label">外卖</span>
-      </a>
-      <a href="profile.html" class="tab-item" data-nav="profile">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span class="tab-label">我的</span>
-      </a>
-    </nav>
   </div>
 
   <!-- 记一笔抽屉 -->
@@ -327,6 +302,15 @@
         render(); App.toastSuccess('已刷新'); return Promise.resolve();
       });
       render();
+      App.showGuide('savings', {
+        emoji: '💰',
+        title: '攒钱 · 新手指引',
+        items: [
+          '点「记一笔」记录每天的收入与支出',
+          '点「+ 新目标」创建储蓄目标并随时存入',
+          '所有数据仅保存在本机，不上传云端',
+        ],
+      });
     })();
   </script>
 </body>

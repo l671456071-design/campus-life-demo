@@ -963,3 +963,71 @@ img { max-width: 100%; display: block; }
   background: currentColor;
 }
 [data-theme="dark"] .demo-chip { background: var(--color-warning-light); color: var(--color-warning); }
+
+/* ============ Tab 光粒动效（主页 tab 点击的微小反馈） ============ */
+.tab-spark {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.95;
+  transform: translate(-50%, -50%);
+  animation: tab-spark-rise 0.65s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+  will-change: transform, opacity;
+}
+@keyframes tab-spark-rise {
+  0%   { transform: translate(-50%, -50%) translate(0, 0) scale(1); opacity: 0.95; }
+  70%  { opacity: 0.55; }
+  100% { transform: translate(-50%, -50%) translate(var(--sx, 0px), var(--sy, -24px)) scale(0.3); opacity: 0; }
+}
+
+/* ============ 指引模式（各功能首次进入的轻量引导层） ============ */
+.guide-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  padding: 0 16px calc(28px + env(safe-area-inset-bottom));
+}
+.guide-mask.show { opacity: 1; }
+.guide-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--color-surface);
+  border-radius: 22px;
+  padding: 24px 20px 20px;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(24px);
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+}
+.guide-mask.show .guide-card { transform: translateY(0); }
+.guide-icon { font-size: 30px; line-height: 1; margin-bottom: 10px; }
+.guide-title { font-size: 18px; font-weight: 800; color: var(--color-text); margin-bottom: 12px; }
+.guide-body { margin-bottom: 18px; display: flex; flex-direction: column; gap: 9px; }
+.guide-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--color-text-sub);
+  line-height: 1.55;
+}
+.guide-no {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+}

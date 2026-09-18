@@ -186,7 +186,12 @@
     <header class="app-header header--left">
       <div class="header-title">校园外卖</div>
       <div class="header-spacer"></div>
-      <div class="header-right"></div>
+      <div class="header-right">
+        <a href="messages.html" class="header-back-btn" style="position:relative;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="badge-dot" id="msgBadge" style="position:absolute;top:6px;right:6px;background:var(--color-danger);width:8px;height:8px;display:none;"></span>
+        </a>
+      </div>
     </header>
     <main class="app-content" id="mainContent">
       <div class="px-4" style="padding-top:8px;">
@@ -546,6 +551,11 @@
       renderChips();
       loadShops();
       renderMiniPrograms();
+      // 未读消息红点
+      (function () {
+        var b = document.getElementById('msgBadge');
+        if (b) b.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
+      })();
       App.initPullToRefresh(mainContent, refresh);
     })();
   </script>

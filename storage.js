@@ -18,6 +18,7 @@ var Storage = {
     cart: 'foodCartDB',
     orders: 'foodOrderDB',
     life: 'lifeDB',
+    guide: 'guideDB',
   },
 
   // demo 模式：存储键统一加 demo_ 前缀（demo_packages / demo_cart / demo_orders / demo_messages ...）
@@ -788,7 +789,73 @@ var Storage = {
     this._remove(this.KEYS.cart);
     this._remove(this.KEYS.orders);
     this._remove(this.KEYS.life);
+    this._remove(this.KEYS.guide);
     this.init();
+  },
+
+  // =========================================================
+  // 用户数字 ID（唯一身份标识，生成后持久化，用于甄别数据归属）
+  // =========================================================
+  getUserId: function () {
+    var user = this.getUser();
+    if (user.numericId && /^\d{8}$/.test(String(user.numericId))) return String(user.numericId);
+    var id = '';
+    // 8 位数字，首位非 0
+    id = String(Math.floor(Math.random() * 9) + 1);
+    for (var i = 0; i < 7; i++) id += String(Math.floor(Math.random() * 10));
+    user.numericId = id;
+    this.saveUser(user);
+    return id;
+  },
+
+  // =========================================================
+  // 个人空间 · 相册（图片以压缩后 dataURL 存储，可发布到自己的帖子）
+  // =========================================================
+  lifeGetAlbum: function () {
+    return this._life().album || [];
+  },
+
+  lifeAddPhotos: function (dataUrls) {
+    if (!dataUrls || !dataUrls.length) return { success: false, message: '没有可保存的照片' };
+    var data = this._life();
+    var MAX = 30;
+    var added = 0;
+    for (var i = 0; i < dataUrls.length; i++) {
+      if (data.album.length >= MAX) break;
+      data.album.unshift({
+        id: 'P' + Date.now() + '_' + i,
+        src: dataUrls[i],
+        createdAt: Date.now(),
+      });
+      added++;
+    }
+    this._saveLife(data);
+    return { success: added > 0, added: added, full: data.album.length >= MAX };
+  },
+
+  lifeRemovePhoto: function (photoId) {
+    var data = this._life();
+    var kept = [];
+    for (var i = 0; i < data.album.length; i++) {
+      if (data.album[i].id !== photoId) kept.push(data.album[i]);
+    }
+    data.album = kept;
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // =========================================================
+  // 指引模式（每个功能首次进入显示一次轻量引导，之后不再打扰）
+  // =========================================================
+  isGuideShown: function (key) {
+    var map = this._read(this.KEYS.guide, {});
+    return !!map[key];
+  },
+
+  markGuideShown: function (key) {
+    var map = this._read(this.KEYS.guide, {});
+    map[key] = Date.now();
+    this._write(this.KEYS.guide, map);
   },
 
   // ---- 工具：按现有数据格式输出 "MM-DD HH:mm" ----
@@ -802,33 +869,22 @@ var Storage = {
   // 校园生活模块（攒钱 / 课表 / 论坛 / 实习）—— 全部本地 localStorage
   // =========================================================
   _lifeSeed: function () {
-    var now = Date.now();
+    // 约定：校园生活各功能初始均为 0 记录（无预填数据），由用户自己产生数据
     return {
       savings: {
-        goals: [
-          { id: 'G1', name: '换一台新电脑', target: 6000, saved: 2350, color: '#0A6EFF', createdAt: now },
-          { id: 'G2', name: '寒假旅行基金', target: 3000, saved: 900, color: '#FF9F0A', createdAt: now },
-        ],
-        ledger: [
-          { id: 'L1', type: 'income', amount: 1800, category: '兼职工资', note: '图书馆助理 9 月', time: '09-15 18:00', createdAt: now - 86400000 * 3 },
-          { id: 'L2', type: 'expense', amount: 32.5, category: '餐饮', note: '奶茶+晚餐', time: '09-16 12:20', createdAt: now - 86400000 * 2 },
-          { id: 'L3', type: 'income', amount: 200, category: '其他收入', note: '二手教材', time: '09-17 20:05', createdAt: now - 86400000 },
-        ],
+        goals: [],
+        ledger: [],
       },
       schedule: [],
       forum: {
-        posts: [
-          { id: 'F1', board: 'lost', title: '兰苑 3 号楼门口捡到一张校园卡', content: '卡套是蓝色的，里面有一张食堂卡，已放宿管阿姨处，失主请联系。', author: '热心同学', likes: 24, liked: false, comments: [{ author: '宿管', text: '已登记，谢谢！' }], createdAt: now - 3600000 * 2 },
-          { id: 'F2', board: 'market', title: '出九成新自行车，180 可小刀', content: '毕业出车，变速正常，锁和车筐都有，菊苑看车。', author: '即将毕业', likes: 11, liked: false, comments: [], createdAt: now - 3600000 * 6 },
-          { id: 'F3', board: 'study', title: '高数期末复习资料分享（电子版）', content: '整理了近三年真题和重点公式，评论区留邮箱我发你，也可以直接私信。', author: '卷卷不吃葱', likes: 58, liked: false, comments: [{ author: '小明', text: '求一份！' }], createdAt: now - 3600000 * 20 },
-          { id: 'F4', board: 'jobs', title: '校门口奶茶店招周末兼职', content: '18 元/小时，周末两天均可排班，有意向的同学留言联系方式。', author: '甜茶店长', likes: 7, liked: false, comments: [], createdAt: now - 3600000 * 30 },
-          { id: 'F5', board: 'talk', title: '三食堂今天的糖醋排骨也太好吃了吧', content: '强烈安利，去晚了真的没位置……', author: '干饭第一名', likes: 36, liked: false, comments: [], createdAt: now - 3600000 * 50 },
-        ],
+        posts: [],
       },
       jobs: {
         applied: [],
         resumes: [],
+        applications: [],
       },
+      album: [],
     };
   },
 
@@ -838,6 +894,10 @@ var Storage = {
       data = this._lifeSeed();
       this._write(this.KEYS.life, data);
     }
+    // 旧版本 lifeDB 补齐新字段（沿用空记录约定，不预填数据）
+    if (!data.jobs) data.jobs = { applied: [], resumes: [], applications: [] };
+    if (!data.jobs.applications) data.jobs.applications = [];
+    if (!data.album) data.album = [];
     return data;
   },
 
@@ -944,6 +1004,7 @@ var Storage = {
       board: post.board || 'talk',
       title: post.title,
       content: post.content,
+      image: post.image || '',
       author: post.author || '我',
       likes: 0,
       liked: false,
@@ -988,14 +1049,138 @@ var Storage = {
     return this._life().jobs;
   },
 
+  // 投递状态机（贴近真实流程）：submitted 已投递 → viewed 已查看 → interview 面试邀约 → offer 已录用 / rejected 不合适
+  // 本地演示按时间轴自动推进（与外卖订单时间轴同款策略）；面试后结果按 jobId 奇偶确定，保证可复现
+  APPLICATION_TIMINGS: { viewedMs: 30 * 1000, interviewMs: 120 * 1000, resultMs: 360 * 1000 },
+  APPLICATION_STATUS: {
+    submitted: '已投递',
+    viewed: '已查看',
+    interview: '面试邀约',
+    offer: '已录用',
+    rejected: '不合适',
+    withdrawn: '已撤回',
+  },
+
   lifeApplyJob: function (jobId) {
     var data = this._life();
     if (data.jobs.applied.indexOf(jobId) !== -1) return { success: false, message: '已经投递过了' };
+    if (!this.lifeGetResume()) return { success: false, message: '请先完成我的简历', needResume: true };
     data.jobs.applied.push(jobId);
+    var app = {
+      id: 'A' + Date.now(),
+      jobId: jobId,
+      title: jobId,
+      status: 'submitted',
+      createdAt: Date.now(),
+      timeline: [{ status: 'submitted', time: this.formatNow() }],
+    };
+    data.jobs.applications.unshift(app);
     this._saveLife(data);
-    return { success: true };
+    return { success: true, application: app };
   },
 
+  // 页面调用：带岗位名称投递（优先使用）
+  lifeApplyJobMeta: function (jobId, title, company) {
+    var data = this._life();
+    if (data.jobs.applied.indexOf(jobId) !== -1) return { success: false, message: '已经投递过了' };
+    if (!this.lifeGetResume()) return { success: false, message: '请先完成我的简历', needResume: true };
+    data.jobs.applied.push(jobId);
+    var app = {
+      id: 'A' + Date.now(),
+      jobId: jobId,
+      title: title || jobId,
+      company: company || '',
+      status: 'submitted',
+      createdAt: Date.now(),
+      timeline: [{ status: 'submitted', time: this.formatNow() }],
+    };
+    data.jobs.applications.unshift(app);
+    this._saveLife(data);
+    return { success: true, application: app };
+  },
+
+  lifeGetApplications: function () {
+    return this._life().jobs.applications || [];
+  },
+
+  // 推进投递状态（页面加载 / 定时调用）
+  lifeSyncApplications: function () {
+    var data = this._life();
+    var T = this.APPLICATION_TIMINGS;
+    var now = Date.now();
+    var changed = false;
+    var apps = data.jobs.applications || [];
+    for (var i = 0; i < apps.length; i++) {
+      var a = apps[i];
+      if (a.status === 'withdrawn') continue;
+      var elapsed = now - a.createdAt;
+      var next = null;
+      if (a.status === 'submitted' && elapsed >= T.viewedMs) next = 'viewed';
+      else if (a.status === 'viewed' && elapsed >= T.interviewMs) next = 'interview';
+      else if (a.status === 'interview' && elapsed >= T.resultMs) {
+        // 面试后结果：jobId 末位数字偶数 → offer，奇数 → rejected（本地可复现演示）
+        var tail = String(a.jobId).slice(-1);
+        var num = parseInt(tail, 10);
+        next = isNaN(num) ? (i % 2 === 0 ? 'offer' : 'rejected') : (num % 2 === 0 ? 'offer' : 'rejected');
+      }
+      if (next) {
+        a.status = next;
+        a.timeline.push({ status: next, time: this.formatNow() });
+        changed = true;
+      }
+    }
+    if (changed) this._saveLife(data);
+    return apps;
+  },
+
+  lifeWithdrawApplication: function (appId) {
+    var data = this._life();
+    var apps = data.jobs.applications || [];
+    for (var i = 0; i < apps.length; i++) {
+      if (apps[i].id === appId && apps[i].status !== 'withdrawn') {
+        apps[i].status = 'withdrawn';
+        apps[i].timeline.push({ status: 'withdrawn', time: this.formatNow() });
+        // 同步移除 applied 标记，允许再次投递
+        var idx = data.jobs.applied.indexOf(apps[i].jobId);
+        if (idx !== -1) data.jobs.applied.splice(idx, 1);
+        this._saveLife(data);
+        return { success: true };
+      }
+    }
+    return { success: false, message: '投递记录不存在' };
+  },
+
+  // ---- 完整简历（分步创建：基本信息 → 求职意向 → 教育经历 → 实践经历 → 技能/自评）----
+  lifeGetResume: function () {
+    return this._life().jobs.resume || null;
+  },
+
+  lifeSaveResume: function (resume) {
+    if (!resume || !resume.name || !resume.intent) return { success: false, message: '姓名和意向岗位不能为空' };
+    var data = this._life();
+    data.jobs.resume = {
+      name: resume.name,
+      gender: resume.gender || '',
+      phone: resume.phone || '',
+      email: resume.email || '',
+      intent: resume.intent,
+      city: resume.city || '',
+      salary: resume.salary || '',
+      school: resume.school || '',
+      major: resume.major || '',
+      degree: resume.degree || '',
+      eduStart: resume.eduStart || '',
+      eduEnd: resume.eduEnd || '',
+      experience: resume.experience || '',
+      skills: resume.skills || '',
+      intro: resume.intro || '',
+      completedAt: resume.completedAt || Date.now(),
+    };
+    this._saveLife(data);
+    return { success: true, resume: data.jobs.resume };
+  },
+
+  // 求职墙快捷意向（旧入口保留）
   lifeAddResume: function (resume) {
     if (!resume || !resume.name || !resume.intent) return { success: false, message: '姓名和意向岗位不能为空' };
     var data = this._life();

@@ -63,7 +63,7 @@
       </div>
     </header>
 
-    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+    <main class="app-content" id="mainContent" style="padding-bottom:32px;">
       <div class="day-chips" id="dayChips"></div>
       <div style="padding:4px 16px;">
         <div class="section-header">
@@ -73,40 +73,17 @@
         <div id="lessonList" style="display:flex;flex-direction:column;gap:10px;"></div>
       </div>
     </main>
-
-    <nav class="tab-bar">
-      <a href="index.html" class="tab-item" data-nav="home">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
-        <span class="tab-label">首页</span>
-      </a>
-      <a href="packages.html" class="tab-item" data-nav="packages">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
-        <span class="tab-label">快递</span>
-      </a>
-      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
-        <div class="tab-scan-btn">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
-        </div>
-        <span class="tab-label">扫码</span>
-      </a>
-      <a href="food.html" class="tab-item" data-nav="food">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
-        <span class="tab-label">外卖</span>
-      </a>
-      <a href="profile.html" class="tab-item" data-nav="profile">
-        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        <span class="tab-label">我的</span>
-      </a>
-    </nav>
   </div>
 
-  <!-- 导入贝蒂课程表抽屉 -->
+  <!-- 导入课程表抽屉（贝蒂 JSON / XLS 表格） -->
   <div class="sheet-mask" id="sheetMask"></div>
   <div class="sheet" id="importSheet">
-    <div class="sheet-title">导入贝蒂课程表</div>
-    <div class="sheet-sub">支持贝蒂课程表 / 超级课程表等导出的 JSON 文件，也可以直接粘贴 JSON 文本。导入将覆盖当前课表。</div>
+    <div class="sheet-title">导入课程表</div>
+    <div class="sheet-sub">支持贝蒂课程表 / 超级课程表导出的 JSON，或 Excel 课表（XLS / XLSX）。导入将覆盖当前课表。</div>
     <input type="file" id="importFile" accept=".json,application/json" style="display:none;">
-    <button class="btn btn-outline btn-block" id="btnPickFile" style="margin-bottom:12px;">选择 JSON 文件</button>
+    <input type="file" id="importXlsFile" accept=".xls,.xlsx,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="display:none;">
+    <button class="btn btn-outline btn-block" id="btnPickFile" style="margin-bottom:12px;">选择 JSON 文件（贝蒂课程表）</button>
+    <button class="btn btn-outline btn-block" id="btnPickXls" style="margin-bottom:12px;border-color:#16A34A;color:#16A34A;">选择 XLS / XLSX 表格文件</button>
     <div class="field">
       <label>或粘贴课表 JSON</label>
       <textarea id="importText" placeholder='[{"courseName":"高等数学","weekday":1,"start":1,"end":2,"room":"文201","teacher":"王老师"}]'></textarea>
@@ -253,6 +230,100 @@
         return { courses: courses };
       }
 
+      // ---- XLS / XLSX 表格课表解析（SheetJS 本地库 libs/xlsx/，无在线依赖）----
+      // 列名兼容：课程/名称、星期/礼拜/周、节次/时间、教室/地点/位置、教师/老师；无表头时按 [课程,星期,节次,地点,教师] 顺序
+      function findHeaderRow(rows) {
+        for (var i = 0; i < Math.min(rows.length, 8); i++) {
+          var r = rows[i] || [];
+          var joined = r.map(function (c) { return String(c == null ? '' : c); }).join('|');
+          if (/课程|名称|星期|节次|地点|教室|教师|老师/.test(joined)) return i;
+        }
+        return -1;
+      }
+      function colIdx(header, keys) {
+        for (var i = 0; i < header.length; i++) {
+          var h = String(header[i] == null ? '' : header[i]);
+          for (var k = 0; k < keys.length; k++) {
+            if (h.indexOf(keys[k]) !== -1) return i;
+          }
+        }
+        return -1;
+      }
+      function parseXlsxRows(rows) {
+        if (!rows || !rows.length) return { error: '表格是空的' };
+        var hRow = findHeaderRow(rows);
+        var header = hRow >= 0 ? rows[hRow] : [];
+        var dataStart = hRow >= 0 ? hRow + 1 : 0;
+        var iName = hRow >= 0 ? colIdx(header, ['课程', '名称', '课名']) : 0;
+        var iDay  = hRow >= 0 ? colIdx(header, ['星期', '礼拜']) : 1;
+        var iSec  = hRow >= 0 ? colIdx(header, ['节次', '节', '时间']) : 2;
+        var iRoom = hRow >= 0 ? colIdx(header, ['教室', '地点', '位置']) : 3;
+        var iTch  = hRow >= 0 ? colIdx(header, ['教师', '老师']) : 4;
+        if (iName < 0) iName = 0;
+        var courses = [];
+        for (var r = dataStart; r < rows.length; r++) {
+          var row = rows[r] || [];
+          var name = row[iName];
+          if (name === undefined || name === null || String(name).trim() === '') continue;
+          var secRaw = String(iSec >= 0 ? (row[iSec] || '') : '');
+          var secParsed = parseSections({ start: secRaw || 1 });
+          // 「08:00」类时间格式自动映射节次
+          var tm = secRaw.match(/(\d{1,2}):(\d{2})/);
+          if (tm && secRaw.indexOf('节') === -1) {
+            var mins = parseInt(tm[1], 10) * 60 + parseInt(tm[2], 10);
+            var idx = 0;
+            for (var t = 0; t < LESSON_TIMES.length; t++) {
+              var pt = LESSON_TIMES[t].split(':');
+              var pm = parseInt(pt[0], 10) * 60 + parseInt(pt[1], 10);
+              if (mins >= pm - 20) idx = t;
+            }
+            secParsed = { start: idx + 1, end: idx + 1 };
+          }
+          courses.push({
+            name: String(name).trim().slice(0, 20),
+            teacher: String(iTch >= 0 ? (row[iTch] || '') : '').trim().slice(0, 10),
+            position: String(iRoom >= 0 ? (row[iRoom] || '') : '').trim().slice(0, 20),
+            weekday: parseDay((iDay >= 0 ? row[iDay] : '') || 1),
+            start: secParsed.start,
+            end: secParsed.end,
+            weeks: '1-16周',
+            color: COLORS[courses.length % COLORS.length],
+          });
+        }
+        if (!courses.length) return { error: '表格里没有识别到课程，请检查列名（课程/星期/节次/地点/教师）' };
+        return { courses: courses };
+      }
+      var sheetJsLoading = false;
+      function loadSheetJs(cb) {
+        if (typeof XLSX !== 'undefined') { cb(); return; }
+        if (sheetJsLoading) return;
+        sheetJsLoading = true;
+        var s = document.createElement('script');
+        s.src = 'libs/xlsx/xlsx.full.min.js';
+        s.onload = function () { cb(); };
+        s.onerror = function () {
+          sheetJsLoading = false;
+          App.toast('表格解析库加载失败，请检查 libs/xlsx 目录');
+        };
+        document.head.appendChild(s);
+      }
+      function showPreview(res) {
+        var pv = document.getElementById('importPreview');
+        if (res.error) {
+          pv.style.display = 'block';
+          pv.style.background = '#FEE2E2';
+          pv.style.color = '#DC2626';
+          pv.textContent = '⚠ ' + res.error;
+          pendingImport = null;
+        } else {
+          pv.style.display = 'block';
+          pv.style.background = 'var(--color-primary-lighter)';
+          pv.style.color = 'var(--color-primary)';
+          pv.textContent = '✓ 识别到 ' + res.courses.length + ' 门课程，点击下方按钮导入';
+          pendingImport = res.courses;
+        }
+      }
+
       function renderDayChips() {
         var d = new Date();
         var html = '';
@@ -300,6 +371,7 @@
       // 导入
       document.getElementById('btnImport').addEventListener('click', function () {
         document.getElementById('importText').value = '';
+        document.getElementById('importXlsFile').value = '';
         document.getElementById('importPreview').style.display = 'none';
         pendingImport = null;
         openSheet(importSheet);
@@ -323,21 +395,41 @@
         var text = document.getElementById('importText').value.trim();
         var pv = document.getElementById('importPreview');
         if (!text) { pv.style.display = 'none'; pendingImport = null; return; }
-        var res = parseSchedule(text);
-        if (res.error) {
-          pv.style.display = 'block';
-          pv.style.background = '#FEE2E2';
-          pv.style.color = '#DC2626';
-          pv.textContent = '⚠ ' + res.error;
-          pendingImport = null;
-        } else {
-          pv.style.display = 'block';
-          pv.style.background = 'var(--color-primary-lighter)';
-          pv.style.color = 'var(--color-primary)';
-          pv.textContent = '✓ 识别到 ' + res.courses.length + ' 门课程，点击下方按钮导入';
-          pendingImport = res.courses;
-        }
+        showPreview(parseSchedule(text));
       }
+
+      // XLS / XLSX 导入
+      document.getElementById('btnPickXls').addEventListener('click', function () {
+        document.getElementById('importXlsFile').click();
+      });
+      document.getElementById('importXlsFile').addEventListener('change', function () {
+        var file = this.files[0];
+        if (!file) return;
+        var btn = document.getElementById('btnPickXls');
+        var oldText = btn.textContent;
+        btn.textContent = '解析中…';
+        loadSheetJs(function () {
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              var wb = XLSX.read(e.target.result, { type: 'array' });
+              var ws = wb.Sheets[wb.SheetNames[0]];
+              var rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+              showPreview(parseXlsxRows(rows));
+            } catch (err) {
+              showPreview({ error: '文件解析失败：' + (err && err.message ? err.message : '格式不正确') });
+            }
+            btn.textContent = oldText;
+            document.getElementById('importXlsFile').value = '';
+          };
+          reader.onerror = function () {
+            btn.textContent = oldText;
+            document.getElementById('importXlsFile').value = '';
+            App.toast('文件读取失败，请重试');
+          };
+          reader.readAsArrayBuffer(file);
+        });
+      });
 
       document.getElementById('importSubmit').addEventListener('click', function () {
         if (!pendingImport) { App.toast('请先选择文件或粘贴 JSON'); return; }
@@ -390,6 +482,16 @@
         render(); App.toastSuccess('已刷新'); return Promise.resolve();
       });
       render();
+      App.showGuide('schedule', {
+        emoji: '📅',
+        title: '课程表 · 新手指引',
+        items: [
+          '点右上角「导入」粘贴贝蒂 JSON 或选择 XLS / XLSX 表格',
+          '表格首行需含「课程 / 星期 / 节次」等列名',
+          '点右下角＋可手动添加单节课',
+          '左右滑动日期条查看每周课表',
+        ],
+      });
     })();
   </script>
 </body>

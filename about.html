@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>关于我们 - 校园取件</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .about-hero { text-align: center; padding: 38px 16px 26px; }
+    .about-logo {
+      width: 84px; height: 84px; border-radius: 22px;
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 44px; margin: 0 auto 14px;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+    }
+    .about-name { font-size: 20px; font-weight: 700; color: var(--color-text); }
+    .about-ver { margin-top: 6px; font-size: 12px; color: var(--color-text-hint); }
+    .about-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-light);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+      padding: 16px;
+      margin: 0 16px 12px;
+    }
+    .about-card h3 { margin: 0 0 10px; font-size: 15px; color: var(--color-text); }
+    .about-card p { margin: 0; font-size: 13.5px; line-height: 1.8; color: var(--color-text-sub); }
+    .feat-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .feat-item {
+      background: var(--color-surface-alt);
+      border-radius: var(--radius-md);
+      padding: 10px 12px;
+      font-size: 13px; color: var(--color-text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .about-foot {
+      text-align: center;
+      padding: 18px 16px calc(24px + env(safe-area-inset-bottom));
+      font-size: 12px; color: var(--color-text-hint); line-height: 1.8;
+    }
+  </style>
+</head>
+<body data-page="about">
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="header-left">
+        <a href="profile.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">关于我们</div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content">
+      <div class="about-hero anim-fade-in-up">
+        <div class="about-logo">📦</div>
+        <div class="about-name">校园取件 · Campus Life</div>
+        <div class="about-ver">Version 3.0.0 · 纯本地离线版</div>
+      </div>
+
+      <div class="about-card anim-fade-in-up stagger-1">
+        <h3>我们是谁</h3>
+        <p>「校园取件」是一款面向在校学生的校园生活助手，由校园学生开发团队打造。我们相信好的校园工具应当「快、轻、稳」——打开即用、离线可用、数据握在自己手里。</p>
+      </div>
+
+      <div class="about-card anim-fade-in-up stagger-2">
+        <h3>核心功能</h3>
+        <div class="feat-list">
+          <div class="feat-item">📦 快递取件</div>
+          <div class="feat-item">🍜 校园外卖</div>
+          <div class="feat-item">🗓 课程表</div>
+          <div class="feat-item">💰 存钱计划</div>
+          <div class="feat-item">💬 校园圈子</div>
+          <div class="feat-item">💼 实习求职</div>
+          <div class="feat-item">🛁 浴室排队</div>
+          <div class="feat-item">🏠 个人空间</div>
+        </div>
+      </div>
+
+      <div class="about-card anim-fade-in-up stagger-3">
+        <h3>数据与隐私</h3>
+        <p>应用不连接云端服务器，所有数据（快递、订单、课程、简历、相册、帖子等）均保存在你本机的浏览器中，不上传、不采集、不追踪。清除浏览器数据即完全删除。</p>
+      </div>
+
+      <div class="about-card anim-fade-in-up stagger-4">
+        <h3>联系我们</h3>
+        <p>使用中有任何问题或建议，欢迎通过「个人中心 → 反馈建议」告诉我们，每一条反馈团队都会认真阅读。</p>
+      </div>
+
+      <div class="about-foot">
+        Made with 💙 by 校园取件开发团队<br>
+        © 2026 Campus Life · 保留所有权利
+      </div>
+    </main>
+  </div>
+</body>
+</html>

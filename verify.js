@@ -253,6 +253,7 @@ htmlFiles.forEach(f => {
       if (ref.startsWith('http://www.w3.org') || ref.startsWith('https://www.w3.org')) return; // SVG 命名空间，非资源加载
       externalRefs.push(f + ' → ' + ref);
     } else if (!ref.startsWith('javascript:') && !ref.startsWith('#') && ref !== '' && !SERVER_ONLY_REFS.has(ref)) {
+      if (/[+'"]/.test(ref)) return; // JS 字符串动态拼接片段（如 src="' + p.image + '"），非真实引用
       const clean = ref.split('?')[0].split('#')[0].replace(/^\.\//, ''); // 归一化 ./ 相对前缀
       if (!localFiles.has(clean)) deadLinks.push(f + ' → ' + ref);
     }
@@ -421,7 +422,7 @@ check('config.js isDemo 恒为 false 常量', /isDemo:\s*false/.test(configSrc))
 
 // 6.6 每个功能页都在 storage.js 之前引入 config.js，且引入 storage.js 的页面同时引入 demo-data.js
 // （本地化升级报告.html 是说明文档；dev-login.html / gray 是刻意自包含的服务器分发页，均不参与本项检查）
-const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html']);
+const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html', 'about.html', 'website.html']);
 const demoScriptPages = fs.readdirSync(ROOT)
   .filter(f => f.endsWith('.html') && !SELF_CONTAINED_PAGES.has(f));
 let scriptIssues = [];
@@ -828,10 +829,13 @@ check('.gitignore 排除 logs/', gitignoreSrc.indexOf('logs/') !== -1);
 (function () {
 console.log('\n[10] 问题反馈系统 + 灰度/开发者双入口访问隔离');
 
-// 10.1 settings 入口 + feedback.html 表单
+// 10.1 settings 入口（已迁至个人中心）+ feedback.html 表单
 const settingsSrc = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
-check('settings.html 含「问题反馈」入口跳 feedback.html',
-  settingsSrc.indexOf('href="feedback.html"') !== -1 && settingsSrc.indexOf('问题反馈') !== -1);
+check('settings.html 已移除「问题反馈」入口（迁至个人中心）',
+  settingsSrc.indexOf('href="feedback.html"') === -1 && settingsSrc.indexOf('问题反馈') === -1);
+const profileFeedbackSrc = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+check('profile.html 含「反馈建议」入口跳 feedback.html',
+  profileFeedbackSrc.indexOf('反馈建议') !== -1 && profileFeedbackSrc.indexOf("location.href='feedback.html'") !== -1);
 
 const feedbackHtmlSrc = fs.readFileSync(path.join(ROOT, 'feedback.html'), 'utf8');
 ['功能异常', '界面问题', '使用建议', '快递问题', '扫码问题', '外卖问题', '地图问题', '其他'].forEach(function (t) {
@@ -844,8 +848,8 @@ check('feedback.html 截图 accept 限 PNG/JPG/WEBP',
 check('feedback.html 限制最多 3 张截图', feedbackHtmlSrc.indexOf('最多 3 张') !== -1);
 check('feedback.html 演示环境提示不发送生产',
   feedbackHtmlSrc.indexOf('当前为演示环境，反馈不会发送到生产系统') !== -1);
-check('feedback.html 成功态含返回设置按钮',
-  feedbackHtmlSrc.indexOf('反馈提交成功') !== -1 && feedbackHtmlSrc.indexOf("location.href='settings.html'") !== -1);
+check('feedback.html 成功态返回个人中心',
+  feedbackHtmlSrc.indexOf('反馈提交成功') !== -1 && feedbackHtmlSrc.indexOf("location.href='profile.html'") !== -1);
 check('feedback.html 加载 config/storage/api-client/app 脚本链',
   ['config.js', 'storage.js', 'api-client.js', 'app.js'].every(function (s) { return feedbackHtmlSrc.indexOf(s) !== -1; }));
 
@@ -1014,13 +1018,15 @@ check('bathroom.html 含设为常用', bathSrc.indexOf('setDefault') !== -1);
 check('bathroom.html 含 getBathroomById', bathSrc.indexOf('getBathroomById') !== -1);
 check('bathroom.html 含 getDefaultBathroom', bathSrc.indexOf('getDefaultBathroom') !== -1);
 
-// 11.5 浴室卡片随首页取件功能整合到 packages.html 快递页
+// 11.5 浴室卡片已从 packages.html 迁至 index.html 首页校园服务区
 const pkgHtmlForBath = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
-check('packages.html 含 bathroomCard 容器', pkgHtmlForBath.indexOf('bathroomCard') !== -1);
-check('packages.html 含 renderBathroomCard', pkgHtmlForBath.indexOf('renderBathroomCard') !== -1);
-check('packages.html 引入 campus-data.js', pkgHtmlForBath.indexOf('campus-data.js') !== -1);
-check('packages.html 浴室卡读取 getDefaultBathroom', pkgHtmlForBath.indexOf('getDefaultBathroom') !== -1);
-check('packages.html 无常用浴室数据时不渲染卡片', /getDefaultBathroom\(\)[\s\S]{0,80}innerHTML = ''/.test(pkgHtmlForBath));
+const idxHtmlForBath = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+check('index.html 含 bathroomCard 容器', idxHtmlForBath.indexOf('id="bathroomCard"') !== -1);
+check('index.html 含 renderBathroomCard', idxHtmlForBath.indexOf('renderBathroomCard') !== -1);
+check('index.html 引入 campus-data.js', idxHtmlForBath.indexOf('campus-data.js') !== -1);
+check('index.html 浴室卡读取 getDefaultBathroom', idxHtmlForBath.indexOf('getDefaultBathroom') !== -1);
+check('index.html 无常用浴室数据时不渲染卡片', /getDefaultBathroom\(\)[\s\S]{0,80}innerHTML = ''/.test(idxHtmlForBath));
+check('packages.html 已移除浴室卡（bathroomCard）', pkgHtmlForBath.indexOf('bathroomCard') === -1);
 
 // 11.6 demo-data.js + mock.js 含结构化宿舍
 const demoSrc = fs.readFileSync(path.join(ROOT, 'demo-data.js'), 'utf8');
@@ -1224,20 +1230,21 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     pkgHtml2.indexOf('扫码取件') !== -1 && pkgHtml2.indexOf('本地导入') !== -1 &&
     pkgHtml2.indexOf('track.html') !== -1 && pkgHtml2.indexOf('records.html') !== -1);
   check('packages.html 含常用取件点区块（pointsList）', pkgHtml2.indexOf('id="pointsList"') !== -1);
-  check('packages.html 含浴室卡区块（bathroomCard）', pkgHtml2.indexOf('id="bathroomCard"') !== -1);
+  check('packages.html 已移除浴室卡区块（迁至首页）', pkgHtml2.indexOf('bathroomCard') === -1);
   check('packages.html 保留搜索/筛选/快递列表',
     pkgHtml2.indexOf('id="searchInput"') !== -1 && pkgHtml2.indexOf('id="filterChips"') !== -1 && pkgHtml2.indexOf('id="pkgList"') !== -1);
 
-  // 13.8 profile.html 个人信息卡片边框缩小对齐
+  // 13.8 profile.html 个人中心改版（小头像 + 数字ID + 宿舍行）
   const prof = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
-  check('profile.html 用户卡片 padding ≤ 14px',
-    /margin-bottom:12px; padding:14px/.test(prof));
-  check('profile.html 头像尺寸缩小 ≤ 44px',
-    /renderUserInfo[\s\S]{0,400}avatarHtml\([^,]+,\s*(40|36|32|44),/.test(prof));
+  check('profile.html 用户卡片水平内边距 14px',
+    /margin-bottom:12px; padding:16px 14px/.test(prof));
+  check('profile.html 头像 52px 可点击进入个人空间',
+    /avatarHtml\(user,\s*52,/.test(prof) && prof.indexOf('myhome.html') !== -1);
   check('profile.html 用户名字号 ≤ 18px',
     /font-size:16px; font-weight:700/.test(prof));
-  check('profile.html 统计数字字号 ≤ 22px',
-    /font-size:20px; font-weight:800/.test(prof));
+  check('profile.html 已移除统计数字卡片（待取/已取/未读）',
+    prof.indexOf('statPending') === -1 && prof.indexOf('statPicked') === -1 &&
+    prof.indexOf('font-size:20px; font-weight:800') === -1);
   check('profile.html 装饰 svg 缩小 ≤ 100px',
     /width:90px; height:90px/.test(prof));
 })();
@@ -1292,14 +1299,17 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   const jobsSrc = fs.readFileSync(path.join(ROOT, 'jobs.html'), 'utf8');
 
   [['savings.html', savSrc], ['schedule.html', schSrc], ['forum.html', forumSrc], ['jobs.html', jobsSrc]].forEach(([f, h]) => {
-    check(f + ' 含统一 5 入口 tab-bar', h.includes('class="tab-bar"') &&
-      ['home', 'packages', 'scan', 'food', 'profile'].every(n => h.indexOf('data-nav="' + n + '"') !== -1));
+    check(f + ' 功能页已移除 tab-bar（进入功能隐藏悬浮导航）', !h.includes('class="tab-bar"'));
     check(f + ' 使用相对路径资源（无 http/https 外链脚本样式）',
       !/<script[^>]*src="https?:/.test(h) && !/<link[^>]*href="https?:/.test(h));
     check(f + ' 含完整标准脚本链',
       h.indexOf('config.js') !== -1 && h.indexOf('mock.js') !== -1 &&
       h.indexOf('demo-data.js') !== -1 && h.indexOf('storage.js') !== -1 &&
       h.indexOf('api.js') !== -1 && h.indexOf('api-client.js') !== -1 && h.indexOf('app.js') !== -1);
+  });
+  const idxForTabs = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  [['index.html', idxForTabs], ['packages.html', pkgSrc3], ['food.html', foodSrc2], ['profile.html', profileSrc2]].forEach(([f, h]) => {
+    check(f + ' 主导航页保留 tab-bar', h.includes('class="tab-bar"'));
   });
 
   // 14.5 攒钱页能力
@@ -1317,6 +1327,12 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('schedule.html 兼容中文星期与「1-2节」区间', schSrc.indexOf('parseDay') !== -1 && schSrc.indexOf('parseSections') !== -1);
   check('schedule.html 导入调用 lifeSaveCourses 覆盖渲染', schSrc.indexOf('lifeSaveCourses') !== -1);
   check('schedule.html 支持手动加课（lifeAddCourse）', schSrc.indexOf('lifeAddCourse') !== -1);
+  check('schedule.html 支持 XLS/XLSX 导入（btnPickXls + importXlsFile）',
+    schSrc.indexOf('btnPickXls') !== -1 && schSrc.indexOf('importXlsFile') !== -1);
+  check('schedule.html 使用本地化 SheetJS（libs/xlsx，无在线依赖）',
+    schSrc.indexOf('libs/xlsx/xlsx.full.min.js') !== -1 && !/<script[^>]*src="https?:/.test(schSrc));
+  check('schedule.html 含 XLS 解析（parseXlsxRows + loadSheetJs）',
+    schSrc.indexOf('parseXlsxRows') !== -1 && schSrc.indexOf('loadSheetJs') !== -1);
 
   // 14.7 论坛页能力
   check('forum.html 含板块筛选（学习/二手/失物/兼职/吐槽）',
@@ -1333,15 +1349,15 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('jobs.html 含职位搜索', jobsSrc.indexOf('id="searchInput"') !== -1);
   check('jobs.html 含职位详情弹层与投递（lifeApplyJob）', jobsSrc.indexOf('lifeApplyJob') !== -1 && jobsSrc.indexOf('detailSheet') !== -1);
   check('jobs.html 含我的投递分区', jobsSrc.indexOf('我的投递') !== -1);
-  check('jobs.html 含求职意向发布（lifeAddResume + 求职墙）',
-    jobsSrc.indexOf('lifeAddResume') !== -1 && jobsSrc.indexOf('求职墙') !== -1);
+  check('jobs.html 含校园求职墙（legacy 求职意向展示）',
+    jobsSrc.indexOf('求职墙') !== -1 && jobsSrc.indexOf('lifeGetResume') !== -1);
   check('jobs.html 含内置种子虚拟岗位（8 个）', (jobsSrc.match(/id: 'J\d+'/g) || []).length >= 8);
 
   // 14.9 storage.js 生活模块数据层
   check('storage.js KEYS 含 lifeDB', /life:\s*'lifeDB'/.test(fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8')));
-  check('lifeGetSavings 返回种子目标与流水', (function () {
+  check('lifeGetSavings 新用户无种子记录（goals/ledger 均为空）', (function () {
     const s = Storage.lifeGetSavings();
-    return Array.isArray(s.goals) && s.goals.length >= 2 && Array.isArray(s.ledger) && s.ledger.length >= 3;
+    return Array.isArray(s.goals) && s.goals.length === 0 && Array.isArray(s.ledger) && s.ledger.length === 0;
   })());
   const ledgerBefore = Storage.lifeGetSavings().ledger.length;
   check('lifeAddLedger 记收入并置顶', (function () {
@@ -1382,7 +1398,12 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     const p = Storage.lifeGetPosts().find(x => x.id === postRes.post.id);
     return r.success && p.comments[p.comments.length - 1].text === 'verify 评论';
   })());
-  check('lifeApplyJob 投递 + 重复投递去重', (function () {
+  check('lifeApplyJob 未建简历拦截投递（needResume）', (function () {
+    const a = Storage.lifeApplyJob('J1');
+    return !a.success && a.needResume === true;
+  })());
+  check('lifeApplyJob 建简历后投递 + 重复投递去重', (function () {
+    Storage.lifeSaveResume({ name: 'verify同学', intent: '前端实习' });
     const a = Storage.lifeApplyJob('J1');
     const b = Storage.lifeApplyJob('J1');
     return a.success && !b.success && Storage.lifeGetJobsState().applied.indexOf('J1') !== -1;
@@ -1395,10 +1416,103 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 升级为 v2', /var VERSION = 'v2'/.test(swSrc));
-  ['savings.html', 'schedule.html', 'forum.html', 'jobs.html'].forEach(f => {
+  check('sw.js VERSION 升级为 v3', /var VERSION = 'v3'/.test(swSrc));
+  ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
+   'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
   });
+  check('sw.js 预缓存 xlsx 本地库', swSrc.indexOf("'./libs/xlsx/xlsx.full.min.js'") !== -1);
+})();
+
+// ============================================================
+// [15] v3 改版：光粒/指引模式/数字ID/个人空间相册/图片帖/简历流程/投递状态机/消息铃铛/浴室入首页
+// ============================================================
+(function () {
+  console.log('\n[15] v3 改版：光粒/指引/个人空间/简历流程/消息铃铛');
+  const stylesSrc4 = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
+  const appJsSrc3 = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const storageSrc4 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const idxSrc4 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const foodSrc3 = fs.readFileSync(path.join(ROOT, 'food.html'), 'utf8');
+  const pkgSrc4 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  const forumSrc2 = fs.readFileSync(path.join(ROOT, 'forum.html'), 'utf8');
+  const jobsSrc2 = fs.readFileSync(path.join(ROOT, 'jobs.html'), 'utf8');
+  const profSrc3 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const setSrc2 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+
+  // 15.1 光粒动效
+  check('styles.css 含 tab-spark 样式与 @keyframes tab-spark-rise',
+    stylesSrc4.indexOf('.tab-spark') !== -1 && /@keyframes tab-spark-rise/.test(stylesSrc4));
+  check('app.js 含 tabSparks 光粒实现', appJsSrc3.indexOf('tabSparks') !== -1);
+
+  // 15.2 指引模式 + 图片压缩
+  check('app.js 含 showGuide 指引模式', appJsSrc3.indexOf('showGuide') !== -1);
+  check('app.js 含 compressImage 图片压缩', appJsSrc3.indexOf('compressImage') !== -1);
+  check('storage.js KEYS 含 guideDB', /guide:\s*'guideDB'/.test(storageSrc4));
+  check('storage.js 含 isGuideShown/markGuideShown',
+    storageSrc4.indexOf('isGuideShown') !== -1 && storageSrc4.indexOf('markGuideShown') !== -1);
+  ['savings.html', 'schedule.html', 'forum.html', 'jobs.html', 'myhome.html'].forEach(f => {
+    const h = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    check(f + ' 含 showGuide 指引调用', h.indexOf("showGuide('") !== -1);
+  });
+
+  // 15.3 个人中心：数字 ID + 个人空间入口 + 新增页
+  check('storage.js 含 getUserId 数字 ID', storageSrc4.indexOf('getUserId') !== -1);
+  check('profile.html 含 userIdRow 数字 ID 展示', profSrc3.indexOf('userIdRow') !== -1);
+  check('profile.html 已移除学号 userStudentId', profSrc3.indexOf('userStudentId') === -1);
+  check('profile.html 头像可进入个人空间（myhome.html）', profSrc3.indexOf('myhome.html') !== -1);
+  check('profile.html 含关于我们/应用官网/反馈建议入口',
+    profSrc3.indexOf('about.html') !== -1 && profSrc3.indexOf('website.html') !== -1 &&
+    profSrc3.indexOf('feedback.html') !== -1);
+  check('settings.html 已移除问题反馈入口', setSrc2.indexOf('feedback.html') === -1);
+  check('profile.html 展示结构化宿舍（getUserDorm）', profSrc3.indexOf('getUserDorm') !== -1);
+
+  // 15.4 个人空间 myhome.html
+  check('myhome.html 存在', fs.existsSync(path.join(ROOT, 'myhome.html')));
+  const myhomeSrc = fs.existsSync(path.join(ROOT, 'myhome.html'))
+    ? fs.readFileSync(path.join(ROOT, 'myhome.html'), 'utf8') : '';
+  check('myhome.html 含相册（lifeGetAlbum/lifeAddPhotos/lifeRemovePhoto）',
+    myhomeSrc.indexOf('lifeGetAlbum') !== -1 && myhomeSrc.indexOf('lifeAddPhotos') !== -1 &&
+    myhomeSrc.indexOf('lifeRemovePhoto') !== -1);
+  check('myhome.html 含头像编辑（avatarSheet）', myhomeSrc.indexOf('avatarSheet') !== -1);
+  check('myhome.html 含资料修改（saveUserDorm）', myhomeSrc.indexOf('saveUserDorm') !== -1);
+  check('myhome.html 相册图可发帖（forum.html?compose=1）', myhomeSrc.indexOf('forum.html?compose=1') !== -1);
+
+  // 15.5 相册存储层
+  check('storage.js 含相册 API（lifeGetAlbum/lifeAddPhotos/lifeRemovePhoto）',
+    storageSrc4.indexOf('lifeGetAlbum') !== -1 && storageSrc4.indexOf('lifeAddPhotos') !== -1 &&
+    storageSrc4.indexOf('lifeRemovePhoto') !== -1);
+
+  // 15.6 论坛图片帖
+  check('forum.html 支持图片帖（post-img + albumPick）',
+    forumSrc2.indexOf('post-img') !== -1 && forumSrc2.indexOf('albumPick') !== -1);
+  check('forum.html 支持 compose=1&img= 深链发图帖',
+    forumSrc2.indexOf('compose=1') !== -1 && forumSrc2.indexOf('URLSearchParams') !== -1);
+  check('storage.js lifeAddPost 支持 image 字段', /lifeAddPost[\s\S]{0,900}image/.test(storageSrc4));
+
+  // 15.7 jobs 简历分步流程 + 投递状态机（纯本地）
+  check('jobs.html 含分步简历向导（rzName/rzIntent/RZ_STEPS）',
+    jobsSrc2.indexOf('rzName') !== -1 && jobsSrc2.indexOf('rzIntent') !== -1 &&
+    jobsSrc2.indexOf('RZ_STEPS') !== -1);
+  check('jobs.html 简历保存走 lifeSaveResume', jobsSrc2.indexOf('lifeSaveResume') !== -1);
+  check('jobs.html 投递走 lifeApplyJobMeta（需简历拦截）',
+    jobsSrc2.indexOf('lifeApplyJobMeta') !== -1 && jobsSrc2.indexOf('needResume') !== -1);
+  check('jobs.html 含投递状态机（submitted/viewed/interview/offer/rejected/withdrawn）',
+    ['submitted', 'viewed', 'interview', 'offer', 'rejected', 'withdrawn'].every(s => jobsSrc2.indexOf(s) !== -1));
+  check('jobs.html 含投递撤回 lifeWithdrawApplication', jobsSrc2.indexOf('lifeWithdrawApplication') !== -1);
+  check('jobs.html 投递时间轴自动推进 lifeSyncApplications', jobsSrc2.indexOf('lifeSyncApplications') !== -1);
+  check('storage.js 含简历/投递 API（lifeSaveResume/lifeApplyJobMeta/lifeSyncApplications/lifeWithdrawApplication）',
+    ['lifeSaveResume', 'lifeApplyJobMeta', 'lifeSyncApplications', 'lifeWithdrawApplication'].every(s => storageSrc4.indexOf(s) !== -1));
+
+  // 15.8 消息铃铛（首页/快递/外卖右上角）
+  check('index.html 右上角消息铃铛（messages.html + msgBadge）',
+    idxSrc4.indexOf('messages.html') !== -1 && idxSrc4.indexOf('msgBadge') !== -1);
+  check('packages.html 含消息铃铛 msgBadge', pkgSrc4.indexOf('msgBadge') !== -1);
+  check('food.html 含消息铃铛 msgBadge', foodSrc3.indexOf('msgBadge') !== -1);
+
+  // 15.9 浴室入口移至首页
+  check('index.html 含浴室入口卡片（bathroom.html）', idxSrc4.indexOf('bathroom.html') !== -1);
+  check('packages.html 已移除浴室卡', pkgSrc4.indexOf('bathroomCard') === -1);
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------
