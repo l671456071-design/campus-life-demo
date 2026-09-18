@@ -1,1 +1,311 @@
-REPLACE_JOBS
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>实习工作 - 校园生活</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#2563EB">
+  <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
+  <link rel="stylesheet" href="styles.css">
+  <script src="theme-init.js"></script>
+  <style>
+    .job-card { padding:14px 16px; display:block; }
+    .job-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .job-name { font-size:16px; font-weight:700; color:var(--color-text); line-height:1.4; }
+    .job-salary { font-size:15px; font-weight:800; color:#EA580C; font-family:var(--font-mono); flex-shrink:0; }
+    .job-company { font-size:13px; color:var(--color-text-sub); margin-top:5px; }
+    .job-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:9px; }
+    .job-tag { font-size:11px; padding:3px 9px; border-radius:99px; background:var(--color-surface-alt); color:var(--color-text-sub); }
+    .job-foot { display:flex; align-items:center; justify-content:space-between; margin-top:11px; padding-top:10px; border-top:1px solid var(--color-border-light); }
+    .job-loc { font-size:12px; color:var(--color-text-hint); display:inline-flex; align-items:center; gap:4px; }
+    .job-applied-tag { font-size:11px; color:#16A34A; background:#DCFCE7; padding:3px 10px; border-radius:99px; font-weight:600; }
+
+    .fab { position:fixed; right:18px; bottom:calc(104px + env(safe-area-inset-bottom)); width:52px; height:52px; border-radius:50%; background:linear-gradient(135deg,#F97316,#EA580C); color:#fff; border:none; box-shadow:0 8px 20px rgba(234,88,12,.4); z-index:20; display:flex; align-items:center; justify-content:center; transition:transform .2s; }
+    .fab:active { transform:scale(.9); }
+
+    .sheet-mask { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:100; }
+    .sheet-mask.show { opacity:1; pointer-events:auto; }
+    .sheet { position:fixed; left:0; right:0; bottom:0; background:var(--color-surface); border-radius:22px 22px 0 0; padding:20px 18px calc(24px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .28s cubic-bezier(.32,.72,0,1); z-index:101; max-height:88vh; overflow-y:auto; }
+    .sheet.show { transform:translateY(0); }
+    .sheet-title { font-size:17px; font-weight:800; text-align:center; margin-bottom:16px; }
+    .field { margin-bottom:12px; }
+    .field label { display:block; font-size:13px; color:var(--color-text-sub); margin-bottom:6px; }
+    .field input, .field select, .field textarea { width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius:12px; padding:11px 13px; font-size:14px; background:var(--color-surface); color:var(--color-text); outline:none; font-family:inherit; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color:#F97316; }
+    .field textarea { resize:vertical; min-height:90px; }
+
+    .detail-name { font-size:20px; font-weight:800; color:var(--color-text); }
+    .detail-salary { font-size:18px; font-weight:800; color:#EA580C; font-family:var(--font-mono); margin-top:6px; }
+    .detail-company { font-size:14px; color:var(--color-text-sub); margin-top:8px; }
+    .detail-sec-title { font-size:14px; font-weight:700; color:var(--color-text); margin:18px 0 8px; }
+    .detail-sec { font-size:13.5px; color:var(--color-text-sub); line-height:1.75; }
+    .detail-sec li { margin-bottom:4px; }
+
+    .resume-card { padding:13px 16px; }
+    .resume-top { display:flex; justify-content:space-between; align-items:center; }
+    .resume-name { font-size:15px; font-weight:700; color:var(--color-text); }
+    .resume-intent { font-size:12px; color:#F97316; background:#FFEDD5; padding:3px 10px; border-radius:99px; }
+    .resume-info { font-size:12px; color:var(--color-text-sub); margin-top:7px; line-height:1.6; }
+  </style>
+</head>
+<body data-page="jobs">
+  <div class="app-shell">
+    <header class="app-header header--left">
+      <div class="header-left">
+        <a href="index.html" class="header-back-btn">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        </a>
+      </div>
+      <div class="header-title">实习工作</div>
+      <div class="header-spacer"></div>
+      <div class="header-right" style="width:32px;"></div>
+    </header>
+
+    <main class="app-content" id="mainContent" style="padding-bottom:96px;">
+      <div style="padding:12px 16px 0;">
+        <div class="search-bar anim-fade-in-up">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索岗位 / 公司 / 城市">
+        </div>
+      </div>
+      <div class="filter-chips" id="typeChips" style="padding:12px 16px 0;"></div>
+      <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:10px;" id="jobList"></div>
+    </main>
+
+    <button class="fab" id="btnResume" title="发布求职意向">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+    </button>
+
+    <nav class="tab-bar">
+      <a href="index.html" class="tab-item" data-nav="home">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 0 0 1 1h3m10-11l2 2m-2-2v10a1 1 0 0 1-1 1h-3m-6 0a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-4a1 1 0 0 0-1-1m-6 0h6"/></svg>
+        <span class="tab-label">首页</span>
+      </a>
+      <a href="packages.html" class="tab-item" data-nav="packages">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        <span class="tab-label">快递</span>
+      </a>
+      <a href="scan.html" class="tab-item tab-item--center" data-nav="scan">
+        <div class="tab-scan-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+        </div>
+        <span class="tab-label">扫码</span>
+      </a>
+      <a href="food.html" class="tab-item" data-nav="food">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        <span class="tab-label">外卖</span>
+      </a>
+      <a href="profile.html" class="tab-item" data-nav="profile">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span class="tab-label">我的</span>
+      </a>
+    </nav>
+  </div>
+
+  <div class="sheet-mask" id="sheetMask"></div>
+
+  <!-- 职位详情 -->
+  <div class="sheet" id="detailSheet">
+    <div id="detailBody"></div>
+  </div>
+
+  <!-- 发布求职意向 -->
+  <div class="sheet" id="resumeSheet">
+    <div class="sheet-title">发布求职意向</div>
+    <div class="field">
+      <label>姓名 / 称呼</label>
+      <input type="text" id="resumeName" placeholder="例如：张同学" maxlength="10">
+    </div>
+    <div class="field">
+      <label>意向岗位</label>
+      <input type="text" id="resumeIntent" placeholder="例如：前端开发实习生" maxlength="20">
+    </div>
+    <div class="field">
+      <label>联系方式（微信/手机号）</label>
+      <input type="text" id="resumeContact" placeholder="仅展示给浏览求职墙的同学" maxlength="30">
+    </div>
+    <div class="field">
+      <label>自我介绍</label>
+      <textarea id="resumeNote" placeholder="年级、专业、技能、可到岗时间等" maxlength="200"></textarea>
+    </div>
+    <button class="btn btn-primary btn-block btn-lg" id="resumeSubmit" style="background:#F97316;">发布</button>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="mock.js"></script>
+  <script src="demo-data.js"></script>
+  <script src="storage.js"></script>
+  <script src="api.js"></script>
+  <script src="api-client.js"></script>
+  <script src="app.js"></script>
+  <script>
+    (function () {
+      // 内置虚拟岗位（演示数据，本地浏览）
+      var JOBS = [
+        { id: 'J1', type: 'intern', name: '前端开发实习生', company: '云图科技（厦门）', city: '厦门 · 思明区', salary: '150-200/天', tags: ['React', 'Vue', '每周3天', '可转正'], desc: '参与校园产品 Web 端功能开发，与设计、后端同学配合完成需求迭代；表现优秀可获转正 offer。', req: ['熟悉 HTML/CSS/JavaScript', '了解 Vue 或 React 任一框架', '每周可到岗 3 天及以上，持续 3 个月'] },
+        { id: 'J2', type: 'intern', name: 'Java 后端实习生', company: '海翼软件', city: '厦门 · 软件园', salary: '180-220/天', tags: ['Java', 'MySQL', '餐补'], desc: '负责业务系统后端接口开发与维护，参与代码评审与技术方案讨论。', req: ['Java 基础扎实，了解 Spring Boot', '熟悉 MySQL 基本操作', '有项目经验者优先'] },
+        { id: 'J3', type: 'campus', name: '2025 校园招聘 · 运营管培生', company: '澜庭电商集团', city: '福州 · 仓山区', salary: '6-9K/月', tags: ['校招', '五险一金', '应届生'], desc: '校招管培生项目，轮岗电商运营各环节，1 年培养为业务骨干。', req: ['2025 届本科及以上', '对电商运营有热情', '接受轮岗与挑战'] },
+        { id: 'J4', type: 'parttime', name: '周末门店兼职', company: '甜茶奶茶（校园店）', city: '校内 · 三食堂旁', salary: '18/小时', tags: ['周末班', '日结', '就近'], desc: '负责点单、饮品制作与店内清洁，周末两天可排班。', req: ['认真负责，手脚麻利', '能连续排班一个月以上优先'] },
+        { id: 'J5', type: 'intern', name: 'UI 设计实习生', company: '蓝鲸设计工作室', city: '远程 / 厦门', salary: '120-160/天', tags: ['可远程', 'Figma', '作品集'], desc: '参与 App 与小程序界面设计，输出高保真稿与设计规范。', req: ['熟练使用 Figma / Sketch', '投递请附作品集', '审美在线，关注细节'] },
+        { id: 'J6', type: 'parttime', name: '图书馆学生助理', company: '校图书馆', city: '校内 · 中心图书馆', salary: '15/小时', tags: ['环境安静', '工时灵活', '可看书'], desc: '负责图书上架、秩序维护与咨询引导，排班灵活，适合想边工作边学习的同学。', req: ['在校生，无挂科', '每周可提供 2 个半天'] },
+        { id: 'J7', type: 'campus', name: '财务助理（校招）', company: '恒信会计师事务所', city: '莆田 · 城厢区', salary: '5.5-7K/月', tags: ['校招', '财会专业', '带薪培训'], desc: '协助审计项目组完成底稿编制、凭证抽查等工作，系统培训后独立带项目。', req: ['财会相关专业 2025 届', '细心、有责任心', '有初级会计证优先'] },
+        { id: 'J8', type: 'intern', name: '新媒体运营实习生', company: '橙子校园 MCN', city: '厦门 · 集美区', salary: '100-150/天', tags: ['小红书', '文案', '弹性'], desc: '负责校园账号内容策划、文案撰写与数据复盘。', req: ['网感好，常刷小红书/抖音', '文字表达流畅', '会简单剪辑优先'] },
+      ];
+      var TYPES = [
+        { key: 'all', label: '全部' },
+        { key: 'intern', label: '实习' },
+        { key: 'campus', label: '校招' },
+        { key: 'parttime', label: '兼职' },
+        { key: 'applied', label: '我的投递' },
+        { key: 'resume', label: '求职墙' },
+      ];
+      var currentType = 'all';
+      var keyword = '';
+      var detailId = null;
+      var searchTimer = null;
+
+      var mask = document.getElementById('sheetMask');
+      var detailSheet = document.getElementById('detailSheet');
+      var resumeSheet = document.getElementById('resumeSheet');
+      function openSheet(s) { mask.classList.add('show'); s.classList.add('show'); }
+      function closeAll() { mask.classList.remove('show'); detailSheet.classList.remove('show'); resumeSheet.classList.remove('show'); }
+      mask.addEventListener('click', closeAll);
+
+      function esc(s) {
+        return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+
+      function renderChips() {
+        document.getElementById('typeChips').innerHTML = TYPES.map(function (t) {
+          return '<button class="chip' + (t.key === currentType ? ' active' : '') + '" data-type="' + t.key + '">' + t.label + '</button>';
+        }).join('');
+        document.querySelectorAll('[data-type]').forEach(function (el) {
+          el.addEventListener('click', function () { currentType = this.dataset.type; renderList(); this.classList.add('active'); });
+        });
+      }
+
+      function renderList() {
+        document.querySelectorAll('[data-type]').forEach(function (el) {
+          el.classList.toggle('active', el.dataset.type === currentType);
+        });
+        var state = Storage.lifeGetJobsState();
+        var listEl = document.getElementById('jobList');
+
+        if (currentType === 'resume') {
+          var rh = '';
+          if (!state.resumes.length) rh = App.emptyState('求职墙还是空的', '点右下角橙色按钮发布你的求职意向');
+          state.resumes.forEach(function (r) {
+            rh += '<div class="card resume-card anim-fade-in-up">' +
+              '<div class="resume-top"><span class="resume-name">' + esc(r.name) + '</span>' +
+              '<span class="resume-intent">' + esc(r.intent) + '</span></div>' +
+              '<div class="resume-info">' + (r.contact ? '📞 ' + esc(r.contact) : '') +
+              (r.note ? '<br>' + esc(r.note) : '') + '<br><span style="color:var(--color-text-hint);">发布于 ' + esc(r.time) + '</span></div></div>';
+          });
+          listEl.innerHTML = rh;
+          return;
+        }
+
+        var jobs = JOBS.filter(function (j) {
+          if (currentType === 'applied') return state.applied.indexOf(j.id) !== -1;
+          if (currentType !== 'all' && j.type !== currentType) return false;
+          if (keyword) {
+            var hay = (j.name + j.company + j.city + j.tags.join('')).toLowerCase();
+            if (hay.indexOf(keyword.toLowerCase()) === -1) return false;
+          }
+          return true;
+        });
+
+        var html = '';
+        if (!jobs.length) {
+          html = App.emptyState(currentType === 'applied' ? '还没有投递记录' : '没有匹配的岗位',
+            currentType === 'applied' ? '看到合适的岗位就投出去吧' : '换个关键词或筛选试试');
+        }
+        jobs.forEach(function (j, i) {
+          var applied = state.applied.indexOf(j.id) !== -1;
+          html += '<a href="javascript:void(0)" class="card card--clickable job-card anim-fade-in-up stagger-' + Math.min(i + 1, 5) + '" data-job="' + j.id + '">' +
+            '<div class="job-top"><div class="job-name">' + esc(j.name) + '</div>' +
+            '<div class="job-salary">' + esc(j.salary) + '</div></div>' +
+            '<div class="job-company">' + esc(j.company) + '</div>' +
+            '<div class="job-meta">' + j.tags.map(function (t) { return '<span class="job-tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+            '<div class="job-foot"><span class="job-loc">' +
+            '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
+            esc(j.city) + '</span>' +
+            (applied ? '<span class="job-applied-tag">✓ 已投递</span>' : '') +
+            '</div></a>';
+        });
+        listEl.innerHTML = html;
+
+        document.querySelectorAll('[data-job]').forEach(function (el) {
+          el.addEventListener('click', function () { openDetail(this.dataset.job); });
+        });
+      }
+
+      function openDetail(id) {
+        detailId = id;
+        var j = JOBS.find(function (x) { return x.id === id; });
+        if (!j) return;
+        var applied = Storage.lifeGetJobsState().applied.indexOf(id) !== -1;
+        document.getElementById('detailBody').innerHTML =
+          '<div class="detail-name">' + esc(j.name) + '</div>' +
+          '<div class="detail-salary">' + esc(j.salary) + '</div>' +
+          '<div class="detail-company">' + esc(j.company) + ' · ' + esc(j.city) + '</div>' +
+          '<div class="job-meta" style="margin-top:12px;">' + j.tags.map(function (t) { return '<span class="job-tag">' + esc(t) + '</span>'; }).join('') + '</div>' +
+          '<div class="detail-sec-title">岗位描述</div><div class="detail-sec">' + esc(j.desc) + '</div>' +
+          '<div class="detail-sec-title">任职要求</div><ul class="detail-sec" style="padding-left:18px;">' +
+            j.req.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>' +
+          '<button class="btn btn-block btn-lg" style="margin-top:20px;background:' + (applied ? '#16A34A' : '#F97316') + ';" id="applyBtn">' +
+            (applied ? '✓ 已投递（等待回复）' : '立即投递') + '</button>';
+        openSheet(detailSheet);
+        document.getElementById('applyBtn').addEventListener('click', function () {
+          var res = Storage.lifeApplyJob(detailId);
+          if (res.success) {
+            App.toastSuccess('投递成功，可在「我的投递」查看');
+            renderList();
+            this.textContent = '✓ 已投递（等待回复）';
+            this.style.background = '#16A34A';
+          } else App.toast(res.message || '投递失败');
+        });
+      }
+
+      document.getElementById('searchInput').addEventListener('input', function () {
+        keyword = this.value.trim();
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(renderList, 250);
+      });
+
+      document.getElementById('btnResume').addEventListener('click', function () {
+        document.getElementById('resumeName').value = '';
+        document.getElementById('resumeIntent').value = '';
+        document.getElementById('resumeContact').value = '';
+        document.getElementById('resumeNote').value = '';
+        openSheet(resumeSheet);
+      });
+      document.getElementById('resumeSubmit').addEventListener('click', function () {
+        var res = Storage.lifeAddResume({
+          name: document.getElementById('resumeName').value.trim(),
+          intent: document.getElementById('resumeIntent').value.trim(),
+          contact: document.getElementById('resumeContact').value.trim(),
+          note: document.getElementById('resumeNote').value.trim(),
+        });
+        if (res.success) {
+          closeAll();
+          currentType = 'resume';
+          App.toastSuccess('求职意向已发布');
+          renderList();
+        } else App.toast(res.message || '发布失败');
+      });
+
+      App.initPullToRefresh(document.getElementById('mainContent'), function () {
+        renderList(); App.toastSuccess('已刷新'); return Promise.resolve();
+      });
+      renderChips();
+      renderList();
+    })();
+  </script>
+</body>
+</html>
