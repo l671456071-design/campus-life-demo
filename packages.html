@@ -17,7 +17,13 @@
     .pk-point { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--color-text-sub); margin-top:12px; }
     .pk-code-row { margin-top:12px; display:flex; align-items:center; gap:8px; }
     .pk-code-row .lab { font-size:12px; color:var(--color-text-hint); }
-    .pk-code-row .code { margin-left:auto; font-size:19px; font-weight:800; letter-spacing:2px; color:var(--color-primary-text, var(--color-primary)); font-family:var(--font-mono); }
+    /* 取件码高亮：蓝底圆角 pill，一眼锁定关键信息 */
+    .pk-code-row .code {
+      margin-left:auto; font-size:17px; font-weight:800; letter-spacing:2px;
+      color:var(--color-primary-text, var(--color-primary)); font-family:var(--font-mono);
+      background:var(--color-primary-light, rgba(37,99,235,.10));
+      padding:4px 12px; border-radius:10px;
+    }
     .pk-quick-btn { margin-top:12px; width:100%; border:none; border-radius:12px; background:var(--color-primary); color:#fff; font-size:14px; font-weight:700; padding:11px 0; cursor:pointer; transition:background .2s; }
     .pk-quick-btn:active { background:var(--color-primary-hover); }
     .pk-eta { margin-top:10px; font-size:12px; color:var(--color-text-sub); display:flex; gap:6px; align-items:center; }
@@ -41,6 +47,12 @@
     </header>
     <main class="app-content" id="mainContent">
       <div class="px-4" style="padding-top:12px;">
+        <!-- 搜索框置顶：进入页面第一眼即可搜索，无需滚动 -->
+        <div class="search-bar anim-fade-in-up" style="margin-bottom:14px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="searchInput" placeholder="搜索快递公司/单号/取件码/取件点">
+        </div>
+
         <!-- 待取快递横幅（原首页区块迁入） -->
         <div class="hero-card anim-fade-in-up">
           <div class="hero-card-main">
@@ -65,11 +77,11 @@
             </div>
             <span class="quick-action-label quick-action-label--primary">扫码取件</span>
           </a>
-          <a href="scan.html" class="quick-action anim-fade-in-up stagger-2">
+          <a href="javascript:void(0)" class="quick-action anim-fade-in-up stagger-2" onclick="openImportCode()">
             <div class="quick-action-icon is-neutral">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><line x1="7" y1="9" x2="8" y2="9"/><line x1="11" y1="9" x2="12" y2="9"/><line x1="15" y1="9" x2="16" y2="9"/><line x1="7" y1="13" x2="8" y2="13"/><line x1="11" y1="13" x2="12" y2="13"/><line x1="15" y1="13" x2="16" y2="13"/><line x1="8" y1="16.2" x2="16" y2="16.2"/></svg>
             </div>
-            <span class="quick-action-label">本地导入</span>
+            <span class="quick-action-label">导入取件码</span>
           </a>
           <a href="track.html" class="quick-action anim-fade-in-up stagger-3">
             <div class="quick-action-icon is-neutral">
@@ -100,11 +112,6 @@
         <div style="margin-top:24px;" class="anim-fade-in-up stagger-4">
           <div class="section-header">
             <span class="section-title">全部快递</span>
-          </div>
-          <!-- 搜索栏 -->
-          <div class="search-bar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            <input type="text" id="searchInput" placeholder="搜索快递公司/单号/取件点">
           </div>
 
           <!-- 筛选 chips -->
@@ -304,6 +311,56 @@
             App.toast(res.message || '取件失败，请稍后再试');
           }
         }).catch(function () { App.toast('取件失败，请稍后再试'); });
+      };
+
+      // —— 导入取件码：手动录入面单取件码（替代原「本地导入」扫码整包入口）——
+      window.openImportCode = function () {
+        var backdrop = document.createElement('div');
+        backdrop.className = 'modal-backdrop';
+        backdrop.innerHTML =
+          '<div class="modal">' +
+            '<div class="modal-title">导入取件码</div>' +
+            '<div class="modal-desc">手动录入快递面单上的取件码，格式如 8-3-267</div>' +
+            '<input id="importCodeInput" type="text" inputmode="numeric" maxlength="20" placeholder="例如：8-3-267" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-border);border-radius:12px;padding:12px 14px;font-size:16px;font-weight:700;letter-spacing:2px;font-family:var(--font-mono);color:var(--color-text);background:var(--color-surface-alt);outline:none;" />' +
+            '<div id="importCodeErr" style="font-size:12px;color:var(--color-danger);margin-top:8px;display:none;">格式不正确，应为「区号-架号-件号」，如 8-3-267</div>' +
+            '<div class="modal-actions">' +
+              '<button class="btn btn-outline" id="importCodeCancel">取消</button>' +
+              '<button class="btn btn-primary" id="importCodeOk">导入</button>' +
+            '</div>' +
+          '</div>';
+        document.body.appendChild(backdrop);
+        requestAnimationFrame(function () { backdrop.classList.add('show'); });
+        function close() {
+          backdrop.classList.remove('show');
+          setTimeout(function () { backdrop.remove(); }, 250);
+        }
+        backdrop.querySelector('#importCodeCancel').addEventListener('click', close);
+        backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+        function submit() {
+          var input = backdrop.querySelector('#importCodeInput');
+          var err = backdrop.querySelector('#importCodeErr');
+          var val = (input.value || '').trim().toUpperCase();
+          if (!/^\d+-\d+-\d+$/.test(val)) { err.style.display = 'block'; return; }
+          var r = Storage.addLocalPackage({ pickupCode: val, sender: '本地导入' });
+          if (r && r.success) {
+            close();
+            App.toastSuccess('已导入取件码 ' + val);
+            loadPackages();
+            renderBanner();
+            renderBadge();
+          } else {
+            err.textContent = (r && r.message) || '导入失败，请稍后重试';
+            err.style.display = 'block';
+          }
+        }
+        backdrop.querySelector('#importCodeOk').addEventListener('click', submit);
+        backdrop.querySelector('#importCodeInput').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') submit();
+        });
+        setTimeout(function () {
+          var i = backdrop.querySelector('#importCodeInput');
+          if (i) i.focus();
+        }, 300);
       };
 
       function loadPackages() {

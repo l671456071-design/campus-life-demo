@@ -1010,7 +1010,7 @@ check('profile-edit.html 不含旧 inputDorm 文本框', profileEditSrc.indexOf(
 check('bathroom.html 存在', fs.existsSync(path.join(ROOT, 'bathroom.html')));
 const bathSrc = fs.readFileSync(path.join(ROOT, 'bathroom.html'), 'utf8');
 check('bathroom.html 引入 campus-data.js', bathSrc.indexOf('campus-data.js') !== -1);
-check('bathroom.html 含实时状态占位', bathSrc.indexOf('实时状态暂未接入') !== -1);
+check('bathroom.html 含营业时间 chip（hours）', bathSrc.indexOf('bath-chip') !== -1 && bathSrc.indexOf('BATH.hours') !== -1);
 check('bathroom.html 不伪造人数/拥挤', bathSrc.indexOf('当前人数') === -1 && bathSrc.indexOf('拥挤程度') === -1);
 check('bathroom.html 含 3D 地图导航链接', bathSrc.indexOf('3D地图导航') !== -1);
 check('bathroom.html 含收藏按钮', bathSrc.indexOf('toggleFav') !== -1);
@@ -1021,11 +1021,8 @@ check('bathroom.html 含 getDefaultBathroom', bathSrc.indexOf('getDefaultBathroo
 // 11.5 浴室卡片已从 packages.html 迁至 index.html 首页校园服务区
 const pkgHtmlForBath = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
 const idxHtmlForBath = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-check('index.html 含 bathroomCard 容器', idxHtmlForBath.indexOf('id="bathroomCard"') !== -1);
-check('index.html 含 renderBathroomCard', idxHtmlForBath.indexOf('renderBathroomCard') !== -1);
+check('index.html 浴室入口改为日常应用直连（bathroom.html，无 bathroomCard 容器）', idxHtmlForBath.indexOf('bathroom.html') !== -1 && idxHtmlForBath.indexOf('bathroomCard') === -1);
 check('index.html 引入 campus-data.js', idxHtmlForBath.indexOf('campus-data.js') !== -1);
-check('index.html 浴室卡读取 getDefaultBathroom', idxHtmlForBath.indexOf('getDefaultBathroom') !== -1);
-check('index.html 无常用浴室数据时不渲染卡片', /getDefaultBathroom\(\)[\s\S]{0,80}innerHTML = ''/.test(idxHtmlForBath));
 check('packages.html 已移除浴室卡（bathroomCard）', pkgHtmlForBath.indexOf('bathroomCard') === -1);
 
 // 11.6 demo-data.js + mock.js 含结构化宿舍
@@ -1214,12 +1211,12 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('index.html 含「课程表」入口（支持贝蒂导入提示）', idx.indexOf('schedule.html') !== -1 && idx.indexOf('课程表') !== -1);
   check('index.html 含「校园论坛」入口', idx.indexOf('forum.html') !== -1 && idx.indexOf('校园论坛') !== -1);
   check('index.html 含「实习工作」入口', idx.indexOf('jobs.html') !== -1 && idx.indexOf('实习工作') !== -1);
-  check('index.html 校园服务区含快递入口', /href="packages\.html"/.test(idx) && idx.indexOf('校园服务') !== -1);
-  check('index.html 校园服务区含外卖入口', /href="food\.html"/.test(idx));
+  check('index.html 热门应用含快递入口（packages.html）', /href="packages\.html"/.test(idx));
+  check('index.html 热门应用含外卖入口（food.html）', /href="food\.html"/.test(idx));
   check('index.html 活动 DOM 不再渲染待取横幅（pendingCount 仅在注释中）',
     idx.indexOf('id="pendingCount"') === -1);
-  check('index.html 旧取件区块以注释保留（含 hero-card / pointsList / bathroomCard 说明）',
-    /<!--[\s\S]*hero-card[\s\S]*-->/.test(idx) && idx.indexOf('bathroomCard') !== -1 && idx.indexOf('pointsList') !== -1);
+  check('index.html 旧取件区块注释已彻底清理（无 hero-card/pointsList/bathroomCard 残留）',
+    idx.indexOf('hero-card') === -1 && idx.indexOf('pointsList') === -1 && idx.indexOf('bathroomCard') === -1);
   check('index.html 标题改为校园生活门户', idx.indexOf('校园生活') !== -1 && idx.indexOf('校园取件') === -1);
 
   // 13.7b packages.html 整合首页全部取件功能
@@ -1416,7 +1413,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 升级为 v4', /var VERSION = 'v4'/.test(swSrc));
+  check('sw.js VERSION 升级为 v5', /var VERSION = 'v5'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1608,6 +1605,125 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('styles.css 暗色蓝色文字提亮 20%（#629BF8，含系统暗色）',
     (cssSrc.match(/--color-primary-text: #629BF8/g) || []).length >= 2);
   check('forum.html 长列表图片懒加载', forumSrc3.indexOf('loading="lazy"') !== -1);
+})();
+
+// ============================================================
+// [17] 本轮改版：浴室重构/节日倒计时/仙游宿舍/首页三分组/DIY背景/我的收藏/扫码增强/快递改版/详情页悬浮框修复
+// ============================================================
+(function () {
+  console.log('\n[17] 本轮改版：浴室重构/倒计时/首页分组/DIY背景/收藏/扫码/快递');
+  const bathSrc = fs.readFileSync(path.join(ROOT, 'bathroom.html'), 'utf8');
+  const storageSrc6 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+  const idxSrc5 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const scanSrc3 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  const pkgSrc6 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  const profSrc5 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const detailSrc = fs.readFileSync(path.join(ROOT, 'detail.html'), 'utf8');
+  const campusSrc = fs.readFileSync(path.join(ROOT, 'campus-data.js'), 'utf8');
+  const campusJson = fs.readFileSync(path.join(ROOT, 'assets/data/campus-buildings.json'), 'utf8');
+  const swSrc2 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  const myhomeSrc3 = fs.readFileSync(path.join(ROOT, 'myhome.html'), 'utf8');
+
+  // 17.1 浴室页重构：修改宿舍弹窗 + 手动录入洗澡记录 + 今日状态 + 本月可视化 + 底部操作栏
+  check('bathroom.html 含宿舍绑定弹窗（dormSheet）与修改入口', bathSrc.indexOf('dormSheet') !== -1);
+  check('bathroom.html 含手动录入洗澡记录（showerSheet/bathAddShower）',
+    bathSrc.indexOf('showerSheet') !== -1 && bathSrc.indexOf('bathAddShower') !== -1);
+  check('bathroom.html 今日状态色块卡（bath-today done/未洗 双态）',
+    bathSrc.indexOf('bath-today') !== -1 && bathSrc.indexOf('记一次') !== -1);
+  check('bathroom.html 本月可视化（近 7 天柱状图 + 日均）',
+    bathSrc.indexOf('本月') !== -1 && bathSrc.indexOf('日均') !== -1);
+  check('bathroom.html 操作按钮集中底部（bath-actions + 3D地图导航）',
+    bathSrc.indexOf('bath-actions') !== -1 && bathSrc.indexOf('3D地图导航') !== -1);
+  check('storage.js 含洗澡记录 API（bathGetShowers/bathAddShower/bathRemoveShower）',
+    ['bathGetShowers', 'bathAddShower', 'bathRemoveShower'].every(s => storageSrc6.indexOf(s) !== -1));
+
+  // 17.2 节日倒计时：精确到秒 + 分区展示 + DIY 自定义
+  check('bathroom.html 含节日倒计时区（FEST_PRESETS + data-fest-at）',
+    bathSrc.indexOf('FEST_PRESETS') !== -1 && bathSrc.indexOf('data-fest-at') !== -1);
+  check('bathroom.html 倒计时精确到秒（秒段渲染 dd天·HH:MM:SS）',
+    bathSrc.indexOf('tickCountdowns') !== -1 && /pad\d?\(/.test(bathSrc));
+  check('bathroom.html 倒计时分区（featured 主卡 + 小卡网格 + DIY 添加卡）',
+    bathSrc.indexOf('fest-featured') !== -1 && bathSrc.indexOf('fest-add') !== -1);
+  check('bathroom.html DIY 节日弹窗（festSheet + festAddCustom/festRemoveCustom）',
+    bathSrc.indexOf('festSheet') !== -1 && bathSrc.indexOf('festAddCustom') !== -1 &&
+    bathSrc.indexOf('festRemoveCustom') !== -1);
+  check('storage.js 含自定义节日 API（festGetCustom/festAddCustom/festRemoveCustom）',
+    ['festGetCustom', 'festAddCustom', 'festRemoveCustom'].every(s => storageSrc6.indexOf(s) !== -1));
+
+  // 17.3 仙游校区：只显示男生/女生宿舍 + 只写几号楼
+  check('campus-data.js 仙游校区 male/female 宿舍（无具体苑区）',
+    campusSrc.indexOf("id: 'male'") !== -1 && campusSrc.indexOf("id: 'female'") !== -1 &&
+    campusSrc.indexOf('男生宿舍') !== -1 && campusSrc.indexOf('女生宿舍') !== -1);
+  check('campus-data.js 已移除仙游旧苑区（兰香园/桂香园/菊香园）',
+    ['兰香园', '桂香园', '菊香园'].every(n => campusSrc.indexOf(n) === -1));
+  check('campus-buildings.json 仙游校区 male/female 同步', campusJson.indexOf('"male"') !== -1 &&
+    campusJson.indexOf('"female"') !== -1);
+  check('storage.js 宿舍解析正则兼容宿舍格式（\\S+宿舍）',
+    /\\S\+宿舍/.test(storageSrc6) || storageSrc6.indexOf('+宿舍') !== -1);
+
+  // 17.4 首页三分组：热门应用 / 日常应用 / 其余应用
+  check('index.html 三分组（热门应用/日常应用/其余应用）',
+    idxSrc5.indexOf('热门应用') !== -1 && idxSrc5.indexOf('日常应用') !== -1 &&
+    idxSrc5.indexOf('其余应用') !== -1);
+  check('index.html 热门应用含扫码取件高亮卡（life-card--hero）与 3D地图',
+    idxSrc5.indexOf('life-card--hero') !== -1 && idxSrc5.indexOf('map.html') !== -1);
+  check('index.html 日常应用含浴室/攒钱/课程表/论坛', idxSrc5.indexOf('bathroom.html') !== -1 &&
+    idxSrc5.indexOf('savings.html') !== -1 && idxSrc5.indexOf('schedule.html') !== -1 &&
+    idxSrc5.indexOf('forum.html') !== -1);
+  check('index.html 其余应用含消息红点（msgDot）', idxSrc5.indexOf('msgDot') !== -1);
+  check('index.html 已移除旧浴室卡 IIFE（renderBathroomCard/bathroomCard）',
+    idxSrc5.indexOf('renderBathroomCard') === -1 && idxSrc5.indexOf('bathroomCard') === -1);
+
+  // 17.5 个人卡片 DIY 背景（相册选择）
+  check('profile.html 含 DIY 背景入口（bgEditBtn）与相册 input（cardBgInput）',
+    profSrc5.indexOf('bgEditBtn') !== -1 && profSrc5.indexOf('cardBgInput') !== -1);
+  check('profile.html 卡片背景走 user.cardBg + 压缩', profSrc5.indexOf('cardBg') !== -1 &&
+    profSrc5.indexOf('compressImage') !== -1);
+  check('profile.html 支持恢复默认背景', profSrc5.indexOf('恢复默认') !== -1);
+
+  // 17.6 个人主页我的收藏
+  check('myhome.html 含我的收藏区（renderFavs + favoriteBathrooms）',
+    myhomeSrc3.indexOf('renderFavs') !== -1 && myhomeSrc3.indexOf('favoriteBathrooms') !== -1 &&
+    myhomeSrc3.indexOf('我的收藏') !== -1);
+  check('myhome.html 收藏卡片直达浴室详情（bathroom.html?id=）',
+    myhomeSrc3.indexOf('bathroom.html?id=') !== -1);
+  check('storage.js 含浴室收藏 API（toggleFavoriteBathroom）',
+    storageSrc6.indexOf('toggleFavoriteBathroom') !== -1);
+
+  // 17.7 扫码增强：闪光灯 + 远近交替识别 + 性能调度
+  check('scan.html 支持设备闪光灯（flashBtn/toggleFlash/torch）',
+    scanSrc3.indexOf('flashBtn') !== -1 && scanSrc3.indexOf('toggleFlash') !== -1 &&
+    scanSrc3.indexOf('torch') !== -1);
+  check('scan.html OCR 远近交替（ocrRound + captureOcrCanvas zoom）',
+    scanSrc3.indexOf('ocrRound') !== -1 && /captureOcrCanvas\(zoom\)/.test(scanSrc3) &&
+    scanSrc3.indexOf('near ? 2 : 1') !== -1);
+  check('scan.html rVFC 优先调度（requestVideoFrameCallback + scheduleDetect）',
+    scanSrc3.indexOf('requestVideoFrameCallback') !== -1 && scanSrc3.indexOf('scheduleDetect') !== -1);
+  check('scan.html 切后台暂停识别（visibilitychange + pauseScan/resumeScan）',
+    scanSrc3.indexOf('visibilitychange') !== -1);
+  check('scan.html 低配档降分辨率采集（960x540）', scanSrc3.indexOf('960') !== -1);
+
+  // 17.8 快递页改版：搜索置顶 + 导入取件码 + 取件码高亮
+  const searchPos = pkgSrc6.indexOf('id="searchInput"');
+  const heroPos = pkgSrc6.indexOf('hero-card');
+  check('packages.html 搜索框位于页面最上方（先于待取横幅）',
+    searchPos !== -1 && heroPos !== -1 && searchPos < heroPos);
+  check('packages.html 已取消旧「本地导入」快捷格（改为导入取件码）',
+    pkgSrc6.indexOf('>本地导入</span>') === -1 && pkgSrc6.indexOf('openImportCode') !== -1 &&
+    pkgSrc6.indexOf('导入取件码') !== -1);
+  check('packages.html 导入取件码校验格式（8-3-267）并走 addLocalPackage',
+    /\\d\+-\\d\+-\\d\+/.test(pkgSrc6) && pkgSrc6.indexOf('addLocalPackage') !== -1);
+  check('packages.html 取件码高亮 pill（pk-code-row .code 蓝底圆角）',
+    /pk-code-row \.code[\s\S]{0,400}border-radius/.test(pkgSrc6));
+  check('packages.html 搜索支持取件码关键词', pkgSrc6.indexOf('取件码') !== -1);
+
+  // 17.9 详情页悬浮 tab-bar 修复
+  check('detail.html 隐藏底部悬浮 tab-bar（body[data-page="detail"] .tab-bar display:none）',
+    detailSrc.indexOf('body[data-page="detail"] .tab-bar') !== -1 &&
+    /body\[data-page="detail"\] \.tab-bar\s*\{\s*display:\s*none/.test(detailSrc));
+
+  // 17.10 缓存版本
+  check('sw.js 版本已升级 v5', /var VERSION = 'v5';/.test(swSrc2));
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

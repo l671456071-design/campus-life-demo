@@ -346,7 +346,7 @@ var Storage = {
     // 旧格式兼容：campus 形如 "涵江校区 · 兰苑 3号楼"，dormitory 形如 "兰苑 3号楼"
     if (user.dormitory) {
       var campusName = (user.campus || '').split(' · ')[0] || '';
-      var parts = user.dormitory.match(/^(\S+苑|\S+园)\s*(.+)$/);
+      var parts = user.dormitory.match(/^(\S+苑|\S+园|\S+宿舍)\s*(.+)$/);
       if (parts) {
         var areaName = parts[1];
         var building = parts[2];
@@ -441,6 +441,69 @@ var Storage = {
       if (b) return b;
     }
     return this.getMyBathroom();
+  },
+
+  // ---- 浴室 · 洗澡记录（手动快速录入，全本地） ----
+  bathGetShowers: function () {
+    return this._life().bath.showers;
+  },
+
+  bathAddShower: function (note) {
+    var data = this._life();
+    var item = {
+      id: 'S' + Date.now(),
+      ts: Date.now(),
+      note: note ? String(note).slice(0, 30) : '',
+    };
+    data.bath.showers.unshift(item);
+    this._saveLife(data);
+    return { success: true, item: item };
+  },
+
+  bathRemoveShower: function (id) {
+    var data = this._life();
+    var kept = [];
+    for (var i = 0; i < data.bath.showers.length; i++) {
+      if (data.bath.showers[i].id !== id) kept.push(data.bath.showers[i]);
+    }
+    data.bath.showers = kept;
+    this._saveLife(data);
+    return { success: true };
+  },
+
+  // ---- 节日倒计时 · DIY 自定义节日（月/日，按年循环） ----
+  festGetCustom: function () {
+    return this._life().festivals;
+  },
+
+  festAddCustom: function (name, month, day) {
+    var m = parseInt(month, 10), d = parseInt(day, 10);
+    if (!name || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) {
+      return { success: false, message: '名称或日期无效' };
+    }
+    var data = this._life();
+    var item = {
+      id: 'V' + Date.now(),
+      name: String(name).slice(0, 12),
+      m: m,
+      d: d,
+      custom: true,
+      createdAt: Date.now(),
+    };
+    data.festivals.unshift(item);
+    this._saveLife(data);
+    return { success: true, item: item };
+  },
+
+  festRemoveCustom: function (id) {
+    var data = this._life();
+    var kept = [];
+    for (var i = 0; i < data.festivals.length; i++) {
+      if (data.festivals[i].id !== id) kept.push(data.festivals[i]);
+    }
+    data.festivals = kept;
+    this._saveLife(data);
+    return { success: true };
   },
 
   // ---- 设置存储 ----
@@ -763,7 +826,7 @@ var Storage = {
     if (typeof DB === 'undefined' || !DB.campuses) {
       return [
         { id: 'hanjiang', name: '涵江校区', desc: '主校区 · 兰苑/楷苑/菊苑/梅苑' },
-        { id: 'xianyou',  name: '仙游校区', desc: '分校区 · 兰香园/桂香园/菊香园' },
+        { id: 'xianyou',  name: '仙游校区', desc: '分校区 · 男生宿舍/女生宿舍' },
       ];
     }
     return DB.campuses;
@@ -885,6 +948,8 @@ var Storage = {
         applications: [],
       },
       album: [],
+      bath: { showers: [] },
+      festivals: [],
     };
   },
 
@@ -898,6 +963,9 @@ var Storage = {
     if (!data.jobs) data.jobs = { applied: [], resumes: [], applications: [] };
     if (!data.jobs.applications) data.jobs.applications = [];
     if (!data.album) data.album = [];
+    if (!data.bath) data.bath = { showers: [] };
+    if (!data.bath.showers) data.bath.showers = [];
+    if (!data.festivals) data.festivals = [];
     return data;
   },
 

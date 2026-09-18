@@ -12,35 +12,180 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
+    /* ===== 浴室详情：单色调 · 留白充足 · 色块突出 ===== */
     .bath-hero {
       background: linear-gradient(135deg, #60A5FA, #2563EB);
       color: #fff;
-      padding: 32px 20px 28px;
-      text-align: center;
+      padding: 26px 20px 22px;
       border-radius: 0 0 20px 20px;
     }
-    .bath-hero-icon { font-size: 48px; margin-bottom: 8px; }
-    .bath-hero-name { font-size: 19px; font-weight: 600; margin-bottom: 4px; }
-    .bath-hero-floor { font-size: 13px; opacity: 0.85; }
+    .bath-hero-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .bath-hero-name { font-size: 20px; font-weight: 700; }
+    .bath-hero-floor { font-size: 13px; opacity: 0.85; margin-top: 4px; }
+    .bath-chip-row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+    .bath-chip {
+      display:inline-flex; align-items:center; gap:5px;
+      background: rgba(255,255,255,0.16); border-radius: 99px;
+      padding: 6px 12px; font-size: 12px; color:#fff;
+    }
+    .bath-chip--btn { cursor:pointer; border:1px dashed rgba(255,255,255,0.5); }
+    .bath-chip--btn:active { background: rgba(255,255,255,0.28); }
+    .bath-chip b { font-weight:700; }
 
-    .bath-info-card { margin: 16px; background: var(--color-surface); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--color-border-light); }
-    .bath-info-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--color-border-light); gap: 12px; }
-    .bath-info-item:last-child { border-bottom: none; }
-    .bath-info-icon { width: 36px; height: 36px; border-radius: 8px; background: var(--color-surface-alt); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-    .bath-info-label { font-size: 13px; color: var(--color-text-sub); width: 64px; flex-shrink: 0; }
-    .bath-info-value { font-size: 15px; color: var(--color-text); flex: 1; text-align: right; }
+    .bath-sec { margin: 18px 16px 0; }
+    .bath-sec-title { font-size: 14px; font-weight: 700; color: var(--color-text); margin-bottom: 10px; display:flex; align-items:center; justify-content:space-between; }
+    .bath-sec-title .tip { font-size: 11.5px; font-weight: 400; color: var(--color-text-hint); }
 
-    .bath-status-card { margin: 0 16px 16px; padding: 16px; background: var(--color-surface-alt); border-radius: var(--radius-md); text-align: center; border: 1px dashed var(--color-border-light); }
-    .bath-status-title { font-size: 14px; color: var(--color-text-sub); margin-bottom: 6px; }
-    .bath-status-hint { font-size: 13px; color: var(--color-text-hint); }
+    /* 今日状态色块 */
+    .bath-today {
+      border-radius: 18px; padding: 18px 16px;
+      display:flex; align-items:center; gap:14px;
+      background: var(--color-surface-alt);
+      border: 1.5px dashed var(--color-border);
+      color: var(--color-text-sub);
+      transition: background .3s, color .3s;
+    }
+    .bath-today.done {
+      background: linear-gradient(135deg, #3B82F6, #2563EB);
+      border: none; color: #fff;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.25);
+    }
+    .bath-today-icon { font-size: 34px; line-height:1; }
+    .bath-today-main { flex:1; }
+    .bath-today-title { font-size: 17px; font-weight: 700; }
+    .bath-today-sub { font-size: 12.5px; opacity: 0.82; margin-top: 4px; }
+    .bath-today-cta {
+      border:none; border-radius: 99px; padding: 10px 18px;
+      font-size: 13.5px; font-weight: 700; cursor:pointer; font-family:inherit;
+      background: var(--color-primary); color:#fff; flex-shrink:0;
+      transition: transform .15s;
+    }
+    .bath-today-cta:active { transform: scale(0.94); }
+    .bath-today.done .bath-today-cta { background: rgba(255,255,255,0.22); color:#fff; }
 
-    .bath-actions { padding: 0 16px 20px; display: flex; flex-direction: column; gap: 10px; }
-    .bath-btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border: none; border-radius: var(--radius-md); font-size: 15px; font-weight: 500; cursor: pointer; font-family: inherit; }
-    .bath-btn-primary { background: var(--color-primary); color: #fff; }
-    .bath-btn-outline { background: transparent; border: 1.5px solid var(--color-border); color: var(--color-text); }
-    .bath-btn-fav { background: #FEF3C7; color: #92400E; }
-    .bath-btn-fav.active { background: #FDE68A; }
-    .bath-btn svg { width: 18px; height: 18px; }
+    /* 本月可视化 */
+    .bath-month-card { background: var(--color-surface); border-radius: var(--radius-lg); padding: 16px; border: 1px solid var(--color-border-light); }
+    .bath-month-top { display:flex; align-items:baseline; gap:8px; }
+    .bath-month-num { font-size: 34px; font-weight: 800; color: var(--color-primary); font-family: var(--font-mono); line-height:1; }
+    .bath-month-unit { font-size: 13px; color: var(--color-text-sub); }
+    .bath-month-avg { margin-left:auto; font-size: 12px; color: var(--color-text-hint); }
+    .bath-bars { display:flex; align-items:flex-end; gap:8px; height: 72px; margin-top: 16px; padding-top: 6px; border-top: 1px dashed var(--color-border-light); }
+    .bath-bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:5px; height:100%; justify-content:flex-end; }
+    .bath-bar { width: 100%; max-width: 26px; border-radius: 6px 6px 3px 3px; background: var(--color-primary-lighter); min-height: 4px; transition: height .4s ease; }
+    .bath-bar.hot { background: var(--color-primary); }
+    .bath-bar-label { font-size: 10.5px; color: var(--color-text-hint); }
+    .bath-bar-label.today { color: var(--color-primary); font-weight: 700; }
+
+    /* 最近记录 */
+    .bath-records { background: var(--color-surface); border-radius: var(--radius-lg); border: 1px solid var(--color-border-light); overflow:hidden; }
+    .bath-record-item { display:flex; align-items:center; gap:12px; padding: 13px 16px; border-bottom: 1px solid var(--color-border-light); }
+    .bath-record-item:last-child { border-bottom:none; }
+    .bath-record-dot { width:8px; height:8px; border-radius:50%; background: var(--color-primary); flex-shrink:0; }
+    .bath-record-time { font-size: 14px; color: var(--color-text); font-family: var(--font-mono); }
+    .bath-record-note { font-size: 12px; color: var(--color-text-hint); margin-left: 8px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .bath-record-del { margin-left:auto; border:none; background:transparent; color: var(--color-text-hint); cursor:pointer; padding: 4px; border-radius: 8px; flex-shrink:0; display:flex; }
+    .bath-record-del:active { background: var(--color-surface-alt); color: var(--color-danger); }
+    .bath-empty { padding: 22px 16px; text-align:center; font-size: 12.5px; color: var(--color-text-hint); }
+
+    /* 节日倒计时 */
+    .bath-fest-featured {
+      border-radius: 18px; padding: 18px 16px;
+      background: linear-gradient(135deg, #1E3A8A, #2563EB);
+      color: #fff; position:relative; overflow:hidden;
+    }
+    .bath-fest-name { font-size: 15px; font-weight: 700; display:flex; align-items:center; gap:8px; }
+    .bath-fest-date { font-size: 11.5px; opacity: 0.8; margin-top: 3px; }
+    .bath-fest-count { font-size: 26px; font-weight: 800; font-family: var(--font-mono); letter-spacing: 1px; margin-top: 10px; }
+    .bath-fest-count small { font-size: 13px; font-weight: 600; opacity: 0.85; margin: 0 2px; }
+    .bath-fest-count .seg { opacity: 0.5; margin: 0 3px; }
+    .bath-fest-close {
+      position:absolute; top:10px; right:10px; border:none; cursor:pointer;
+      width:26px; height:26px; border-radius:50%; background: rgba(255,255,255,0.18); color:#fff;
+      display:flex; align-items:center; justify-content:center;
+    }
+    .bath-fest-grid { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .bath-fest-card {
+      background: var(--color-surface); border-radius: 14px; padding: 12px 14px;
+      border: 1px solid var(--color-border-light); position:relative;
+    }
+    .bath-fest-card-name { font-size: 13.5px; font-weight: 700; color: var(--color-text); display:flex; align-items:center; gap:6px; }
+    .bath-fest-card-date { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
+    .bath-fest-card-count { font-size: 13px; font-weight: 700; color: var(--color-primary); font-family: var(--font-mono); margin-top: 6px; }
+    .bath-fest-card-count small { font-weight: 500; color: var(--color-text-hint); }
+    .bath-fest-card .bath-fest-close { background: var(--color-surface-alt); color: var(--color-text-hint); width:22px; height:22px; top:8px; right:8px; }
+    .bath-fest-add {
+      border: 1.5px dashed var(--color-border); border-radius: 14px; padding: 12px 14px;
+      background: transparent; cursor:pointer; font-family:inherit;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px;
+      color: var(--color-text-sub); font-size: 13px; font-weight: 600;
+    }
+    .bath-fest-add:active { background: var(--color-surface-alt); }
+
+    /* 底部集中操作栏 */
+    .bath-actions {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: var(--color-surface);
+      border-top: 1px solid var(--color-border-light);
+      box-shadow: 0 -4px 16px rgba(15,23,42,0.06);
+    }
+    .bath-btn-main {
+      flex: 1; display:flex; align-items:center; justify-content:center; gap:8px;
+      padding: 13px; border: none; border-radius: 14px;
+      background: var(--color-primary); color: #fff;
+      font-size: 15px; font-weight: 700; cursor:pointer; font-family:inherit;
+    }
+    .bath-btn-main:active { background: var(--color-primary-hover); }
+    .bath-act {
+      width: 46px; height: 46px; border-radius: 14px; border: none; cursor:pointer;
+      background: var(--color-surface-alt); color: var(--color-text-sub);
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+      font-size: 9px; font-family:inherit; flex-shrink:0;
+      text-decoration: none;
+    }
+    .bath-act svg { width: 19px; height: 19px; }
+    .bath-act.active { background: var(--color-primary-lighter); color: var(--color-primary); }
+    .bath-act:active { transform: scale(0.93); }
+
+    /* 弹窗（mask + sheet） */
+    .bath-mask { position:fixed; inset:0; background:rgba(15,23,42,0.45); z-index:50; opacity:0; pointer-events:none; transition:opacity .25s; }
+    .bath-mask.show { opacity:1; pointer-events:auto; }
+    .bath-sheet {
+      position:fixed; left:0; right:0; bottom:0; z-index:51;
+      background: var(--color-surface); border-radius: 20px 20px 0 0;
+      padding: 18px 18px calc(20px + env(safe-area-inset-bottom));
+      transform: translateY(105%); transition: transform .3s cubic-bezier(.32,.72,.32,1);
+      max-height: 82vh; overflow-y: auto;
+    }
+    .bath-sheet.show { transform: none; }
+    .bath-sheet-grabber { width:36px; height:4px; border-radius:99px; background:var(--color-border); margin:0 auto 14px; }
+    .bath-sheet-title { font-size: 16px; font-weight: 700; color: var(--color-text); text-align:center; }
+    .bath-sheet-sub { font-size: 12px; color: var(--color-text-hint); text-align:center; margin-top: 4px; }
+    .bath-field-label { font-size: 12.5px; font-weight: 600; color: var(--color-text-sub); margin: 16px 0 8px; }
+    .bath-chip-group { display:flex; flex-wrap:wrap; gap:8px; }
+    .bath-opt {
+      padding: 9px 16px; border-radius: 99px; font-size: 13.5px; cursor:pointer;
+      background: var(--color-surface-alt); color: var(--color-text-sub);
+      border: 1.5px solid transparent; transition: all .15s;
+    }
+    .bath-opt.active { background: var(--color-primary-lighter); color: var(--color-primary); border-color: var(--color-primary); font-weight: 700; }
+    .bath-input {
+      width:100%; box-sizing:border-box; border:1.5px solid var(--color-border); border-radius: 12px;
+      padding: 12px 14px; font-size: 15px; font-family:inherit; color: var(--color-text);
+      background: var(--color-surface-alt); outline:none;
+    }
+    .bath-input:focus { border-color: var(--color-primary); background: var(--color-surface); }
+    .bath-sheet-confirm {
+      width:100%; margin-top: 20px; border:none; border-radius: 14px; padding: 14px;
+      background: var(--color-primary); color:#fff; font-size: 15px; font-weight: 700;
+      cursor:pointer; font-family:inherit;
+    }
+    .bath-sheet-confirm:active { background: var(--color-primary-hover); }
+    .bath-sheet-cancel {
+      width:100%; margin-top: 10px; border:none; border-radius: 14px; padding: 13px;
+      background: transparent; color: var(--color-text-hint); font-size: 14px; cursor:pointer; font-family:inherit;
+    }
   </style>
 </head>
 <body data-page="bathroom">
@@ -55,9 +200,73 @@
       <div class="header-right" style="width:32px;"></div>
     </header>
 
-    <main class="app-content">
+    <main class="app-content" style="padding-bottom:calc(96px + env(safe-area-inset-bottom));">
       <div id="bathContent"></div>
     </main>
+
+    <!-- 底部集中操作栏 -->
+    <div class="bath-actions" id="bathActions" style="display:none;">
+      <button class="bath-btn-main" id="navMainBtn"></button>
+      <a class="bath-act" id="actLoc" title="查看位置">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        位置
+      </a>
+      <button class="bath-act" id="actFav" onclick="toggleFav()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        <span id="actFavText">收藏</span>
+      </button>
+      <button class="bath-act" id="actDefault" onclick="setDefault()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        <span id="actDefaultText">常用</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 弹窗 1：修改绑定宿舍 -->
+  <div class="bath-mask" id="dormMask" onclick="closeSheet('dorm')"></div>
+  <div class="bath-sheet" id="dormSheet">
+    <div class="bath-sheet-grabber"></div>
+    <div class="bath-sheet-title">修改绑定宿舍</div>
+    <div class="bath-sheet-sub">切换后自动匹配最近浴室</div>
+    <div class="bath-field-label">校区</div>
+    <div class="bath-chip-group" id="dormCampus"></div>
+    <div class="bath-field-label" id="dormAreaLabel">苑区</div>
+    <div class="bath-chip-group" id="dormArea"></div>
+    <div class="bath-field-label">楼栋</div>
+    <div class="bath-chip-group" id="dormBuilding"></div>
+    <div class="bath-field-label">房间号（可选）</div>
+    <input class="bath-input" id="dormRoom" type="text" inputmode="numeric" maxlength="8" placeholder="如 215">
+    <button class="bath-sheet-confirm" onclick="saveDorm()">保存</button>
+    <button class="bath-sheet-cancel" onclick="closeSheet('dorm')">取消</button>
+  </div>
+
+  <!-- 弹窗 2：快速录入洗澡记录 -->
+  <div class="bath-mask" id="showerMask" onclick="closeSheet('shower')"></div>
+  <div class="bath-sheet" id="showerSheet">
+    <div class="bath-sheet-grabber"></div>
+    <div class="bath-sheet-title">记一次洗澡</div>
+    <div class="bath-sheet-sub">记录保存在本机，仅自己可见</div>
+    <div class="bath-field-label">时间</div>
+    <div style="font-size:20px;font-weight:800;color:var(--color-primary);font-family:var(--font-mono);text-align:center;padding:6px 0;" id="showerTime">--</div>
+    <div class="bath-field-label">备注（可选）</div>
+    <input class="bath-input" id="showerNote" type="text" maxlength="30" placeholder="如：运动后 / 睡前">
+    <button class="bath-sheet-confirm" onclick="saveShower()">确认记录</button>
+    <button class="bath-sheet-cancel" onclick="closeSheet('shower')">取消</button>
+  </div>
+
+  <!-- 弹窗 3：DIY 自定义节日 -->
+  <div class="bath-mask" id="festMask" onclick="closeSheet('fest')"></div>
+  <div class="bath-sheet" id="festSheet">
+    <div class="bath-sheet-grabber"></div>
+    <div class="bath-sheet-title">自定义节日</div>
+    <div class="bath-sheet-sub">生日 / 纪念日 / 考试日，按年循环倒数</div>
+    <div class="bath-field-label">名称</div>
+    <input class="bath-input" id="festName" type="text" maxlength="12" placeholder="如：我的生日">
+    <div class="bath-field-label">日期（每年循环）</div>
+    <input class="bath-input" id="festDate" type="date">
+    <div style="font-size:11.5px;color:var(--color-text-hint);margin-top:8px;">农历节日请按当年的公历日期添加</div>
+    <button class="bath-sheet-confirm" onclick="saveFest()">添加节日</button>
+    <button class="bath-sheet-cancel" onclick="closeSheet('fest')">取消</button>
   </div>
 
   <script src="config.js"></script>
@@ -69,102 +278,443 @@
   <script src="api-client.js"></script>
   <script src="app.js"></script>
   <script>
+    // ================= 内置节日（公历固定日期，按年循环） =================
+    var FEST_PRESETS = [
+      { name: '元旦', m: 1, d: 1 },
+      { name: '情人节', m: 2, d: 14 },
+      { name: '劳动节', m: 5, d: 1 },
+      { name: '儿童节', m: 6, d: 1 },
+      { name: '国庆节', m: 10, d: 1 },
+      { name: '双十一', m: 11, d: 11 },
+      { name: '圣诞节', m: 12, d: 25 },
+      { name: '跨年夜', m: 12, d: 31 },
+    ];
+
+    var BATH = null;          // 当前浴室
+    var dormPick = { campusId: '', areaId: '', building: '' };
+
     document.addEventListener('DOMContentLoaded', function () {
       App.initTheme();
       renderBathroom();
+      // 秒级倒计时：1s tick
+      setInterval(tickCountdowns, 1000);
     });
 
+    // ---------- 渲染 ----------
     function renderBathroom() {
       var params = new URLSearchParams(location.search);
       var id = params.get('id');
-      var bath = id ? Storage.getBathroomById(id) : Storage.getDefaultBathroom();
+      BATH = id ? Storage.getBathroomById(id) : Storage.getDefaultBathroom();
       var container = document.getElementById('bathContent');
 
-      if (!bath) {
+      if (!BATH) {
+        document.getElementById('bathActions').style.display = 'none';
         container.innerHTML =
           '<div style="padding:60px 20px;text-align:center;color:var(--color-text-sub);">' +
           '<div style="font-size:40px;margin-bottom:12px;">🛁</div>' +
           '<p>未找到浴室信息</p>' +
           '<p style="font-size:13px;margin-top:8px;color:var(--color-text-hint);">请先在个人资料中设置宿舍</p>' +
-          '<a href="profile-edit.html" class="btn btn-outline btn-sm" style="margin-top:16px;">去设置</a></div>';
+          '<button class="btn btn-outline btn-sm" style="margin-top:16px;" onclick="openDormSheet()">去绑定宿舍</button></div>';
         return;
       }
 
+      var navUrl = 'map.html?dest=' + encodeURIComponent(BATH.name);
       var user = Storage.getUser();
-      var favs = user.favoriteBathrooms || [];
-      var isFav = favs.indexOf(bath.id) !== -1;
-      var isDefault = user.defaultBathroomId === bath.id;
+      var isFav = (user.favoriteBathrooms || []).indexOf(BATH.id) !== -1;
+      var isDefault = user.defaultBathroomId === BATH.id;
       var dorm = Storage.getUserDorm();
       var dormText = dorm ? dorm.areaName + ' ' + dorm.building + (dorm.room ? ' ' + dorm.room : '') : '';
 
-      container.innerHTML =
+      // ---- Hero：位置信息 ----
+      var html =
         '<div class="bath-hero anim-fade-in-up">' +
-          '<div class="bath-hero-icon">🛁</div>' +
-          '<div class="bath-hero-name">' + bath.name + '</div>' +
-          (bath.floor ? '<div class="bath-hero-floor">' + bath.floor + '</div>' : '') +
-        '</div>' +
-
-        '<div class="bath-info-card anim-fade-in-up stagger-1">' +
-          '<div class="bath-info-item">' +
-            '<div class="bath-info-icon">📏</div>' +
-            '<div class="bath-info-label">距离</div>' +
-            '<div class="bath-info-value">约 ' + bath.distance + 'm</div>' +
+          '<div class="bath-hero-top">' +
+            '<div>' +
+              '<div class="bath-hero-name">' + BATH.name + '</div>' +
+              (BATH.floor ? '<div class="bath-hero-floor">' + BATH.floor + ' · ' + BATH.hours + '</div>' : '') +
+            '</div>' +
+            '<div style="font-size:36px;line-height:1;">🚿</div>' +
           '</div>' +
-          '<div class="bath-info-item">' +
-            '<div class="bath-info-icon">🕐</div>' +
-            '<div class="bath-info-label">开放时间</div>' +
-            '<div class="bath-info-value">' + bath.hours + '</div>' +
+          '<div class="bath-chip-row">' +
+            '<span class="bath-chip">📏 约 <b>' + BATH.distance + 'm</b></span>' +
+            '<span class="bath-chip">🕐 <b>' + BATH.hours + '</b></span>' +
+            '<span class="bath-chip bath-chip--btn" onclick="openDormSheet()">🏠 ' +
+              (dormText ? dormText : '绑定宿舍') + ' · 修改</span>' +
           '</div>' +
-          (dormText ? '<div class="bath-info-item">' +
-            '<div class="bath-info-icon">🏠</div>' +
-            '<div class="bath-info-label">我的宿舍</div>' +
-            '<div class="bath-info-value">' + dormText + '</div>' +
-          '</div>' : '') +
-        '</div>' +
-
-        '<div class="bath-status-card anim-fade-in-up stagger-2">' +
-          '<div class="bath-status-title">当前状态</div>' +
-          '<div class="bath-status-hint">实时状态暂未接入</div>' +
-        '</div>' +
-
-        '<div class="bath-actions anim-fade-in-up stagger-3">' +
-          '<a href="map.html?dest=' + encodeURIComponent(bath.name) + '" class="bath-btn bath-btn-primary">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/></svg>' +
-            '3D地图导航' +
-          '</a>' +
-          '<button class="bath-btn bath-btn-outline" onclick="location.href=\'map.html?dest=' + encodeURIComponent(bath.name) + '\'">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>' +
-            '查看位置' +
-          '</button>' +
-          '<button class="bath-btn bath-btn-fav' + (isFav ? ' active' : '') + '" id="favBtn" onclick="toggleFav(\'' + bath.id + '\')">' +
-            '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
-            (isFav ? '已收藏' : '收藏') +
-          '</button>' +
-          '<button class="bath-btn bath-btn-outline" id="defaultBtn" onclick="setDefault(\'' + bath.id + '\')"' + (isDefault ? ' style="opacity:0.5;pointer-events:none;"' : '') + '>' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-            (isDefault ? '已设为常用' : '设为常用浴室') +
-          '</button>' +
         '</div>';
+
+      // ---- 今日状态色块 ----
+      var showers = Storage.bathGetShowers();
+      var todayCount = countToday(showers);
+      html +=
+        '<div class="bath-sec anim-fade-in-up stagger-1">' +
+          '<div class="bath-today' + (todayCount > 0 ? ' done' : '') + '">' +
+            '<div class="bath-today-icon">' + (todayCount > 0 ? '✅' : '🛁') + '</div>' +
+            '<div class="bath-today-main">' +
+              '<div class="bath-today-title">' + (todayCount > 0 ? '今日已洗 ' + todayCount + ' 次' : '今天还没洗') + '</div>' +
+              '<div class="bath-today-sub">' + (todayCount > 0 ? '保持清爽，状态不错' : '点击右侧按钮，快速记一笔') + '</div>' +
+            '</div>' +
+            '<button class="bath-today-cta" onclick="openShowerSheet()">记一次</button>' +
+          '</div>' +
+        '</div>';
+
+      // ---- 本月可视化 ----
+      html +=
+        '<div class="bath-sec anim-fade-in-up stagger-2">' +
+          '<div class="bath-sec-title">本月数据 <span class="tip">手动记录 · 全本机保存</span></div>' +
+          '<div class="bath-month-card">' +
+            monthCardHtml(showers) +
+          '</div>' +
+        '</div>';
+
+      // ---- 最近记录 ----
+      html +=
+        '<div class="bath-sec anim-fade-in-up stagger-3">' +
+          '<div class="bath-sec-title">最近记录</div>' +
+          '<div class="bath-records">' + recordsHtml(showers) + '</div>' +
+        '</div>';
+
+      // ---- 节日倒计时（分区：最近主卡 + 后续小卡 + DIY） ----
+      html +=
+        '<div class="bath-sec anim-fade-in-up stagger-4">' +
+          '<div class="bath-sec-title">节日倒计时 <span class="tip">精确到秒</span></div>' +
+          '<div id="festArea">' + festAreaHtml() + '</div>' +
+        '</div>';
+
+      container.innerHTML = html;
+
+      // ---- 底部操作栏 ----
+      var actions = document.getElementById('bathActions');
+      actions.style.display = 'flex';
+      document.getElementById('navMainBtn').innerHTML =
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/></svg>3D地图导航';
+      document.getElementById('navMainBtn').onclick = function () { location.href = navUrl; };
+      var loc = document.getElementById('actLoc');
+      loc.href = navUrl;
+      loc.style.display = 'flex';
+      document.getElementById('actFav').classList.toggle('active', isFav);
+      document.getElementById('actFavText').textContent = isFav ? '已藏' : '收藏';
+      var defBtn = document.getElementById('actDefault');
+      defBtn.classList.toggle('active', isDefault);
+      defBtn.style.opacity = isDefault ? '0.55' : '';
+      defBtn.style.pointerEvents = isDefault ? 'none' : '';
+      document.getElementById('actDefaultText').textContent = isDefault ? '常用' : '常用';
     }
 
-    function toggleFav(id) {
-      var isFav = Storage.toggleFavoriteBathroom(id);
-      var btn = document.getElementById('favBtn');
-      btn.classList.toggle('active', isFav);
-      btn.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="' + (isFav ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>' +
-        (isFav ? '已收藏' : '收藏');
+    // ---- 统计：今日次数 / 本月次数 / 近 7 天柱状图 ----
+    function countToday(showers) {
+      var n = new Date(); var c = 0;
+      for (var i = 0; i < showers.length; i++) {
+        var d = new Date(showers[i].ts);
+        if (d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth() && d.getDate() === n.getDate()) c++;
+      }
+      return c;
+    }
+
+    function monthCardHtml(showers) {
+      var now = new Date();
+      var monthCount = 0;
+      for (var i = 0; i < showers.length; i++) {
+        var d = new Date(showers[i].ts);
+        if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) monthCount++;
+      }
+      var days = now.getDate();
+      var avg = days > 0 ? (monthCount / days) : 0;
+
+      // 近 7 天柱状图
+      var bars = '';
+      var dayNames = ['日', '一', '二', '三', '四', '五', '六'];
+      var maxDay = 1;
+      var counts = [];
+      for (var k = 6; k >= 0; k--) {
+        var day = new Date(now.getFullYear(), now.getMonth(), now.getDate() - k);
+        var c = 0;
+        for (var j = 0; j < showers.length; j++) {
+          var sd = new Date(showers[j].ts);
+          if (sd.getFullYear() === day.getFullYear() && sd.getMonth() === day.getMonth() && sd.getDate() === day.getDate()) c++;
+        }
+        if (c > maxDay) maxDay = c;
+        counts.push({ c: c, day: day, label: (7 - k) + '日', isToday: k === 0 });
+      }
+      counts.forEach(function (it) {
+        var h = Math.max(8, Math.round(it.c / maxDay * 100));
+        bars += '<div class="bath-bar-col">' +
+          '<div class="bath-bar' + (it.c > 0 ? ' hot' : '') + '" style="height:' + h + '%;"></div>' +
+          '<div class="bath-bar-label' + (it.isToday ? ' today' : '') + '">' + (it.isToday ? '今天' : it.label) + '</div>' +
+        '</div>';
+      });
+
+      return '<div class="bath-month-top">' +
+          '<span class="bath-month-num">' + monthCount + '</span>' +
+          '<span class="bath-month-unit">次洗澡</span>' +
+          '<span class="bath-month-avg">日均 ' + avg.toFixed(1) + ' 次</span>' +
+        '</div>' +
+        '<div class="bath-bars">' + bars + '</div>';
+    }
+
+    function recordsHtml(showers) {
+      if (!showers.length) {
+        return '<div class="bath-empty">还没有记录，点上方「记一次」开始</div>';
+      }
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      var html = '';
+      var list = showers.slice(0, 5);
+      for (var i = 0; i < list.length; i++) {
+        var d = new Date(list[i].ts);
+        var time = pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        html += '<div class="bath-record-item">' +
+          '<span class="bath-record-dot"></span>' +
+          '<span class="bath-record-time">' + time + '</span>' +
+          (list[i].note ? '<span class="bath-record-note">' + list[i].note + '</span>' : '') +
+          '<button class="bath-record-del" title="删除" onclick="removeShower(\'' + list[i].id + '\')">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>' +
+          '</button>' +
+        '</div>';
+      }
+      return html;
+    }
+
+    // ---- 节日倒计时：最近主卡 + 其余小卡（含 DIY） ----
+    function festList() {
+      var list = [];
+      var all = FEST_PRESETS.concat(Storage.festGetCustom());
+      for (var i = 0; i < all.length; i++) {
+        var f = all[i];
+        list.push({
+          id: f.id || (f.name + '-' + f.m + '-' + f.d),
+          name: f.name, m: f.m, d: f.d,
+          custom: !!f.custom,
+          at: nextOccur(f.m, f.d),
+          today: isToday(f.m, f.d),
+        });
+      }
+      list.sort(function (a, b) {
+        if (a.today !== b.today) return a.today ? -1 : 1;
+        return a.at - b.at;
+      });
+      return list;
+    }
+
+    function nextOccur(m, d) {
+      var now = new Date();
+      var t = new Date(now.getFullYear(), m - 1, d, 0, 0, 0);
+      if (t.getTime() <= now.getTime()) t.setFullYear(t.getFullYear() + 1);
+      return t;
+    }
+
+    function isToday(m, d) {
+      var n = new Date();
+      return n.getMonth() === m - 1 && n.getDate() === d;
+    }
+
+    function festAreaHtml() {
+      var list = festList();
+      if (!list.length) return '';
+      var f = list[0];
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      var html = '<div class="bath-fest-featured anim-fade-in-up">' +
+        '<div class="bath-fest-name">🎉 距离 ' + f.name + '</div>' +
+        '<div class="bath-fest-date">' + (f.m + ' 月 ' + f.d + ' 日 · ' + (f.custom ? '自定义' : '公历节日')) + '</div>' +
+        (f.custom ? '<button class="bath-fest-close" title="删除" onclick="removeFest(\'' + f.id + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' : '') +
+        '<div class="bath-fest-count" data-fest-at="' + f.at.getTime() + '"' + (f.today ? ' data-fest-today="1"' : '') + '>--</div>' +
+      '</div>';
+
+      var rest = list.slice(1, 5);
+      if (rest.length) {
+        html += '<div class="bath-fest-grid">';
+        rest.forEach(function (it) {
+          html += '<div class="bath-fest-card">' +
+            (it.custom ? '<button class="bath-fest-close" title="删除" onclick="removeFest(\'' + it.id + '\')"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' : '') +
+            '<div class="bath-fest-card-name">' + it.name + '</div>' +
+            '<div class="bath-fest-card-date">' + pad(it.m) + '-' + pad(it.d) + '</div>' +
+            '<div class="bath-fest-card-count" data-fest-at="' + it.at.getTime() + '"' + (it.today ? ' data-fest-today="1"' : '') + '>--</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+
+      html += '<button class="bath-fest-add anim-fade-in-up" style="margin-top:10px;width:100%;" onclick="openFestSheet()">' +
+        '<span style="font-size:18px;">＋</span> 自定义节日卡片' +
+      '</button>';
+      return html;
+    }
+
+    // 秒级 tick：更新所有倒计时元素
+    function tickCountdowns() {
+      var els = document.querySelectorAll('[data-fest-at]');
+      var now = Date.now();
+      for (var i = 0; i < els.length; i++) {
+        var at = parseInt(els[i].getAttribute('data-fest-at'), 10);
+        var isTodayFest = els[i].getAttribute('data-fest-today') === '1';
+        if (isTodayFest) {
+          els[i].innerHTML = '就是今天 🎉';
+          continue;
+        }
+        var diff = Math.max(0, at - now);
+        var sec = Math.floor(diff / 1000);
+        var dd = Math.floor(sec / 86400);
+        var hh = Math.floor((sec % 86400) / 3600);
+        var mm = Math.floor((sec % 3600) / 60);
+        var ss = sec % 60;
+        var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+        if (els[i].classList.contains('bath-fest-count')) {
+          els[i].innerHTML = '<small>还有</small> ' + dd + ' <small>天</small><span class="seg">·</span>' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+        } else {
+          els[i].innerHTML = dd + '天 ' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+        }
+      }
+    }
+
+    // ---------- 弹窗开关 ----------
+    function openSheet(key) {
+      document.getElementById(key + 'Mask').classList.add('show');
+      document.getElementById(key + 'Sheet').classList.add('show');
+    }
+    function closeSheet(key) {
+      document.getElementById(key + 'Mask').classList.remove('show');
+      document.getElementById(key + 'Sheet').classList.remove('show');
+    }
+
+    // ---------- 弹窗 1：宿舍选择 ----------
+    function openDormSheet() {
+      var campuses = Storage.getCampusAreas();
+      var dorm = Storage.getUserDorm() || {};
+      dormPick = {
+        campusId: dorm.campusId || campuses[0].id,
+        areaId: dorm.areaId || '',
+        building: dorm.building || '',
+      };
+      document.getElementById('dormRoom').value = dorm.room || '';
+      renderDormChips();
+      openSheet('dorm');
+    }
+
+    function renderDormChips() {
+      var campuses = Storage.getCampusAreas();
+      var htmlC = '';
+      campuses.forEach(function (c) {
+        htmlC += '<span class="bath-opt' + (dormPick.campusId === c.id ? ' active' : '') + '" onclick="pickDorm(\'campus\',\'' + c.id + '\')">' + c.name + '</span>';
+      });
+      document.getElementById('dormCampus').innerHTML = htmlC;
+
+      var areas = Storage.getAreasByCampus(dormPick.campusId);
+      // 仙游校区只显示男生/女生宿舍，不显示具体苑区
+      var isXianyou = dormPick.campusId === 'xianyou';
+      document.getElementById('dormAreaLabel').textContent = isXianyou ? '宿舍类型' : '苑区';
+      var htmlA = '';
+      areas.forEach(function (a) {
+        htmlA += '<span class="bath-opt' + (dormPick.areaId === a.id ? ' active' : '') + '" onclick="pickDorm(\'area\',\'' + a.id + '\')">' + a.name + '</span>';
+      });
+      document.getElementById('dormArea').innerHTML = htmlA;
+
+      var buildings = dormPick.areaId ? Storage.getBuildingsByArea(dormPick.campusId, dormPick.areaId) : [];
+      var htmlB = '';
+      buildings.forEach(function (b) {
+        htmlB += '<span class="bath-opt' + (dormPick.building === b ? ' active' : '') + '" onclick="pickDorm(\'building\',\'' + b + '\')">' + b + '</span>';
+      });
+      document.getElementById('dormBuilding').innerHTML = htmlB || '<span style="font-size:12.5px;color:var(--color-text-hint);">请先选择' + (isXianyou ? '宿舍类型' : '苑区') + '</span>';
+    }
+
+    function pickDorm(level, val) {
+      if (level === 'campus') {
+        if (dormPick.campusId !== val) { dormPick.campusId = val; dormPick.areaId = ''; dormPick.building = ''; }
+      } else if (level === 'area') {
+        if (dormPick.areaId !== val) { dormPick.areaId = val; dormPick.building = ''; }
+      } else {
+        dormPick.building = val;
+      }
+      renderDormChips();
+    }
+
+    function saveDorm() {
+      if (!dormPick.campusId || !dormPick.areaId || !dormPick.building) {
+        App.toast('请选择完整宿舍信息');
+        return;
+      }
+      var areaName = '';
+      var areas = Storage.getAreasByCampus(dormPick.campusId);
+      for (var i = 0; i < areas.length; i++) {
+        if (areas[i].id === dormPick.areaId) { areaName = areas[i].name; break; }
+      }
+      Storage.saveUserDorm({
+        campusId: dormPick.campusId,
+        areaId: dormPick.areaId,
+        areaName: areaName,
+        building: dormPick.building,
+        room: document.getElementById('dormRoom').value.trim(),
+      });
+      closeSheet('dorm');
+      App.toastSuccess('宿舍已更新');
+      setTimeout(renderBathroom, 300);
+    }
+
+    // ---------- 弹窗 2：快速录入洗澡 ----------
+    function openShowerSheet() {
+      var d = new Date();
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      document.getElementById('showerTime').textContent = pad(d.getHours()) + ':' + pad(d.getMinutes());
+      document.getElementById('showerNote').value = '';
+      openSheet('shower');
+    }
+
+    function saveShower() {
+      var note = document.getElementById('showerNote').value.trim();
+      Storage.bathAddShower(note);
+      closeSheet('shower');
+      App.toastSuccess('已记录 · 今天第 ' + (countToday(Storage.bathGetShowers())) + ' 次');
+      setTimeout(renderBathroom, 300);
+    }
+
+    function removeShower(id) {
+      Storage.bathRemoveShower(id);
+      renderBathroom();
+      App.toast('已删除该条记录');
+    }
+
+    // ---------- 弹窗 3：DIY 节日 ----------
+    function openFestSheet() {
+      document.getElementById('festName').value = '';
+      var d = new Date();
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      document.getElementById('festDate').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+      openSheet('fest');
+    }
+
+    function saveFest() {
+      var name = document.getElementById('festName').value.trim();
+      var dateVal = document.getElementById('festDate').value;
+      if (!name) { App.toast('请填写节日名称'); return; }
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dateVal)) { App.toast('请选择日期'); return; }
+      var parts = dateVal.split('-');
+      var res = Storage.festAddCustom(name, parseInt(parts[1], 10), parseInt(parts[2], 10));
+      if (!res.success) { App.toast(res.message || '添加失败'); return; }
+      closeSheet('fest');
+      App.toastSuccess('已添加「' + name + '」');
+      var area = document.getElementById('festArea');
+      if (area) area.innerHTML = festAreaHtml();
+    }
+
+    function removeFest(id) {
+      Storage.festRemoveCustom(id);
+      var area = document.getElementById('festArea');
+      if (area) area.innerHTML = festAreaHtml();
+      App.toast('已删除自定义节日');
+    }
+
+    // ---------- 收藏 / 常用 ----------
+    function toggleFav() {
+      var isFav = Storage.toggleFavoriteBathroom(BATH.id);
+      document.getElementById('actFav').classList.toggle('active', isFav);
+      document.getElementById('actFavText').textContent = isFav ? '已藏' : '收藏';
       App.toast(isFav ? '已收藏' : '已取消收藏');
     }
 
-    function setDefault(id) {
-      Storage.setDefaultBathroom(id);
-      var btn = document.getElementById('defaultBtn');
-      btn.style.opacity = '0.5';
+    function setDefault() {
+      Storage.setDefaultBathroom(BATH.id);
+      var btn = document.getElementById('actDefault');
+      btn.classList.add('active');
+      btn.style.opacity = '0.55';
       btn.style.pointerEvents = 'none';
-      btn.innerHTML =
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
-        '已设为常用';
       App.toastSuccess('已设为常用浴室');
     }
   </script>

@@ -11,6 +11,11 @@
   <link rel="apple-touch-icon" href="./assets/icons/pwa-192.png">
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
+  <style>
+    /* 详情页为二级页面：隐藏底部悬浮 tab-bar（修复下方悬浮框列表显示问题），内容区补足安全区留白 */
+    body[data-page="detail"] .tab-bar { display: none !important; }
+    body[data-page="detail"] .app-content { padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+  </style>
 </head>
 <body data-page="detail">
   <div class="app-shell">

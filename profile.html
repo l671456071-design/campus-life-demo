@@ -63,8 +63,12 @@
     <main class="app-content" id="mainContent">
       <div style="padding: 16px;">
         <!-- 用户信息卡片：小头像 + 数字ID（每个用户数据ID唯一，用于甄别数据） -->
-        <div class="card anim-fade-in-up" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color:#fff; margin-bottom:12px; padding:16px 14px; position:relative; overflow:hidden;">
+        <div class="card anim-fade-in-up" id="profileCard" style="background: linear-gradient(135deg, #2563EB, #1D4ED8); color:#fff; margin-bottom:12px; padding:16px 14px; position:relative; overflow:hidden;">
           <svg style="position:absolute; right:-16px; top:-16px; width:90px; height:90px; opacity:0.1;" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+          <!-- DIY 背景入口：从相册选图自定义卡片背景 -->
+          <button id="bgEditBtn" style="position:absolute; top:10px; right:10px; width:30px; height:30px; border-radius:50%; background:rgba(255,255,255,0.22); display:flex; align-items:center; justify-content:center; border:none; z-index:2;" title="自定义卡片背景">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
           <div style="display:flex; align-items:center; gap:12px;">
             <a href="myhome.html" style="flex-shrink:0; border-radius:50%; display:block; position:relative;" title="进入个人主页">
               <div id="userAvatarBox"></div>
@@ -83,6 +87,9 @@
             <span id="userDorm">宿舍信息未设置</span>
           </div>
         </div>
+
+        <!-- DIY 背景相册选择（隐藏 input） -->
+        <input type="file" id="cardBgInput" accept="image/*" style="display:none;">
 
         <!-- 功能菜单列表 -->
         <div class="card" style="padding:0; overflow:hidden; margin-bottom:16px;">
@@ -246,6 +253,59 @@
       renderUserInfo();
       renderStats();
       renderFavoritePoints();
+      initCardBg();
+    }
+
+    // —— 个人卡片 DIY 背景（相册选图，压缩后存 user.cardBg）——
+    function renderCardBg() {
+      var user = Storage.getUser();
+      var card = document.getElementById('profileCard');
+      if (user.cardBg) {
+        card.style.background = 'linear-gradient(rgba(15,23,42,.42), rgba(15,23,42,.62)), url("' + user.cardBg + '") center/cover no-repeat';
+      } else {
+        card.style.background = 'linear-gradient(135deg, #2563EB, #1D4ED8)';
+      }
+    }
+
+    function showCardBgModal() {
+      var user = Storage.getUser();
+      var actions = [
+        { label: '从相册选择', style: 'btn-primary', onClick: function () { document.getElementById('cardBgInput').click(); } }
+      ];
+      if (user.cardBg) {
+        actions.push({ label: '恢复默认', style: 'btn-outline', onClick: function () {
+          var u = Storage.getUser(); delete u.cardBg; Storage.saveUser(u); renderCardBg(); App.toastSuccess('已恢复默认背景');
+        } });
+      }
+      App.showModal({
+        title: '自定义卡片背景',
+        desc: '从相册选择一张喜欢的照片作为个人卡片背景，图片会压缩后保存在本机。',
+        actions: actions
+      });
+    }
+
+    function initCardBg() {
+      renderCardBg();
+      document.getElementById('bgEditBtn').addEventListener('click', function (e) {
+        e.stopPropagation();
+        showCardBgModal();
+      });
+      document.getElementById('cardBgInput').addEventListener('change', function (e) {
+        var file = e.target.files && e.target.files[0];
+        if (!file) return;
+        App.compressImage(file, 1080, 0.72).then(function (dataUrl) {
+          var u = Storage.getUser();
+          u.cardBg = dataUrl;
+          try {
+            Storage.saveUser(u);
+            renderCardBg();
+            App.toastSuccess('背景已更新');
+          } catch (err) {
+            App.toast('存储空间不足，请换一张小一点的图片');
+          }
+        }).catch(function () { App.toast('图片处理失败，请换一张试试'); });
+        e.target.value = '';
+      });
     }
 
     // 用户信息与统计全部来自 localStorage（Storage 数据层）

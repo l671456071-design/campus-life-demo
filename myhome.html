@@ -41,6 +41,10 @@
     .mh-album-title { font-size:15px; font-weight:700; color:var(--color-text); }
     .mh-album-sub { font-size:12px; color:var(--color-text-hint); margin-top:3px; }
     .mh-album-arrow { color:var(--color-text-hint); flex-shrink:0; }
+
+    /* 我的收藏：收藏的浴室卡片列表 */
+    .mh-fav-empty { padding:16px; text-align:center; font-size:13px; color:var(--color-text-hint); }
+    #favList .mh-album { margin-bottom:10px; }
   </style>
 </head>
 <body data-page="myhome">
@@ -85,8 +89,14 @@
           </div>
         </section>
 
-        <!-- 相册入口（管理功能在编辑页） -->
+        <!-- 我的收藏：收藏的浴室快捷入口 -->
         <section class="mh-section anim-fade-in-up stagger-2">
+          <div class="section-header"><span class="section-title">我的收藏</span></div>
+          <div id="favList"></div>
+        </section>
+
+        <!-- 相册入口（管理功能在编辑页） -->
+        <section class="mh-section anim-fade-in-up stagger-3">
           <div class="section-header"><span class="section-title">我的相册</span></div>
           <a class="card mh-album" href="profile-edit.html#album">
             <div class="mh-album-cover" id="albumCover">🖼️</div>
@@ -102,6 +112,7 @@
   </div>
 
   <script src="config.js"></script>
+  <script src="campus-data.js"></script>
   <script src="mock.js"></script>
   <script src="demo-data.js"></script>
   <script src="storage.js"></script>
@@ -148,15 +159,40 @@
       }
     }
 
+    // ---- 我的收藏：收藏的浴室快捷入口 ----
+    function renderFavs() {
+      var user = Storage.getUser();
+      var favs = user.favoriteBathrooms || [];
+      var wrap = document.getElementById('favList');
+      var cards = '';
+      favs.forEach(function (id) {
+        var b = null;
+        (window.CAMPUS_DATA && CAMPUS_DATA.bathrooms || []).forEach(function (x) { if (x.id === id) b = x; });
+        if (!b) return;
+        cards +=
+          '<a class="card mh-album" href="bathroom.html?id=' + b.id + '">' +
+            '<div class="mh-album-cover">🚿</div>' +
+            '<div class="mh-album-main">' +
+              '<div class="mh-album-title">' + b.name + '</div>' +
+              '<div class="mh-album-sub">🕐 ' + (b.hours || '开放时间以现场为准') + ' · 约' + (b.distance || '--') + 'm</div>' +
+            '</div>' +
+            '<svg class="mh-album-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '</a>';
+      });
+      wrap.innerHTML = cards || '<div class="card mh-fav-empty">还没有收藏，去浴室页点亮 ☆ 收藏常用浴室吧</div>';
+    }
+
     renderIdentity();
     renderStats();
     renderAlbumEntry();
+    renderFavs();
     App.showGuide('myhome', {
       emoji: '🏠',
       title: '个人空间 · 新手指引',
       items: [
         '这里是纯展示主页，点「编辑资料」修改头像与信息',
         '快递动态实时统计待取件与运输中数量，点数字可直达',
+        '浴室页点亮 ☆ 后，收藏的浴室会出现在「我的收藏」',
         '相册只保留入口，照片管理在编辑页中进行',
       ],
     });

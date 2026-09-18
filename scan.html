@@ -588,6 +588,7 @@
       ocrBusy: false,
       lastOcrAt: 0,
       lastOcrText: '',
+      ocrRound: 0,             // OCR 轮次：奇数轮全框（远）、偶数轮中心放大（近）交替识别
       ocrPipe: undefined,      // ocr-worker.js：预处理 Worker（二值化/放大不占主线程）
       ocrPend: {},             // 待响应的预处理请求
       ocrSeq: 0,
@@ -632,6 +633,15 @@
         } catch (e) { /* Storage 不可用时忽略 */ }
       }
 
+      // 页面切后台：暂停识别循环与慢提示，回前台自动恢复（省电、防后台空转发热）
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          pauseScan();
+        } else if (SCAN.stream) {
+          resumeScan();
+        }
+      });
+
       startCamera();
     });
 
@@ -668,8 +678,11 @@
       }
       document.getElementById('scanTip').textContent = '正在启动摄像头…';
       try {
+        // 低配设备降分辨率采集（960x540），减少取流/绘制开销；中高配仍用 720p 保证识别率
+        var idealW = 1280, idealH = 720;
+        try { if (Perf.tierKey && Perf.tierKey() === 'low') { idealW = 960; idealH = 540; } } catch (e0) {}
         SCAN.stream = await cameraGetUserMedia({
-          video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          video: { facingMode: { ideal: 'environment' }, width: { ideal: idealW }, height: { ideal: idealH } },
           audio: false,
         });
       } catch (err) {
@@ -755,7 +768,22 @@
 
     function startDetectLoop() {
       SCAN.scanning = true;
-      requestAnimationFrame(detectFrame);
+      scheduleDetect();
+    }
+
+    // 帧调度：优先 requestVideoFrameCallback（有新视频帧才算，省电且不掉帧），
+    // 不支持时回退 requestAnimationFrame 节流循环
+    function scheduleDetect() {
+      if (!SCAN.scanning) return;
+      var v = SCAN.video;
+      if (v && typeof v.requestVideoFrameCallback === 'function') {
+        v.requestVideoFrameCallback(function () {
+          if (!SCAN.scanning) return;
+          detectFrame(performance.now());
+        });
+      } else {
+        requestAnimationFrame(detectFrame);
+      }
     }
 
     function pauseScan() { SCAN.scanning = false; stopSlowHints(); }
@@ -780,7 +808,7 @@
         SCAN.lastOcrAt = ts;
         runOcrFrame();
       }
-      requestAnimationFrame(detectFrame);
+      scheduleDetect();
     }
 
     async function detectOnce() {
@@ -881,15 +909,21 @@
     }
 
     // 抓取扫描框区域（仅 drawImage，重活交给 Worker / 识别交给 Tesseract 独立线程）
-    function captureOcrCanvas() {
+    // zoom: 1 = 扫描框原区域（远距离，覆盖面大）；2 = 中心 60% 再裁剪（近距离，取件码字更大）
+    function captureOcrCanvas(zoom) {
       var v = SCAN.video;
       var vw = v.videoWidth, vh = v.videoHeight;
       if (!vw || !vh) return null;
       var r = computeScanRegion(vw, vh);
       if (r.w < 40 || r.h < 40) return null;
+      if (zoom === 2) {
+        var cw = r.w * 0.6, ch = r.h * 0.6;
+        r = { x: r.x + (r.w - cw) / 2, y: r.y + (r.h - ch) / 2, w: cw, h: ch };
+        if (r.w < 40 || r.h < 40) return null;
+      }
       var c = document.createElement('canvas');
-      c.width = r.w;
-      c.height = r.h;
+      c.width = Math.round(r.w);
+      c.height = Math.round(r.h);
       var ctx = c.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(v, r.x, r.y, r.w, r.h, 0, 0, c.width, c.height);
       return c;
@@ -988,9 +1022,13 @@
       try {
         var ok = await ensureOcrWorker();
         if (!ok || !SCAN.scanning) return;
-        var c = captureOcrCanvas();
+        // 远近交替识别：奇数轮全框（远距离整面单扫描），偶数轮中心 60% 放大 3 倍
+        // （近距离拍取件码时字更大、二值化后更清晰），大幅提升远近两种距离的命中效率
+        SCAN.ocrRound = (SCAN.ocrRound || 0) + 1;
+        var near = SCAN.ocrRound % 2 === 0;
+        var c = captureOcrCanvas(near ? 2 : 1);
         if (!c) return;
-        var processed = await preprocessForOcr(c, 2, 128);   // 放大 2 倍 + 二值化增强
+        var processed = await preprocessForOcr(c, near ? 3 : 2, 128);   // 放大 2/3 倍 + 二值化增强
         var result = await SCAN.ocrWorker.recognize(processed);
         var text = result && result.data && result.data.text ? result.data.text : '';
         if (text && text.replace(/\s/g, '').length >= 3) {

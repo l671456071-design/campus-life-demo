@@ -17,12 +17,11 @@
     .home-hello .hello-title { font-size: 24px; font-weight: 800; color: var(--color-text); letter-spacing: 0.2px; }
     .home-hello .hello-date { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
 
-    .life-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      padding: 16px 16px 0;
-    }
+    .life-section { padding: 20px 16px 0; }
+    .life-section .section-header { margin-bottom: 10px; }
+
+    /* —— 热门应用：2×2 大卡 —— */
+    .life-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .life-card {
       position: relative;
       background: var(--color-surface);
@@ -32,6 +31,7 @@
       overflow: hidden;
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
       display: block;
+      text-decoration: none;
     }
     .life-card:active { transform: scale(0.96); box-shadow: var(--shadow-md); }
     .life-card-icon {
@@ -45,10 +45,19 @@
       position: absolute; right: -10px; bottom: -14px;
       width: 76px; height: 76px; opacity: 0.10;
     }
+    /* 扫码取件：热门首位蓝底高亮 */
+    .life-card--hero {
+      background: linear-gradient(135deg, #2563EB, #3B82F6);
+      box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28);
+    }
+    .life-card--hero .life-card-title,
+    .life-card--hero .life-card-sub { color: #fff; }
+    .life-card--hero .life-card-sub { opacity: 0.82; }
+    .life-card--hero .life-card-deco { opacity: 0.16; }
 
-    .life-section { padding: 22px 16px 0; }
-    .life-section .section-header { margin-bottom: 10px; }
+    /* —— 日常应用：横向小卡，每行两张 —— */
     .svc-row { display: flex; gap: 12px; }
+    .svc-row + .svc-row { margin-top: 12px; }
     .svc-card {
       flex: 1; display: flex; align-items: center; gap: 12px;
       background: var(--color-surface);
@@ -56,6 +65,7 @@
       padding: 14px 16px;
       box-shadow: var(--shadow-sm);
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      text-decoration: none;
     }
     .svc-card:active { transform: scale(0.96); }
     .svc-icon {
@@ -64,6 +74,32 @@
     }
     .svc-title { font-size: 15px; font-weight: 700; color: var(--color-text); }
     .svc-sub { font-size: 11px; color: var(--color-text-hint); margin-top: 2px; }
+
+    /* —— 其余应用：四宫格紧凑入口 —— */
+    .more-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    }
+    .more-item {
+      position: relative;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      padding: 14px 4px 12px;
+      background: var(--color-surface);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      text-decoration: none;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .more-item:active { transform: scale(0.94); }
+    .more-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .more-label { font-size: 12px; font-weight: 600; color: var(--color-text); }
+    .more-dot {
+      position: absolute; top: 9px; right: 11px;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--color-danger); display: none;
+    }
   </style>
 </head>
 <body data-page="home">
@@ -85,81 +121,121 @@
         <div class="hello-date" id="helloDate"></div>
       </div>
 
-      <!-- 校园生活四大功能 -->
-      <div class="life-grid">
-        <a href="savings.html" class="life-card anim-fade-in-up stagger-1">
-          <div class="life-card-icon" style="background:linear-gradient(135deg,#FEF3C7,#FDE68A);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
-          </div>
-          <div class="life-card-title">攒钱</div>
-          <div class="life-card-sub">工资记账 · 储蓄目标</div>
-          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
-        </a>
-        <a href="schedule.html" class="life-card anim-fade-in-up stagger-2">
-          <div class="life-card-icon" style="background:linear-gradient(135deg,#DBEAFE,#BFDBFE);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          </div>
-          <div class="life-card-title">课程表</div>
-          <div class="life-card-sub">支持贝蒂 / XLS 导入</div>
-          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        </a>
-        <a href="forum.html" class="life-card anim-fade-in-up stagger-3">
-          <div class="life-card-icon" style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <div class="life-card-title">校园论坛</div>
-          <div class="life-card-sub">交流 · 二手 · 失物</div>
-          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </a>
-        <a href="jobs.html" class="life-card anim-fade-in-up stagger-4">
-          <div class="life-card-icon" style="background:linear-gradient(135deg,#FFEDD5,#FED7AA);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          </div>
-          <div class="life-card-title">实习工作</div>
-          <div class="life-card-sub">实习 · 校招 · 兼职</div>
-          <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-        </a>
+      <!-- 热门应用 -->
+      <div class="life-section anim-fade-in-up">
+        <div class="section-header"><span class="section-title">热门应用</span></div>
+        <div class="life-grid">
+          <a href="scan.html" class="life-card life-card--hero anim-fade-in-up stagger-1">
+            <div class="life-card-icon" style="background:rgba(255,255,255,.18);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+            </div>
+            <div class="life-card-title">扫码取件</div>
+            <div class="life-card-sub">扫码 · 取件码识别</div>
+            <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/></svg>
+          </a>
+          <a href="packages.html" class="life-card anim-fade-in-up stagger-2">
+            <div class="life-card-icon" style="background:linear-gradient(135deg,#E0F2FE,#BAE6FD);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+            </div>
+            <div class="life-card-title">快递</div>
+            <div class="life-card-sub">待取 · 取件点 · 记录</div>
+            <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#0284C7" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          </a>
+          <a href="food.html" class="life-card anim-fade-in-up stagger-3">
+            <div class="life-card-icon" style="background:linear-gradient(135deg,#FEE2E2,#FECACA);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+            </div>
+            <div class="life-card-title">外卖</div>
+            <div class="life-card-sub">点餐 · 订单 · 配送</div>
+            <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          </a>
+          <a href="map.html" class="life-card anim-fade-in-up stagger-4">
+            <div class="life-card-icon" style="background:linear-gradient(135deg,#CCFBF1,#99F6E4);">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            </div>
+            <div class="life-card-title">3D地图</div>
+            <div class="life-card-sub">校园导航 · 找路</div>
+            <svg class="life-card-deco" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          </a>
+        </div>
       </div>
 
-      <!-- 校园服务（原首页取件相关功能已整合至「快递」页） -->
+      <!-- 日常应用 -->
       <div class="life-section anim-fade-in-up">
-        <div class="section-header">
-          <span class="section-title">校园服务</span>
+        <div class="section-header"><span class="section-title">日常应用</span></div>
+        <div class="svc-row">
+          <a href="savings.html" class="svc-card">
+            <div class="svc-icon" style="background:#FEF3C7;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+            </div>
+            <div>
+              <div class="svc-title">攒钱</div>
+              <div class="svc-sub">工资记账 · 储蓄目标</div>
+            </div>
+          </a>
+          <a href="schedule.html" class="svc-card">
+            <div class="svc-icon" style="background:#DBEAFE;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div>
+              <div class="svc-title">课程表</div>
+              <div class="svc-sub">支持贝蒂 / XLS 导入</div>
+            </div>
+          </a>
         </div>
         <div class="svc-row">
-          <a href="packages.html" class="svc-card">
-            <div class="svc-icon" style="background:#DBEAFE;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+          <a href="bathroom.html" class="svc-card">
+            <div class="svc-icon" style="background:#E0F2FE;">
+              <span style="font-size:20px;">🛁</span>
             </div>
             <div>
-              <div class="svc-title">快递</div>
-              <div class="svc-sub">待取 · 取件点 · 记录</div>
+              <div class="svc-title">浴室</div>
+              <div class="svc-sub">位置 · 记录 · 倒计时</div>
             </div>
           </a>
-          <a href="food.html" class="svc-card">
-            <div class="svc-icon" style="background:#FEE2E2;">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+          <a href="forum.html" class="svc-card">
+            <div class="svc-icon" style="background:#EDE9FE;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
             </div>
             <div>
-              <div class="svc-title">外卖</div>
-              <div class="svc-sub">点餐 · 订单 · 配送</div>
+              <div class="svc-title">校园论坛</div>
+              <div class="svc-sub">交流 · 二手 · 失物</div>
             </div>
           </a>
         </div>
-        <!-- 浴室（原快递页区块迁入；无数据则不显示） -->
-        <div id="bathroomCard" style="margin-top:12px;"></div>
       </div>
 
-      <!--
-        ============ 原版首页取件功能（按需求保留代码，已整合到 packages.html 快递页） ============
-      <div class="px-4" style="padding-top:16px;">
-        <div class="hero-card anim-fade-in-up"> ...待取快递横幅... </div>
-        <div class="quick-grid"> ...扫码取件/学校论坛/跑腿/外卖 快捷网格... </div>
-        <div id="bathroomCard"></div>
-        <div id="recentList"></div>
-        <div id="pointsList"></div>
+      <!-- 其余应用 -->
+      <div class="life-section anim-fade-in-up" style="padding-bottom:28px;">
+        <div class="section-header"><span class="section-title">其余应用</span></div>
+        <div class="more-grid">
+          <a href="jobs.html" class="more-item">
+            <div class="more-icon" style="background:#FFEDD5;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C2410C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <span class="more-label">实习工作</span>
+          </a>
+          <a href="messages.html" class="more-item">
+            <span class="more-dot" id="msgDot"></span>
+            <div class="more-icon" style="background:#DBEAFE;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <span class="more-label">消息</span>
+          </a>
+          <a href="myhome.html" class="more-item">
+            <div class="more-icon" style="background:#EDE9FE;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6D28D9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
+            <span class="more-label">个人空间</span>
+          </a>
+          <a href="website.html" class="more-item">
+            <div class="more-icon" style="background:#CCFBF1;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <span class="more-label">应用官网</span>
+          </a>
+        </div>
       </div>
-      -->
     </main>
     <nav class="tab-bar">
       <a href="index.html" class="tab-item" data-nav="home">
@@ -205,33 +281,19 @@
       document.getElementById('helloDate').textContent =
         (d.getMonth() + 1) + ' 月 ' + d.getDate() + ' 日 · ' + week;
 
-      // 未读消息红点
-      var badge = document.getElementById('msgBadge');
-      if (badge) badge.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
-
-      // 常用浴室卡片（原快递页区块迁入；无数据则不显示）
-      (function renderBathroomCard() {
-        var wrap = document.getElementById('bathroomCard');
-        var bath = Storage.getDefaultBathroom();
-        if (!bath) { wrap.innerHTML = ''; return; }
-        wrap.innerHTML =
-          '<a href="bathroom.html" class="card card--clickable anim-fade-in-up" style="display:flex;align-items:center;gap:12px;padding:14px 16px;">' +
-            '<div style="width:42px;height:42px;border-radius:14px;background:#E0F2FE;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">🛁</div>' +
-            '<div style="flex:1;min-width:0;">' +
-              '<div style="font-size:15px;font-weight:700;color:var(--color-text);">' + bath.name + '</div>' +
-              '<div style="font-size:12px;color:var(--color-text-hint);margin-top:3px;display:flex;align-items:center;gap:8px;">' +
-                '<span style="display:inline-flex;align-items:center;gap:3px;">🕐 ' + (bath.hours || '开放时间以现场为准') + '</span>' +
-                '<span style="display:inline-flex;align-items:center;gap:3px;">📏 约' + (bath.distance || '--') + 'm</span>' +
-              '</div>' +
-            '</div>' +
-            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-hint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>' +
-          '</a>';
-      })();
+      // 未读消息红点（头部铃铛 + 其余应用「消息」入口）
+      function renderBadges() {
+        var has = Storage.getUnreadCount() > 0;
+        var badge = document.getElementById('msgBadge');
+        if (badge) badge.style.display = has ? 'block' : 'none';
+        var dot = document.getElementById('msgDot');
+        if (dot) dot.style.display = has ? 'block' : 'none';
+      }
+      renderBadges();
 
       // 下拉刷新（仅刷新红点）
       App.initPullToRefresh(document.getElementById('mainContent'), function () {
-        var b = document.getElementById('msgBadge');
-        if (b) b.style.display = Storage.getUnreadCount() > 0 ? 'block' : 'none';
+        renderBadges();
         App.toastSuccess('已刷新');
         return Promise.resolve();
       });
