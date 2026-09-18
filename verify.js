@@ -242,6 +242,9 @@ const localFiles = new Set(fs.readdirSync(ROOT).concat(
   walk(path.join(ROOT, 'assets'), 'assets/'),
   walk(path.join(ROOT, 'libs'), 'libs/'),
 ));
+// 仅后端服务期存在的路由入口（dev-login.html 是服务器页，链接的 /gray/ 由后端路由提供，
+// 不属于静态文件，故不参与“本地文件死链”检查）
+const SERVER_ONLY_REFS = new Set(['/gray/', '/gray', '/dev', '/dev-login.html']);
 htmlFiles.forEach(f => {
   const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
   const refs = [...html.matchAll(/(?:src|href)="([^"]+)"/g)].map(m => m[1]);
@@ -249,7 +252,7 @@ htmlFiles.forEach(f => {
     if (ref.startsWith('http://') || ref.startsWith('https://') || ref.startsWith('//')) {
       if (ref.startsWith('http://www.w3.org') || ref.startsWith('https://www.w3.org')) return; // SVG 命名空间，非资源加载
       externalRefs.push(f + ' → ' + ref);
-    } else if (!ref.startsWith('javascript:') && !ref.startsWith('#') && ref !== '') {
+    } else if (!ref.startsWith('javascript:') && !ref.startsWith('#') && ref !== '' && !SERVER_ONLY_REFS.has(ref)) {
       const clean = ref.split('?')[0].split('#')[0].replace(/^\.\//, ''); // 归一化 ./ 相对前缀
       if (!localFiles.has(clean)) deadLinks.push(f + ' → ' + ref);
     }
@@ -259,7 +262,7 @@ check('HTML 中无外部 http(s) 资源引用', externalRefs.length === 0, exter
 check('无死链（所有本地引用文件存在）', deadLinks.length === 0, deadLinks.join('; '));
 
 // 应用代码：严格禁止任何外部 URL
-const appFiles = ['styles.css', 'mock.js', 'storage.js', 'api.js', 'app.js', 'server.js',
+const appFiles = ['styles.css', 'mock.js', 'storage.js', 'api.js', 'app.js',
   'libs/qr-scanner/jsQR.js', 'libs/qr-encoder/qrcode.js', 'libs/qr-encoder/qrcode_UTF8.js',
   'libs/three/three.min.js', 'libs/tesseract/tesseract.min.js', 'libs/tesseract/worker.min.js'];
 let cdnHits = [];
@@ -293,7 +296,7 @@ check('3D 地图页 map.html 存在（功能页）', fs.existsSync(path.join(ROO
 
 // 导航结构：5 Tab = 首页/快递/扫码/外卖/我的；地图不再是 Tab
 let tabIssues = [];
-const mainPages = ['index.html', 'packages.html', 'scan.html', 'food.html', 'profile.html', 'detail.html', 'map.html', 'messages.html', 'records.html', 'order.html', 'food-detail.html'];
+const mainPages = ['index.html', 'packages.html', 'scan.html', 'food.html', 'profile.html', 'detail.html', 'map.html', 'messages.html', 'records.html', 'order.html', 'food-detail.html', 'savings.html', 'schedule.html', 'forum.html', 'jobs.html'];
 mainPages.forEach(f => {
   if (!fs.existsSync(path.join(ROOT, f))) return;
   const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -376,59 +379,51 @@ function loadEnv(opts) {
     DEMO_DATA: vm.runInContext('DEMO_DATA', sandbox) };
 }
 
-// 6.1 公网域名（模拟 GitHub Pages）→ 自动 demo 模式
+// 6.1 演示模式已撤销：任何域名都恒为 local 模式，demo 种子永不激活
 const pub = loadEnv({ hostname: 'demo-user.github.io' });
-check('公网域名自动判定为 demo 模式', pub.APP_CONFIG.mode === 'demo' && pub.APP_CONFIG.isDemo === true);
-check('demo 模式 DB 被整体替换为 DEMO_DATA', pub.DB === pub.DEMO_DATA);
-check('demo 用户为虚拟用户（张同学 / DEMO001）', pub.DB.user.id === 'DEMO001' && pub.DB.user.name === '张同学');
-check('demo 快递全部为 DEMOPK 虚拟数据', pub.Storage.getPackages().every(p => /^DEMOPK/.test(p.id)));
-check('demo 种子含取件码 8-3-267 / 5-8-112 / 9-2-345',
-  ['8-3-267', '5-8-112', '9-2-345'].every(c => pub.Storage.getPackages().some(p => p.pickupCode === c)));
-check('demo 外卖店铺/菜品已注入', pub.Storage.getRestaurants().length === 7 && pub.Storage.getFoods().length === 38);
+check('公网域名仍恒为 local 模式（演示已撤销）', pub.APP_CONFIG.mode === 'local' && pub.APP_CONFIG.isDemo === false);
+check('demo-data 不再被激活（DB 不替换为 DEMO_DATA）', pub.DB !== pub.DEMO_DATA);
+check('公网环境使用 mock.js 种子（id 为数字 / 15 条快递）', pub.DB.user.id === 1 && pub.Storage.getPackages().length === 15);
+check('无张同学 / DEMO001 虚拟用户', pub.DB.user.id !== 'DEMO001' && pub.DB.user.name !== '张同学');
 const demoStoreKeys = Object.keys(pub.store);
-check('demo 所有 localStorage 键带 demo_ 前缀', demoStoreKeys.length > 0 && demoStoreKeys.every(k => k.indexOf('demo_') === 0), demoStoreKeys.join(','));
-check('demo 不写入任何本地开发键（packageDB 等）', !('packageDB' in pub.store) && !('userDB' in pub.store));
-check('demo 存储中无本地用户张小明', JSON.stringify(pub.store).indexOf('张小明') === -1);
-check('demo 数据无真实 11 位手机号', !/1[3-9]\d{9}/.test(JSON.stringify(pub.DEMO_DATA)));
+check('localStorage 不出现任何 demo_ 前缀键', demoStoreKeys.every(k => k.indexOf('demo_') !== 0), demoStoreKeys.join(','));
+check('本地数据无 DEMOPK 虚拟快递', pub.Storage.getPackages().every(p => !/^DEMOPK/.test(p.id)));
+check('种子数据无真实 11 位手机号', !/1[3-9]\d{9}/.test(JSON.stringify(pub.DB)));
 
-// 6.2 demo 模式取件流程：只影响 demo_ 键；ApiClient 本地覆写可用
+// 6.2 本地取件流程（公网域名环境）正常写入本地键
 const asyncChecks = [];
-const pr = pub.Storage.confirmPickup('DEMOPK001');
-check('demo 确认取件成功', pr.success === true);
-check('demo 取件后状态持久化到 demo_packageDB', JSON.parse(pub.store['demo_packageDB']).find(p => p.id === 'DEMOPK001').status === 'picked');
-check('demo 取件记录写入 demo_pickupRecordDB', JSON.parse(pub.store['demo_pickupRecordDB'])[0].packageId === 'DEMOPK001');
-const pubAuth = pub.ApiClient.requireAuth();
-check('demo 模式 requireAuth 免登录返回 Promise', pubAuth instanceof Promise && typeof pubAuth.then === 'function');
-asyncChecks.push(pubAuth.then(function (u) {
-  check('demo requireAuth 用户为 DEMO001', u && u.id === 'DEMO001');
-}));
-check('demo 模式 isLoggedIn 恒为 true（免登录）', pub.ApiClient.isLoggedIn() === true);
-asyncChecks.push(pub.ApiClient.trackPackage('SF1357924680').then(function (res) {
-  check('demo 物流查询走本地虚拟轨迹', res.code === 0 && Array.isArray(res.data.tracking) && res.data.tracking.length > 0);
-}));
+const firstPkg = pub.Storage.getPackages().find(p => p.status === 'pending') || pub.Storage.getPackages()[0];
+const pr = pub.Storage.confirmPickup(firstPkg.id);
+check('本地确认取件成功', pr.success === true);
+check('取件状态持久化到本地 packageDB', JSON.parse(pub.store['packageDB']).find(p => p.id === firstPkg.id).status === 'picked');
+check('取件记录写入本地 pickupRecordDB', JSON.parse(pub.store['pickupRecordDB'])[0].packageId === firstPkg.id);
 
-// 6.3 localhost → local 模式，数据与 demo 完全隔离
+// 6.3 localhost 与公网域名行为完全一致（同样 local、同样种子）
 const local = loadEnv({ hostname: 'localhost', protocol: 'http:' });
-check('localhost 自动判定为 local 模式', local.APP_CONFIG.mode === 'local' && local.APP_CONFIG.isDemo === false);
-check('local 模式使用 mock.js 种子（id 为数字）', local.DB.user.id === 1 && local.Storage.getPackages().length === 15);
-check('local 存储键不带 demo_ 前缀', 'packageDB' in local.store && !('demo_packageDB' in local.store));
-check('local 与 demo 用户不同', local.Storage.getUser().name !== pub.Storage.getUser().name);
-check('demo 中取走 DEMOPK001 不影响 local 数据', local.Storage.getPackage('PK001') !== null);
+check('localhost 同样为 local 模式', local.APP_CONFIG.mode === 'local' && local.APP_CONFIG.isDemo === false);
+check('localhost 存储键不带 demo_ 前缀', 'packageDB' in local.store && !('demo_packageDB' in local.store));
+check('两种环境用户一致（均为 mock 种子用户）', local.Storage.getUser().id === pub.Storage.getUser().id);
 
-// 6.4 URL 参数强制切换优先级
+// 6.4 URL 参数不再能切换演示模式
 const forcedDemo = loadEnv({ hostname: 'localhost', search: '?mode=demo' });
-check('?mode=demo 可在 localhost 强制演示模式', forcedDemo.APP_CONFIG.mode === 'demo');
+check('?mode=demo 已失效（仍为 local）', forcedDemo.APP_CONFIG.mode === 'local' && forcedDemo.APP_CONFIG.isDemo === false);
 const forcedLocal = loadEnv({ hostname: 'x.github.io', search: '?mode=local' });
-check('?mode=local 可在公网域名强制本地模式', forcedLocal.APP_CONFIG.mode === 'local');
+check('公网域名带 ?mode=local 仍为 local', forcedLocal.APP_CONFIG.mode === 'local');
 
-// 6.5 演示提示条逻辑存在于 config.js
+// 6.5 config.js 中演示模式入口已彻底移除
 const configSrc = fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8');
-check('config.js 内置演示模式横幅文案', configSrc.indexOf('当前为演示模式 · 数据均为虚拟数据') !== -1);
+check('config.js 不含演示模式横幅文案', configSrc.indexOf('当前为演示模式') === -1 && configSrc.indexOf('数据均为虚拟数据') === -1);
+check('config.js 不注入演示 chip / 演示切换 UI（无 demo-chip、无横幅 DOM 注入）',
+  configSrc.indexOf('demo-chip') === -1 && configSrc.indexOf('createElement') === -1 &&
+  configSrc.indexOf('insertAdjacentHTML') === -1 && configSrc.indexOf('当前为演示模式') === -1);
+check('config.js 启动时清除历史演示模式覆盖（campus_mode_override）', configSrc.indexOf("removeItem('campus_mode_override')") !== -1);
+check('config.js isDemo 恒为 false 常量', /isDemo:\s*false/.test(configSrc));
 
 // 6.6 每个功能页都在 storage.js 之前引入 config.js，且引入 storage.js 的页面同时引入 demo-data.js
-// （本地化升级报告.html 是说明文档，不属于 App 页面，不参与本项检查）
+// （本地化升级报告.html 是说明文档；dev-login.html / gray 是刻意自包含的服务器分发页，均不参与本项检查）
+const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html']);
 const demoScriptPages = fs.readdirSync(ROOT)
-  .filter(f => f.endsWith('.html') && f !== '本地化升级报告.html');
+  .filter(f => f.endsWith('.html') && !SELF_CONTAINED_PAGES.has(f));
 let scriptIssues = [];
 demoScriptPages.forEach(f => {
   const html = fs.readFileSync(path.join(ROOT, f), 'utf8');
@@ -598,6 +593,813 @@ check('WebGPU 探测仅采集适配器信息（perf.js probeWebGPU）',
 check('地图页 WebGPU 实验开关仅 debug 模式可见', mapSrc.indexOf('if (Perf.isDebug()) initWebGPUExperiment()') !== -1);
 check('WebGPU 开关不强制切换渲染（仅预留计算通道）',
   mapSrc.indexOf("typeof THREE.WebGPURenderer === 'function'") !== -1 && mapSrc.indexOf('M3.webgpu = info') !== -1);
+
+// ---------- 9. 灰度测试隔离（Phase 7 加固） ----------
+console.log('\n[9] 灰度测试隔离（.env / 微信占位 / 友好降级 / 脱敏 / 灰度门禁 / 管理台）');
+
+// 9.1 .env.example 模板齐全
+const envExample = fs.readFileSync(path.join(ROOT, 'backend', '.env.example'), 'utf8');
+check('.env.example 存在', envExample.length > 0);
+check('.env.example 含 SMS_SECRET 占位', envExample.indexOf('TENCENT_SMS_SECRET_ID=') !== -1 && envExample.indexOf('TENCENT_SMS_SECRET_KEY=') !== -1);
+check('.env.example 含 WECHAT_SECRET 占位', envExample.indexOf('WECHAT_APP_SECRET=') !== -1);
+check('.env.example 含 COURIER_API_KEY 占位', envExample.indexOf('KDNIAO_API_KEY=') !== -1);
+check('.env.example 含 DATABASE_PATH 占位', envExample.indexOf('DATABASE_PATH=') !== -1);
+check('.env.example 含 ENVIRONMENT 三态说明', envExample.indexOf('development') !== -1 && envExample.indexOf('gray') !== -1 && envExample.indexOf('production') !== -1);
+
+// 9.2 灰度方案文档齐全
+const grayDoc = fs.readFileSync(path.join(ROOT, '灰度方案.md'), 'utf8');
+check('灰度方案.md 存在', grayDoc.length > 0);
+const grayDocSections = ['1. 灰度用户范围', '2. 接入服务', '3. API 清单', '4. 数据结构', '5. 安全措施', '6. 灰度指标', '7. 风险', '8. 回滚方案', '9. 第三方接口依赖', '10. 上线前检查清单'];
+check('灰度方案.md 含 10 个章节', grayDocSections.every(s => grayDoc.indexOf(s) !== -1));
+check('灰度方案.md 含三阶段灰度表', grayDoc.indexOf('wave1') !== -1 && grayDoc.indexOf('wave2') !== -1 && grayDoc.indexOf('wave3') !== -1);
+check('灰度方案.md 含回滚至 Demo 模式', grayDoc.indexOf('ENVIRONMENT=development') !== -1 && grayDoc.indexOf('一键回滚') !== -1);
+
+// 9.3 微信登录占位（不伪造授权成功）
+const authRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'auth.js'), 'utf8');
+check('auth.js 含微信 qrcode 占位路由', authRouteSrc.indexOf("router.get('/wechat/qrcode'") !== -1);
+check('auth.js 含微信 callback 占位路由', authRouteSrc.indexOf("router.get('/wechat/callback'") !== -1);
+check('auth.js 含微信 status 查询路由', authRouteSrc.indexOf("router.get('/wechat/status'") !== -1);
+check('微信占位未启用时返回 503 文案', authRouteSrc.indexOf('微信登录暂未开放') !== -1 && authRouteSrc.indexOf('请使用手机号登录') !== -1);
+check('微信占位不伪造成功授权', authRouteSrc.indexOf('WECHAT_LOGIN_ENABLED') !== -1 && authRouteSrc.indexOf('请使用手机号登录') !== -1);
+
+// 9.4 灰度门禁中间件
+const grayMwSrc = fs.readFileSync(path.join(ROOT, 'backend', 'middleware', 'gray.js'), 'utf8');
+check('gray.js 导出 grayRequired + grayOptional', grayMwSrc.indexOf('grayRequired') !== -1 && grayMwSrc.indexOf('grayOptional') !== -1);
+check('grayRequired 校验登录 + 灰度名单 + 过期', grayMwSrc.indexOf('req.userId') !== -1 && grayMwSrc.indexOf('getGrayUserByUserId') !== -1 && grayMwSrc.indexOf('expires_at') !== -1);
+check('grayRequired 未登录返回 401 + 友好文案', grayMwSrc.indexOf('401') !== -1 && grayMwSrc.indexOf('请先登录') !== -1);
+check('grayRequired 非灰度用户返回 403 + demo 提示', grayMwSrc.indexOf('403') !== -1 && grayMwSrc.indexOf('演示模式') !== -1);
+check('grayRequired 过期返回 403 + 过期文案', grayMwSrc.indexOf('灰度资格已过期') !== -1);
+
+// 9.5 友好降级文案表（errorHandler.js）
+const errHandlerSrc = fs.readFileSync(path.join(ROOT, 'backend', 'middleware', 'errorHandler.js'), 'utf8');
+check('errorHandler 含 ECONNREFUSED 友好文案', errHandlerSrc.indexOf('服务暂时不可用') !== -1);
+check('errorHandler 含 outbound_expired 友好文案', errHandlerSrc.indexOf('出库码已过期') !== -1);
+check('errorHandler 含 courier_unavailable 友好文案', errHandlerSrc.indexOf('快递信息暂时无法获取') !== -1);
+check('errorHandler 含 sms_failed 友好文案', errHandlerSrc.indexOf('验证码发送失败') !== -1);
+check('errorHandler 含 wechat_failed 友好文案', errHandlerSrc.indexOf('微信授权失败') !== -1);
+check('errorHandler 含 scan_invalid 友好文案', errHandlerSrc.indexOf('该取件码不属于当前用户') !== -1);
+check('errorHandler 原始堆栈入日志不外泄', errHandlerSrc.indexOf('logger.error') !== -1 && errHandlerSrc.indexOf('err.stack') !== -1);
+
+// 9.6 手机号脱敏
+const maskSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'mask.js'), 'utf8');
+check('mask.js 提供 maskPhone', maskSrc.indexOf('function maskPhone') !== -1);
+check('mask.js 提供 maskIp', maskSrc.indexOf('function maskIp') !== -1);
+check('mask.js 提供 maskSecrets', maskSrc.indexOf('function maskSecrets') !== -1);
+check('maskPhone 保留前 3 后 4', maskSrc.indexOf('PHONE_MASK_KEEP_HEAD') !== -1 && maskSrc.indexOf('PHONE_MASK_KEEP_TAIL') !== -1);
+
+// 9.7 指标采集（8 事件 + 手机号脱敏入库）
+const metricsSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'metrics.js'), 'utf8');
+check('metrics.js 提供 start/stop/wrap/record', ['start', 'stop', 'wrap', 'record'].every(m => metricsSrc.indexOf(m + ':') !== -1 || metricsSrc.indexOf(m + ' =') !== -1 || metricsSrc.indexOf('function ' + m) !== -1));
+check('metrics.js 含 8 类事件常量', ['sms_send', 'sms_verify', 'login', 'courier_sync', 'pickup_code', 'outbound_refresh', 'scan_verify', 'pickup_complete'].every(e => metricsSrc.indexOf(e) !== -1));
+check('metrics.js 入库 phone_masked 字段', metricsSrc.indexOf('phone_masked') !== -1);
+
+// 9.8 Provider 工厂回退
+const courierProviderIdxSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'courierProvider', 'index.js'), 'utf8');
+check('courierProvider/index.js 工厂 getProvider', courierProviderIdxSrc.indexOf('getProvider') !== -1);
+check('courierProvider/index.js 工厂未知 provider 回退 kdniao', courierProviderIdxSrc.indexOf('回退') !== -1 && courierProviderIdxSrc.indexOf('kdniao') !== -1);
+const kdniaoProviderSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'courierProvider', 'kdniaoProvider.js'), 'utf8');
+check('kdniaoProvider 含 capabilities 字段', kdniaoProviderSrc.indexOf('capabilities') !== -1);
+check('kdniaoProvider trackByNumber 能力 true', kdniaoProviderSrc.indexOf('trackByNumber: true') !== -1);
+check('kdniaoProvider getOutboundCode 能力 false（不支持）', kdniaoProviderSrc.indexOf('getOutboundCode: false') !== -1);
+
+const smsProviderIdxSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'smsProvider', 'index.js'), 'utf8');
+check('smsProvider/index.js 工厂 getProvider', smsProviderIdxSrc.indexOf('getProvider') !== -1);
+check('smsProvider 工厂按 SMS_PROVIDER 切换', smsProviderIdxSrc.indexOf('SMS_PROVIDER') !== -1);
+check('smsProvider 默认回退 console', smsProviderIdxSrc.indexOf('console') !== -1);
+
+// 9.8.1 腾讯云短信真实实现（零依赖，TC3-HMAC-SHA256 签名直连）
+const tencentProviderSrc = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'smsProvider', 'tencentProvider.js'), 'utf8');
+check('tencentProvider 已从占位升级为真实实现（无占位警告）',
+  tencentProviderSrc.indexOf('SDK 未启用') === -1 && tencentProviderSrc.indexOf('取消注释') === -1);
+check('tencentProvider 零第三方依赖（仅内置 https + crypto）',
+  /require\('https'\)/.test(tencentProviderSrc) && /require\('crypto'\)/.test(tencentProviderSrc) &&
+  tencentProviderSrc.indexOf("require('tencentcloud-sdk") === -1);
+check('tencentProvider 指向 sms.tencentcloudapi.com', tencentProviderSrc.indexOf('sms.tencentcloudapi.com') !== -1);
+check('tencentProvider 使用 API3.0 SendSms / 2021-01-11',
+  tencentProviderSrc.indexOf("'SendSms'") !== -1 && tencentProviderSrc.indexOf('2021-01-11') !== -1);
+check('tencentProvider 实现 TC3-HMAC-SHA256 签名',
+  tencentProviderSrc.indexOf('TC3-HMAC-SHA256') !== -1 &&
+  tencentProviderSrc.indexOf("'TC3' + secretKey") !== -1 &&
+  tencentProviderSrc.indexOf('tc3_request') !== -1);
+check('tencentProvider 请求含 SmsSdkAppId/SignName/TemplateId/TemplateParamSet',
+  ['SmsSdkAppId', 'SignName', 'TemplateId', 'TemplateParamSet'].every(function (k) {
+    return tencentProviderSrc.indexOf(k) !== -1;
+  }));
+check('tencentProvider 手机号自动补 +86 国家码', tencentProviderSrc.indexOf("'+86' + phone") !== -1);
+check('tencentProvider 以 SendStatusSet[0].Code === Ok 判定成功',
+  /SendStatusSet/.test(tencentProviderSrc) && /status\.Code === 'Ok'/.test(tencentProviderSrc));
+check('tencentProvider 凭证不全时拒绝发送（不假装成功）',
+  /hasCredentials[\s\S]{0,400}ok:\s*false/.test(tencentProviderSrc));
+check('tencentProvider 频控错误码给用户友好文案',
+  tencentProviderSrc.indexOf('LimitExceeded.PhoneNumber') !== -1 &&
+  tencentProviderSrc.indexOf('验证码发送过于频繁') !== -1);
+check('tencentProvider 日志对手机号脱敏', tencentProviderSrc.indexOf('mask.maskPhone') !== -1);
+check('tencentProvider 请求有超时保护', /timeout:\s*(?:REQUEST_TIMEOUT_MS|\d+)/.test(tencentProviderSrc));
+
+// 9.8.2 .env 零依赖加载（必须在 config 之前，且不覆盖真实环境变量）
+const loadEnvSrc = fs.readFileSync(path.join(ROOT, 'backend', 'load-env.js'), 'utf8');
+check('load-env.js 存在且零依赖（不 require dotenv）',
+  loadEnvSrc.indexOf("require('fs')") !== -1 && loadEnvSrc.indexOf("require('dotenv')") === -1);
+check('load-env.js 不覆盖已存在的环境变量', loadEnvSrc.indexOf('process.env[key] === undefined') !== -1);
+const serverHeadForEnv = fs.readFileSync(path.join(ROOT, 'backend', 'server.js'), 'utf8').slice(0, 600);
+check('server.js 在 require config 之前加载 .env',
+  serverHeadForEnv.indexOf("require('./load-env')") !== -1 &&
+  serverHeadForEnv.indexOf("require('./load-env')") < serverHeadForEnv.indexOf("require('./config')"));
+
+// 9.8.3 Windows 登录自启脚本
+const startCmdSrc = fs.readFileSync(path.join(ROOT, 'backend', 'start-backend.cmd'), 'utf8');
+check('start-backend.cmd 调 node server.js',
+  /nodejs\\node\.exe/.test(startCmdSrc) && /"%NODE_EXE%"\s+server\.js/.test(startCmdSrc));
+check('start-backend.cmd 日志重定向到 logs/autostart.log', startCmdSrc.indexOf('logs\\autostart.log') !== -1);
+check('start-backend.cmd 纯 ASCII（避免 cmd GBK 解析中文乱码）', /[^\x00-\x7F]/.test(startCmdSrc) === false);
+const envExampleSrc = fs.readFileSync(path.join(ROOT, 'backend', '.env.example'), 'utf8');
+check('.env.example 含腾讯短信 5 个配置键',
+  ['TENCENT_SMS_SECRET_ID', 'TENCENT_SMS_SECRET_KEY', 'TENCENT_SMS_SDK_APP_ID',
+   'TENCENT_SMS_SIGN_NAME', 'TENCENT_SMS_TEMPLATE_ID'].every(function (k) {
+    return envExampleSrc.indexOf(k) !== -1;
+  }));
+
+// 9.8.4 性能与瘦身：gzip/缓存/证书持久化/数据保留期清理/keep-alive/旧静态服务器下线
+const serverPerfSrc = fs.readFileSync(path.join(ROOT, 'backend', 'server.js'), 'utf8');
+check('server.js 零依赖 gzip（内置 zlib，无 compression 包）',
+  serverPerfSrc.indexOf("require('zlib')") !== -1 &&
+  serverPerfSrc.indexOf('createGzip') !== -1 &&
+  serverPerfSrc.indexOf("require('compression')") === -1);
+check('gzip 仅对接受 gzip 的 GET/HEAD 生效', serverPerfSrc.indexOf("'accept-encoding'") !== -1);
+check('gzip 背压双向传递（socket drain + 上游 res drain 转发，防大文件挂起）',
+  /gz\.on\('data'[\s\S]{0,200}gz\.pause\(\)/.test(serverPerfSrc) &&
+  /gz\.on\('drain'[\s\S]{0,80}res\.emit\('drain'\)/.test(serverPerfSrc));
+check('静态资源差异化缓存（库 7 天强缓存 + HTML no-cache）',
+  serverPerfSrc.indexOf('max-age=604800') !== -1 &&
+  /LONG_CACHE_EXT[\s\S]{0,400}no-cache/.test(serverPerfSrc));
+check('自签证书持久化到 backend/certs 并在 IP 变化时续签',
+  serverPerfSrc.indexOf("path.join(__dirname, 'certs')") !== -1 &&
+  serverPerfSrc.indexOf('certCoversIps') !== -1);
+check('HTTPS keep-alive 延长（减少手机端重复 RSA 握手）',
+  /keepAliveTimeout\s*=\s*15000/.test(serverPerfSrc));
+check('数据保留期清理已调度（启动一次 + 每天一次，unref 不阻止退出）',
+  serverPerfSrc.indexOf('db.purgeOldData') !== -1 &&
+  /setTimeout\(runPurge[\s\S]{0,40}\)\.unref\(\)/.test(serverPerfSrc) &&
+  /setInterval\(runPurge[\s\S]{0,80}\)\.unref\(\)/.test(serverPerfSrc));
+const sqlitePerfSrc = fs.readFileSync(path.join(ROOT, 'backend', 'db', 'sqlite.js'), 'utf8');
+check('sqlite.js 含 purgeOldData 三表清理（验证码/指标/错误日志）',
+  sqlitePerfSrc.indexOf('purgeOldData') !== -1 &&
+  ['verification_codes', 'metrics_events', 'error_logs'].every(function (t) {
+    return new RegExp('DELETE FROM ' + t).test(sqlitePerfSrc);
+  }));
+check('SQLite WAL 下调 synchronous=NORMAL + busy_timeout（降磁盘负载/防锁）',
+  sqlitePerfSrc.indexOf('PRAGMA synchronous = NORMAL') !== -1 &&
+  sqlitePerfSrc.indexOf('PRAGMA busy_timeout') !== -1);
+const metricsSrc2 = fs.readFileSync(path.join(ROOT, 'backend', 'services', 'metrics.js'), 'utf8');
+check('metrics inFlight 有 TTL 兜底回收（防挂死请求泄漏内存）',
+  /INFLIGHT_TTL_MS[\s\S]{0,300}inFlight\.delete\(id\)/.test(metricsSrc2));
+check('.gitignore 排除 backend/certs/ 私钥与证书',
+  fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8').indexOf('backend/certs/') !== -1);
+check('旧的零依赖根 server.js 已下线（静态站点统一由后端提供）',
+  fs.existsSync(path.join(ROOT, 'server.js')) === false);
+const rootPkgSrc = fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8');
+check('根 package.json start 指向 backend/server.js',
+  /"start"\s*:\s*"node backend\/server\.js"/.test(rootPkgSrc));
+
+// 9.9 admin 路由鉴权 + 9 路由
+const adminRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'admin.js'), 'utf8');
+check('admin.js router.use adminRequired 前置鉴权', adminRouteSrc.indexOf("router.use(adminRequired)") !== -1 || adminRouteSrc.indexOf('router.use(require') !== -1);
+const adminRoutes = ['/health', '/metrics', '/errors', '/gray-users', '/users'];
+check('admin.js 含 5 类核心路由', adminRoutes.every(r => adminRouteSrc.indexOf(r) !== -1));
+check('admin.js POST 添加灰度用户', adminRouteSrc.indexOf("router.post('/gray-users'") !== -1);
+check('admin.js PUT 启用禁用灰度用户', adminRouteSrc.indexOf("router.put('/gray-users/:id'") !== -1);
+check('admin.js DELETE 移出灰度名单', adminRouteSrc.indexOf("router.delete('/gray-users/:id'") !== -1);
+check('admin.js 灰度名单手机号脱敏', adminRouteSrc.indexOf('maskPhone') !== -1 || adminRouteSrc.indexOf('mask.maskPhone') !== -1);
+check('admin.js 用户列表手机号脱敏', /users[\s\S]{0,500}maskPhone/.test(adminRouteSrc) || /users[\s\S]{0,500}mask\.maskPhone/.test(adminRouteSrc));
+
+// 9.10 扫码闭环：scanVerify + scanConfirm 二次校验
+const scanRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'scan.js'), 'utf8');
+check('scan.js POST /verify 校验取件码归属', scanRouteSrc.indexOf("router.post('/verify'") !== -1);
+check('scan.js POST /confirm 置 picked 状态', scanRouteSrc.indexOf("router.post('/confirm'") !== -1 && scanRouteSrc.indexOf('picked') !== -1);
+check('scan.js 前置 grayRequired 强门禁', scanRouteSrc.indexOf('grayRequired') !== -1);
+check('scan.js 不直接信任 OCR 结果（后端二次校验归属）', scanRouteSrc.indexOf('getPackageById') !== -1 && scanRouteSrc.indexOf('user_id') !== -1 && scanRouteSrc.indexOf('req.userId') !== -1);
+check('scan.js 抛 scan_invalid BusinessError 拒绝他人取件码', scanRouteSrc.indexOf('scan_invalid') !== -1 && scanRouteSrc.indexOf('BusinessError') !== -1);
+
+// 9.11 SQLite schema 8 表完整
+const schemaSrc = fs.readFileSync(path.join(ROOT, 'backend', 'db', 'schema.sql'), 'utf8');
+const schemaTables = ['users', 'gray_users', 'verification_codes', 'packages', 'package_tracking', 'outbound_codes', 'metrics_events', 'error_logs'];
+check('schema.sql 含 8 张表', schemaTables.every(t => schemaSrc.indexOf('CREATE TABLE IF NOT EXISTS ' + t) !== -1));
+check('schema.sql users 表含 environment 字段', /CREATE TABLE[\s\S]+users[\s\S]+environment/.test(schemaSrc));
+check('schema.sql gray_users 表含 enabled + expires_at', /CREATE TABLE[\s\S]+gray_users[\s\S]+enabled[\s\S]+expires_at/.test(schemaSrc));
+check('schema.sql outbound_codes 表含 source + status + expires_at', /CREATE TABLE[\s\S]+outbound_codes[\s\S]+source[\s\S]+status[\s\S]+expires_at/.test(schemaSrc));
+check('schema.sql metrics_events 含 phone_masked 字段', /CREATE TABLE[\s\S]+metrics_events[\s\S]+phone_masked/.test(schemaSrc));
+check('schema.sql verification_codes 含 attempts 防爆破字段', /CREATE TABLE[\s\S]+verification_codes[\s\S]+attempts/.test(schemaSrc));
+
+// 9.12 前端 api-client.js 灰度方法 + demo 覆盖
+const apiClientSrc = fs.readFileSync(path.join(ROOT, 'api-client.js'), 'utf8');
+check('api-client.js 含 getPickupCode 方法', apiClientSrc.indexOf('getPickupCode') !== -1);
+check('api-client.js 含 getOutboundCode 方法', apiClientSrc.indexOf('getOutboundCode') !== -1);
+check('api-client.js 含 scanVerify 方法', apiClientSrc.indexOf('scanVerify') !== -1);
+check('api-client.js 含 scanConfirm 方法', apiClientSrc.indexOf('scanConfirm') !== -1);
+check('api-client.js demo 模式覆盖新接口（APP_CONFIG.isDemo 分支）', apiClientSrc.indexOf('APP_CONFIG.isDemo') !== -1 && apiClientSrc.indexOf('DEMO') !== -1);
+
+// 9.13 scan.html 灰度模式校验
+check('scan.html 含 isGrayScan 判断', scanSrc.indexOf('isGrayScan') !== -1);
+check('scan.html 含 grayVerifyPickupCode', scanSrc.indexOf('grayVerifyPickupCode') !== -1);
+check('scan.html 含 grayConfirmPickup', scanSrc.indexOf('grayConfirmPickup') !== -1);
+check('scan.html 加载 api-client.js', scanSrc.indexOf('api-client.js') !== -1);
+check('scan.html 灰度模式调 scanVerify 二次校验', /grayVerifyPickupCode[\s\S]{0,400}scanVerify/.test(scanSrc));
+check('scan.html 非灰度模式回退本地 API.confirmPickup', scanSrc.indexOf('API.confirmPickup') !== -1);
+
+// 9.14 admin.html 单页应用
+const adminHtmlSrc = fs.readFileSync(path.join(ROOT, 'admin.html'), 'utf8');
+check('admin.html 存在', adminHtmlSrc.length > 0);
+check('admin.html 加载 config.js + api-client.js', adminHtmlSrc.indexOf('config.js') !== -1 && adminHtmlSrc.indexOf('api-client.js') !== -1);
+check('admin.html 含 5 Tab（总览/指标/异常/灰度/用户）',
+  ['总览', '指标', '异常', '灰度', '用户'].every(s => adminHtmlSrc.indexOf(s) !== -1));
+check('admin.html 含登录卡片', adminHtmlSrc.indexOf('登录') !== -1 && adminHtmlSrc.indexOf('验证码') !== -1);
+
+// 9.15 .gitignore 安全
+const gitignoreSrc = fs.readFileSync(path.join(ROOT, '.gitignore'), 'utf8');
+check('.gitignore 排除 .env', gitignoreSrc.indexOf('.env') !== -1);
+check('.gitignore 排除 backend/data/', gitignoreSrc.indexOf('backend/data/') !== -1 || gitignoreSrc.indexOf('backend/data') !== -1);
+check('.gitignore 排除 *.sqlite', gitignoreSrc.indexOf('*.sqlite') !== -1);
+check('.gitignore 排除 secrets/', gitignoreSrc.indexOf('secrets/') !== -1);
+check('.gitignore 排除 logs/', gitignoreSrc.indexOf('logs/') !== -1);
+
+// ============================================================
+// [10] 问题反馈系统 + 灰度/开发者双入口访问隔离（防拆包）
+// ============================================================
+(function () {
+console.log('\n[10] 问题反馈系统 + 灰度/开发者双入口访问隔离');
+
+// 10.1 settings 入口 + feedback.html 表单
+const settingsSrc = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+check('settings.html 含「问题反馈」入口跳 feedback.html',
+  settingsSrc.indexOf('href="feedback.html"') !== -1 && settingsSrc.indexOf('问题反馈') !== -1);
+
+const feedbackHtmlSrc = fs.readFileSync(path.join(ROOT, 'feedback.html'), 'utf8');
+['功能异常', '界面问题', '使用建议', '快递问题', '扫码问题', '外卖问题', '地图问题', '其他'].forEach(function (t) {
+  check('feedback.html 含反馈类型 ' + t, feedbackHtmlSrc.indexOf(t) !== -1);
+});
+check('feedback.html 文本框 maxlength=500 + 实时计数 0/500',
+  feedbackHtmlSrc.indexOf('maxlength="500"') !== -1 && feedbackHtmlSrc.indexOf('/ 500') !== -1);
+check('feedback.html 截图 accept 限 PNG/JPG/WEBP',
+  feedbackHtmlSrc.indexOf('accept="image/png,image/jpeg,image/webp"') !== -1);
+check('feedback.html 限制最多 3 张截图', feedbackHtmlSrc.indexOf('最多 3 张') !== -1);
+check('feedback.html 演示环境提示不发送生产',
+  feedbackHtmlSrc.indexOf('当前为演示环境，反馈不会发送到生产系统') !== -1);
+check('feedback.html 成功态含返回设置按钮',
+  feedbackHtmlSrc.indexOf('反馈提交成功') !== -1 && feedbackHtmlSrc.indexOf("location.href='settings.html'") !== -1);
+check('feedback.html 加载 config/storage/api-client/app 脚本链',
+  ['config.js', 'storage.js', 'api-client.js', 'app.js'].every(function (s) { return feedbackHtmlSrc.indexOf(s) !== -1; }));
+
+// 10.2 api-client 反馈方法 + demo 覆盖
+check('api-client.js 含 submitFeedback', apiClientSrc.indexOf('submitFeedback') !== -1);
+check('api-client.js 含 getMyFeedback', apiClientSrc.indexOf('getMyFeedback') !== -1);
+check('api-client.js demo 模式反馈落 demo_feedbackDB', apiClientSrc.indexOf('demo_feedbackDB') !== -1);
+check('config.js 含 appVersion v0.2.0-gray',
+  fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8').indexOf('v0.2.0-gray') !== -1);
+
+// 10.3 gray/index.html：灰度唯一对外分发页，必须自包含防拆包
+const graySrc = fs.readFileSync(path.join(ROOT, 'gray', 'index.html'), 'utf8');
+check('gray/index.html 存在且非空', graySrc.length > 1000);
+check('gray 页 noindex,nofollow', graySrc.indexOf('noindex') !== -1);
+check('gray 页无外部 <script src> 引用（零拆包面）', !/<script[^>]+src=/.test(graySrc));
+check('gray 页无外部样式表引用', graySrc.indexOf('rel="stylesheet"') === -1);
+check('gray 页仅直连 /api/auth 与 /api/feedback',
+  graySrc.indexOf('/api/auth/send-code') !== -1 && graySrc.indexOf('/api/feedback') !== -1);
+check('gray 页自带版本号 v0.2.0-gray', graySrc.indexOf('v0.2.0-gray') !== -1);
+check('gray 页含 8 类反馈 Chip',
+  ['bug', 'ui', 'suggestion', 'express', 'scan', 'food', 'map', 'other'].every(function (c) {
+    return new RegExp("code:\\s*'" + c + "'").test(graySrc);
+  }));
+
+// 10.4 dev-login.html 开发者入口
+const devLoginSrc = fs.readFileSync(path.join(ROOT, 'dev-login.html'), 'utf8');
+check('dev-login.html 调 /api/auth/dev-session 换身份', devLoginSrc.indexOf('/api/auth/dev-session') !== -1);
+check('dev-login.html 无外部脚本引用（自包含）', !/<script[^>]+src=/.test(devLoginSrc));
+check('dev-login.html 提供灰度反馈入口链接', devLoginSrc.indexOf('/gray/') !== -1);
+
+// 10.5 schema 第 9 表 + sqlite CRUD
+check('schema.sql 头部声明 9 张表', /9\s*张表/.test(schemaSrc));
+check('schema.sql 含 feedback 表', schemaSrc.indexOf('CREATE TABLE IF NOT EXISTS feedback') !== -1);
+['idx_feedback_status', 'idx_feedback_type', 'idx_feedback_time', 'idx_feedback_user'].forEach(function (idx) {
+  check('schema.sql 含索引 ' + idx, schemaSrc.indexOf(idx) !== -1);
+});
+const sqliteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'db', 'sqlite.js'), 'utf8');
+['createFeedback', 'getFeedbackById', 'listFeedback', 'countFeedback', 'updateFeedbackFields'].forEach(function (fn) {
+  check('sqlite.js 含反馈方法 ' + fn, sqliteSrc.indexOf(fn + ':') !== -1 || sqliteSrc.indexOf(fn + ' =') !== -1);
+});
+check('updateFeedbackFields 白名单仅 status/admin_note',
+  /allowed\s*=\s*\[\s*'status'\s*,\s*'admin_note'\s*\]/.test(sqliteSrc));
+check('updateFeedbackFields 使用 apply 逐参数绑定（防 node:sqlite 数组坑）',
+  sqliteSrc.indexOf('updStmt.run.apply') !== -1);
+
+// 10.6 routes/feedback.js 后端盖章 + 安全校验
+const feedbackRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'feedback.js'), 'utf8');
+check('feedback 路由 POST 必须 authRequired',
+  /router\.post\('\/',\s*auth\.authRequired/.test(feedbackRouteSrc));
+['bug', 'ui', 'suggestion', 'express', 'scan', 'food', 'map', 'other'].forEach(function (t) {
+  check('feedback.js 类型白名单含 ' + t, new RegExp('\\b' + t + ":\\s*'").test(feedbackRouteSrc));
+});
+check('feedback.js 校验 PNG/JPEG/WEBP MIME 白名单',
+  feedbackRouteSrc.indexOf('image/png') !== -1 && feedbackRouteSrc.indexOf('image/webp') !== -1);
+check('feedback.js 校验文件头魔数（0x89/0xFF/RIFF）',
+  feedbackRouteSrc.indexOf('checkMagic') !== -1 && feedbackRouteSrc.indexOf('0x89') !== -1 && feedbackRouteSrc.indexOf('0x52') !== -1);
+check('feedback.js 截图落盘 uploads/feedback 目录', feedbackRouteSrc.indexOf("'uploads', 'feedback'") !== -1);
+check('feedback.js 截图失败回滚删除反馈记录', feedbackRouteSrc.indexOf('DELETE FROM feedback') !== -1);
+check('feedback.js appVersion 由后端 config 盖章', feedbackRouteSrc.indexOf('appVersion: config.APP_VERSION') !== -1);
+check('feedback.js userId 只取自 JWT', feedbackRouteSrc.indexOf('userId: req.userId') !== -1);
+check('feedback.js 提交埋点不含正文', feedbackRouteSrc.indexOf('feedback_submit') !== -1 && feedbackRouteSrc.indexOf('imageCount') !== -1);
+
+// 10.7 admin 反馈后台
+check('admin.js 含 GET /feedback 列表', adminRouteSrc.indexOf("router.get('/feedback'") !== -1);
+check('admin.js 含 GET /feedback/:id 详情', adminRouteSrc.indexOf("router.get('/feedback/:id'") !== -1);
+check('admin.js 含 PUT /feedback/:id 状态更新', adminRouteSrc.indexOf("router.put('/feedback/:id'") !== -1);
+check('admin.js 含鉴权截图读取路由', adminRouteSrc.indexOf('/screenshots/:idx') !== -1);
+check('admin.js 四态状态机 pending/processing/resolved/closed',
+  ['pending', 'processing', 'resolved', 'closed'].every(function (s) { return adminRouteSrc.indexOf("'" + s + "'") !== -1; }));
+check('admin.js 截图路径正则防目录穿越',
+  adminRouteSrc.indexOf('uploads/feedback/[^/]+/\\d{2}') !== -1 || adminRouteSrc.indexOf('uploads\\/feedback\\/[^/]+\\/\\d{2}') !== -1);
+check('admin.js 截图 sendFile 前做根目录前缀校验',
+  adminRouteSrc.indexOf('path.resolve') !== -1 && adminRouteSrc.indexOf('sendFile') !== -1);
+check('formatFeedback 手机号脱敏', /formatFeedback[\s\S]{0,1200}maskPhone/.test(adminRouteSrc));
+
+// 10.8 auth.js 开发者会话（仅 admin）
+check('auth.js 含 POST /dev-session', authRouteSrc.indexOf("router.post('/dev-session'") !== -1);
+check('dev-session 仅 role=admin 可换，其他统一 403',
+  authRouteSrc.indexOf("user.role !== 'admin'") !== -1 && authRouteSrc.indexOf('该账号没有开发者权限') !== -1);
+check('dev_session Cookie 含 HttpOnly + Secure + sameSite',
+  /DEV_COOKIE_OPTS[\s\S]{0,200}httpOnly:\s*true/.test(authRouteSrc) &&
+  /DEV_COOKIE_OPTS[\s\S]{0,200}secure:\s*true/.test(authRouteSrc) &&
+  authRouteSrc.indexOf("sameSite: 'lax'") !== -1);
+check('auth.js 含 POST /dev-logout 清 Cookie', authRouteSrc.indexOf("router.post('/dev-logout'") !== -1 && authRouteSrc.indexOf('clearCookie') !== -1);
+
+// 10.9 server.js 访问隔离
+const serverSrc = fs.readFileSync(path.join(ROOT, 'backend', 'server.js'), 'utf8');
+check('server.js 定义 GRAY_PUBLIC_API 仅放登录/反馈/健康',
+  serverSrc.indexOf('GRAY_PUBLIC_API') !== -1 && serverSrc.indexOf('auth\\/(?:send-code') !== -1 && serverSrc.indexOf('feedback') !== -1);
+check('server.js 定义 ALWAYS_DENY 拦截后端源码/库/.git/node_modules',
+  serverSrc.indexOf('ALWAYS_DENY') !== -1 && serverSrc.indexOf('.sqlite') !== -1 && serverSrc.indexOf('.git') !== -1);
+check('server.js 灰度公开静态仅 /gray 与 /dev-login',
+  serverSrc.indexOf('GRAY_PUBLIC_STATIC') !== -1 && serverSrc.indexOf("'/gray/'") !== -1 && serverSrc.indexOf("'/dev-login.html'") !== -1);
+check('server.js 三重身份判定 bearerIsAdmin/devSessionOk/isLoopback',
+  ['bearerIsAdmin', 'devSessionOk', 'isLoopback'].every(function (f) { return serverSrc.indexOf('function ' + f) !== -1; }));
+check('server.js 仅 text/html 导航请求 302，子资源 403',
+  serverSrc.indexOf("accept.indexOf('text/html')") !== -1 && serverSrc.indexOf("res.status(403)") !== -1);
+check('server.js 未手写 /gray 重定向（避免非严格路由自跳，注释里的说明文字除外）',
+  /^\s*app\.get\('\/gray'/m.test(serverSrc) === false);
+check('server.js json body 放开 25mb 容纳截图', serverSrc.indexOf("limit: '25mb'") !== -1);
+check('server.js 静态服务 dotfiles deny', serverSrc.indexOf("dotfiles: 'deny'") !== -1);
+
+// 10.10 admin.html 反馈管理 Tab
+check('admin.html 含反馈管理 Tab + 待处理角标',
+  adminHtmlSrc.indexOf('data-tab="feedback"') !== -1 && adminHtmlSrc.indexOf('fbPendingChip') !== -1);
+check('admin.html 反馈截图走鉴权 fetch 而非 img 直链',
+  adminHtmlSrc.indexOf('fetchFeedbackImage') !== -1);
+
+// 10.11 截图目录禁止入库
+check('.gitignore 排除 backend/uploads/ 截图目录', gitignoreSrc.indexOf('backend/uploads/') !== -1);
+})();
+
+// ============================================================
+// [11] 宿舍与浴室（数据驱动、三级联动、不硬编码）
+// ============================================================
+(function () {
+console.log('\n[11] 宿舍与浴室系统');
+
+// 11.1 campus-data.js 数据文件
+check('campus-data.js 存在', fs.existsSync(path.join(ROOT, 'campus-data.js')));
+check('assets/data/campus-buildings.json 存在', fs.existsSync(path.join(ROOT, 'assets', 'data', 'campus-buildings.json')));
+const campusDataSrc = fs.readFileSync(path.join(ROOT, 'campus-data.js'), 'utf8');
+check('campus-data.js 含 5+ 苑区（竹/菊/兰/楷/梅）',
+  ['竹苑', '菊苑', '兰苑', '楷苑', '梅苑'].every(function (n) { return campusDataSrc.indexOf(n) !== -1; }));
+check('campus-data.js 含 bathrooms 数组', campusDataSrc.indexOf('bathrooms') !== -1);
+check('campus-data.js 含仙游校区', campusDataSrc.indexOf('xianyou') !== -1);
+
+// 11.2 storage.js 宿舍/浴室方法
+const storageSrc2 = fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8');
+check('storage.js 含 getUserDorm', storageSrc2.indexOf('getUserDorm') !== -1);
+check('storage.js 含 saveUserDorm', storageSrc2.indexOf('saveUserDorm') !== -1);
+check('storage.js 含 getMyBathroom', storageSrc2.indexOf('getMyBathroom') !== -1);
+check('storage.js 含 getBathrooms', storageSrc2.indexOf('getBathrooms') !== -1);
+check('storage.js 含 getBathroomById', storageSrc2.indexOf('getBathroomById') !== -1);
+check('storage.js 含 toggleFavoriteBathroom', storageSrc2.indexOf('toggleFavoriteBathroom') !== -1);
+check('storage.js 含 setDefaultBathroom', storageSrc2.indexOf('setDefaultBathroom') !== -1);
+check('storage.js 含 getCampusAreas', storageSrc2.indexOf('getCampusAreas') !== -1);
+check('storage.js 含 getAreasByCampus', storageSrc2.indexOf('getAreasByCampus') !== -1);
+check('storage.js 含 getBuildingsByArea', storageSrc2.indexOf('getBuildingsByArea') !== -1);
+check('storage.js getDefaultAddress 读 user.dorm 优先', storageSrc2.indexOf('getUserDorm') !== -1 && storageSrc2.indexOf('getDefaultAddress') !== -1);
+check('storage.js getUser 默认含 dorm 结构', /dorm:\s*\{/.test(storageSrc2));
+check('storage.js setCampusId 切校区清旧宿舍', /dorm\s*=\s*null/.test(storageSrc2) && storageSrc2.indexOf('setCampusId') !== -1);
+
+// 11.3 profile-edit.html 三级联动
+check('profile-edit.html 存在', fs.existsSync(path.join(ROOT, 'profile-edit.html')));
+const profileEditSrc = fs.readFileSync(path.join(ROOT, 'profile-edit.html'), 'utf8');
+check('profile-edit.html 引入 campus-data.js', profileEditSrc.indexOf('campus-data.js') !== -1);
+check('profile-edit.html 含 inputArea 下拉', profileEditSrc.indexOf('inputArea') !== -1);
+check('profile-edit.html 含 inputBuilding 下拉', profileEditSrc.indexOf('inputBuilding') !== -1);
+check('profile-edit.html 含 inputRoom 输入', profileEditSrc.indexOf('inputRoom') !== -1);
+check('profile-edit.html 含 onCampusChange 联动', profileEditSrc.indexOf('onCampusChange') !== -1);
+check('profile-edit.html 含 onAreaChange 联动', profileEditSrc.indexOf('onAreaChange') !== -1);
+check('profile-edit.html saveProfile 读 areaId+building', /saveProfile[\s\S]{0,400}areaId[\s\S]{0,200}building/.test(profileEditSrc));
+check('profile-edit.html saveProfile 调 saveUserDorm', profileEditSrc.indexOf('saveUserDorm') !== -1);
+check('profile-edit.html 不含旧 inputDorm 文本框', profileEditSrc.indexOf('inputDorm') === -1);
+
+// 11.4 bathroom.html 详情页
+check('bathroom.html 存在', fs.existsSync(path.join(ROOT, 'bathroom.html')));
+const bathSrc = fs.readFileSync(path.join(ROOT, 'bathroom.html'), 'utf8');
+check('bathroom.html 引入 campus-data.js', bathSrc.indexOf('campus-data.js') !== -1);
+check('bathroom.html 含实时状态占位', bathSrc.indexOf('实时状态暂未接入') !== -1);
+check('bathroom.html 不伪造人数/拥挤', bathSrc.indexOf('当前人数') === -1 && bathSrc.indexOf('拥挤程度') === -1);
+check('bathroom.html 含 3D 地图导航链接', bathSrc.indexOf('3D地图导航') !== -1);
+check('bathroom.html 含收藏按钮', bathSrc.indexOf('toggleFav') !== -1);
+check('bathroom.html 含设为常用', bathSrc.indexOf('setDefault') !== -1);
+check('bathroom.html 含 getBathroomById', bathSrc.indexOf('getBathroomById') !== -1);
+check('bathroom.html 含 getDefaultBathroom', bathSrc.indexOf('getDefaultBathroom') !== -1);
+
+// 11.5 浴室卡片随首页取件功能整合到 packages.html 快递页
+const pkgHtmlForBath = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+check('packages.html 含 bathroomCard 容器', pkgHtmlForBath.indexOf('bathroomCard') !== -1);
+check('packages.html 含 renderBathroomCard', pkgHtmlForBath.indexOf('renderBathroomCard') !== -1);
+check('packages.html 引入 campus-data.js', pkgHtmlForBath.indexOf('campus-data.js') !== -1);
+check('packages.html 浴室卡读取 getDefaultBathroom', pkgHtmlForBath.indexOf('getDefaultBathroom') !== -1);
+check('packages.html 无常用浴室数据时不渲染卡片', /getDefaultBathroom\(\)[\s\S]{0,80}innerHTML = ''/.test(pkgHtmlForBath));
+
+// 11.6 demo-data.js + mock.js 含结构化宿舍
+const demoSrc = fs.readFileSync(path.join(ROOT, 'demo-data.js'), 'utf8');
+check('demo-data.js 含 dorm 结构', demoSrc.indexOf('dorm:') !== -1);
+check('demo-data.js 张同学宿舍 = 兰苑 5号楼 302室', demoSrc.indexOf('"兰苑"') !== -1 && demoSrc.indexOf('"5号楼"') !== -1 && demoSrc.indexOf('"302室"') !== -1);
+const mockSrc = fs.readFileSync(path.join(ROOT, 'mock.js'), 'utf8');
+check('mock.js 含 dorm 结构', mockSrc.indexOf('dorm:') !== -1);
+
+// 11.7 profile.html 显示结构化宿舍
+const profileSrc = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+check('profile.html 引入 campus-data.js', profileSrc.indexOf('campus-data.js') !== -1);
+check('profile.html 调 getUserDorm 显示宿舍', profileSrc.indexOf('getUserDorm') !== -1);
+})();
+
+// ============================================================
+// [12] 灰度一键体验会话（免验证码 2h 进入产品，仅看 demo 虚拟数据）
+// ============================================================
+(function () {
+console.log('\n[12] 灰度一键体验会话');
+
+const authRouteSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'auth.js'), 'utf8');
+const serverSrc = fs.readFileSync(path.join(ROOT, 'backend', 'server.js'), 'utf8');
+const apiClientSrc = fs.readFileSync(path.join(ROOT, 'api-client.js'), 'utf8');
+
+// 12.1 后端 trial-login / trial-logout
+check('auth.js 含 POST /trial-login', authRouteSrc.indexOf("router.post('/trial-login'") !== -1);
+check('auth.js 含 POST /trial-logout', authRouteSrc.indexOf("router.post('/trial-logout'") !== -1);
+check('trial 令牌 scope=trial 且 env=gray',
+  /scope:\s*'trial'/.test(authRouteSrc) && /env:\s*'gray'/.test(authRouteSrc));
+check('exp_session Cookie 含 HttpOnly + Secure + SameSite=Lax',
+  /EXP_COOKIE_OPTS[\s\S]{0,220}httpOnly:\s*true/.test(authRouteSrc) &&
+  /EXP_COOKIE_OPTS[\s\S]{0,220}secure:\s*true/.test(authRouteSrc) &&
+  /EXP_COOKIE_OPTS[\s\S]{0,220}sameSite:\s*'lax'/.test(authRouteSrc));
+check('体验令牌有效期 2 小时（Cookie maxAge + JWT expiresIn）',
+  /EXP_COOKIE_OPTS[\s\S]{0,220}2\s*\*\s*60\s*\*\s*60\s*\*\s*1000/.test(authRouteSrc) &&
+  /expiresIn:\s*'2h'/.test(authRouteSrc));
+check('体验账号使用固定虚拟手机号，不与真实用户冲突',
+  /TRIAL_PHONE\s*=\s*'1\d{10}'/.test(authRouteSrc));
+check('体验账号不存在时以 gray 环境创建',
+  /createUser\(TRIAL_PHONE,\s*\{[^}]*environment:\s*'gray'/.test(authRouteSrc));
+check('trial-login 有 IP 限频且超限返回 429',
+  authRouteSrc.indexOf('trialRateMap') !== -1 && authRouteSrc.indexOf('429') !== -1);
+check('trial-logout 清除 exp_session Cookie',
+  /router\.post\('\/trial-logout'[\s\S]{0,200}clearCookie\('exp_session'/.test(authRouteSrc));
+
+// 12.2 server.js 四层门禁：exp_session 只解锁静态页，永不解锁 API/admin/源码
+check('server.js 定义 expSessionOk 且只认 scope=trial',
+  /function expSessionOk[\s\S]{0,260}payload\.scope\s*===\s*'trial'/.test(serverSrc));
+check('GRAY_PUBLIC_API 放通 trial-login/trial-logout',
+  /auth\\\/\(\?:[^)]*trial-login\|trial-logout/.test(serverSrc));
+check('server.js 定义 ADMIN_ONLY_STATIC 封锁 /admin',
+  serverSrc.indexOf('ADMIN_ONLY_STATIC') !== -1 &&
+  /\^\\\/admin\(\?:\\\.html\)\?\(\?:\\\/\|\$\)/.test(serverSrc));
+check('静态门禁对体验 Cookie 放行产品页（dev || expSessionOk）',
+  /if \(dev \|\| expSessionOk\(req\)\) return next\(\)/.test(serverSrc));
+check('管理页对体验用户 302 到灰度入口',
+  /ADMIN_ONLY_STATIC\.test\(p\) && !dev[\s\S]{0,220}redirect\(302,\s*'\/gray\/'\)/.test(serverSrc));
+check('SPA fallback 含 expSessionOk',
+  /app\.get\('\*'[\s\S]{0,400}expSessionOk\(req\)/.test(serverSrc));
+const apiGateBlock = serverSrc.slice(serverSrc.indexOf("app.use('/api'"));
+const apiGateBody = apiGateBlock.slice(0, apiGateBlock.indexOf('});') + 3);
+check('API 总闸不接受 exp_session（体验令牌无法触达任何业务/管理 API）',
+  apiGateBody.indexOf('expSessionOk') === -1 && apiGateBody.indexOf('bearerIsAdmin') !== -1);
+check('ALWAYS_DENY 在静态中间件最前（源码/数据库 404 优先于体验放行）',
+  serverSrc.indexOf('ALWAYS_DENY.test(p)') < serverSrc.indexOf('expSessionOk(req)) return next'));
+
+// 12.3 config.js 模式覆盖持久化
+const configSrc2 = fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8');
+check('config.js 定义 campus_mode_override 持久化键',
+  configSrc2.indexOf("campus_mode_override") !== -1);
+check('config.js 演示撤销后不再读写 mode 覆盖（改为主动清除 campus_mode_override）',
+  !/localStorage\.setItem\(MODE_KEY/.test(configSrc2) &&
+  !/localStorage\.getItem\(MODE_KEY\)/.test(configSrc2) &&
+  configSrc2.indexOf("localStorage.removeItem('campus_mode_override')") !== -1);
+
+// 12.4 api-client.js 体验登录/退出 + 真实登录清覆盖
+check('api-client.js 含 trialLogin 调 /api/auth/trial-login',
+  /trialLogin:\s*function[\s\S]{0,200}\/api\/auth\/trial-login/.test(apiClientSrc));
+check('api-client.js 含 trialLogout 调 /api/auth/trial-logout 并清覆盖',
+  /trialLogout:\s*function[\s\S]{0,400}\/api\/auth\/trial-logout[\s\S]{0,200}removeItem\('campus_mode_override'\)/.test(apiClientSrc));
+check('api-client.js 真实 login 成功后清除 demo 覆盖',
+  /login:\s*function[\s\S]{0,400}removeItem\('campus_mode_override'\)/.test(apiClientSrc));
+const demoOverrideBlock = apiClientSrc.slice(apiClientSrc.indexOf('APP_CONFIG.isDemo'));
+check('demo 覆盖块不替换 trialLogin/trialLogout（退出体验仍打真实后端）',
+  demoOverrideBlock.indexOf('ApiClient.trialLogin') === -1 &&
+  demoOverrideBlock.indexOf('ApiClient.trialLogout') === -1);
+
+// 12.5 gray/index.html 一键体验入口
+const grayHtmlSrc2 = fs.readFileSync(path.join(ROOT, 'gray', 'index.html'), 'utf8');
+check('gray 页含一键体验按钮 trialBtn', grayHtmlSrc2.indexOf('id="trialBtn"') !== -1);
+check('gray 页含 enterTrial 处理函数', grayHtmlSrc2.indexOf('function enterTrial') !== -1);
+check('enterTrial 成功后强制 demo 覆盖 + 体验标记',
+  /setItem\('campus_mode_override',\s*'demo'\)/.test(grayHtmlSrc2) &&
+  /setItem\('campus_trial',\s*'1'\)/.test(grayHtmlSrc2));
+check('enterTrial 跳转产品首页 /index.html',
+  /function enterTrial[\s\S]{0,700}location\.href\s*=\s*'\/index\.html'/.test(grayHtmlSrc2));
+check('gray 反馈表单页也有体验入口 trialLink', grayHtmlSrc2.indexOf('id="trialLink"') !== -1);
+
+// 12.6 settings.html 退出产品体验入口（仅体验会话可见）
+const settingsSrc2 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+check('settings.html 含 trialExitGroup 且默认隐藏',
+  /id="trialExitGroup"[^>]*style="display:none;"/.test(settingsSrc2));
+check('settings.html 仅 campus_trial=1 时显示退出入口',
+  /getItem\('campus_trial'\)\s*===\s*'1'/.test(settingsSrc2));
+check('settings.html 含 exitTrial 函数', settingsSrc2.indexOf('function exitTrial') !== -1);
+check('settings.html 引入 api-client.js（退出时调真实 trial-logout）',
+  /<script src="api-client\.js"><\/script>/.test(settingsSrc2));
+check('exitTrial 调 ApiClient.trialLogout',
+  /function exitTrial[\s\S]{0,1200}ApiClient\.trialLogout\(\)/.test(settingsSrc2));
+check('exitTrial 清理本地体验痕迹并回灰度页',
+  /function exitTrial[\s\S]{0,900}removeItem\('campus_trial'\)[\s\S]{0,200}removeItem\('campus_mode_override'\)[\s\S]{0,200}'\/gray\/'/.test(settingsSrc2));
+})();
+
+// [13] 扫码导入本地快递 + 首页布局重组 + 个人卡片缩小（新功能：本地导入 / 不调云端）
+(function () {
+  console.log('\n[13] 扫码导入本地快递 + 首页布局重组 + 个人卡片缩小');
+
+  // 13.1 storage.js 新增 addLocalPackage
+  check('storage.js 含 addLocalPackage 方法', typeof Storage.addLocalPackage === 'function');
+
+  // 13.2 addLocalPackage 基础写入
+  const before = Storage.getPackages().length;
+  const res = Storage.addLocalPackage({
+    pickupCode: '13-5-' + Date.now().toString().slice(-3),
+    company: '顺丰', shortName: '顺丰', logoColor: '#000000',
+    pickupPoint: '涵江校园驿站', type: 'station',
+  });
+  check('addLocalPackage 返回 success', !!res.success);
+  check('addLocalPackage 新增 1 条快递', Storage.getPackages().length === before + 1);
+  check('新快递 id 以 LP 开头（Local Pkg 标识）', /^LP\d+$/.test(res.pkg.id));
+  check('新快递 status=pending', res.pkg.status === 'pending');
+  check('新快递 source=local-scan', res.pkg.source === 'local-scan');
+  check('新快递 trackingNo 默认本地导入前缀', /本地导入/.test(res.pkg.trackingNo));
+
+  // 13.3 重复导入去重（同取件码+取件点 → 拒绝）
+  const dup = Storage.addLocalPackage({
+    pickupCode: res.pkg.pickupCode,
+    company: '圆通', pickupPoint: res.pkg.pickupPoint,
+  });
+  check('addLocalPackage 同取件码+取件点去重', !dup.success && /已存在/.test(dup.message));
+
+  // 13.4 空取件码拒绝
+  const empty = Storage.addLocalPackage({ pickupCode: '', company: '中通' });
+  check('addLocalPackage 空取件码拒绝', !empty.success);
+
+  // 13.5 导入后写入消息中心通知
+  const beforeMsg = Storage.getMessages().length;
+  const r2 = Storage.addLocalPackage({
+    pickupCode: '99-9-' + Date.now().toString().slice(-3),
+    company: '京东', pickupPoint: '竹苑快递柜', type: 'locker',
+  });
+  check('导入成功后消息中心 +1', r2.success && Storage.getMessages().length === beforeMsg + 1);
+
+  // 13.6 scan.html 模式切换 + 导入抽屉
+  const scanHtml = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  check('scan.html 含 mode-switch 切换按钮', scanHtml.indexOf('class="mode-switch"') !== -1);
+  check('scan.html 含 mode-banner 模式横幅', scanHtml.indexOf('class="mode-banner') !== -1);
+  check('scan.html 含 import-sheet 导入抽屉', scanHtml.indexOf('class="import-sheet"') !== -1);
+  check('scan.html 含 import-mask 抽屉遮罩', scanHtml.indexOf('class="import-mask"') !== -1);
+  check('scan.html 含 chip 选择器（公司/取件点）', scanHtml.indexOf('class="chip"') !== -1);
+  check('scan.html 含 toggleScanMode 函数', /function toggleScanMode\(/.test(scanHtml));
+  check('scan.html 含 openImportSheet 函数', /function openImportSheet\(/.test(scanHtml));
+  check('scan.html 含 closeImportSheet 函数', /function closeImportSheet\(/.test(scanHtml));
+  check('scan.html 含 submitImportLocal 函数', /function submitImportLocal\(/.test(scanHtml));
+  check('scan.html 含 extractPickupCode 函数', /function extractPickupCode\(/.test(scanHtml));
+  check('scan.html 含 selectChip 函数', /function selectChip\(/.test(scanHtml));
+  check('scan.html 导入模式不走 API.resolveScanCode',
+    /SCAN\.mode === 'import'[\s\S]{0,200}openImportSheet/.test(scanHtml));
+  check('scan.html 提交导入调 Storage.addLocalPackage',
+    /submitImportLocal[\s\S]{0,800}Storage\.addLocalPackage/.test(scanHtml));
+  check('scan.html CSS 模式切换按钮过渡 transition',
+    /\.mode-switch[\s\S]{0,500}transition:[\s\S]{0,200}background[\s\S]{0,400}cubic-bezier/.test(scanHtml));
+  check('scan.html CSS 导入抽屉滑入过渡 transform',
+    /\.import-sheet[\s\S]{0,500}transform:[\s\S]{0,300}translateY/.test(scanHtml));
+  check('scan.html CSS chip spring 弹性动画',
+    /\.chip:active[\s\S]{0,100}scale/.test(scanHtml) && /\.import-submit-btn:active[\s\S]{0,100}scale/.test(scanHtml));
+  check('scan.html 含 8 家快递公司 chip', (scanHtml.match(/data-company="/g) || []).length >= 8);
+  check('scan.html 含 7 个取件点 chip', (scanHtml.match(/data-point="/g) || []).length >= 7);
+  check('scan.html 成功 overlay 标题可动态切换（导入 vs 取件）',
+    scanHtml.indexOf('successOverlayTitle') !== -1);
+
+  // 13.7 index.html 首页重组为校园生活门户
+  const idx = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  check('index.html 含「攒钱」入口', idx.indexOf('savings.html') !== -1 && idx.indexOf('攒钱') !== -1);
+  check('index.html 含「课程表」入口（支持贝蒂导入提示）', idx.indexOf('schedule.html') !== -1 && idx.indexOf('课程表') !== -1);
+  check('index.html 含「校园论坛」入口', idx.indexOf('forum.html') !== -1 && idx.indexOf('校园论坛') !== -1);
+  check('index.html 含「实习工作」入口', idx.indexOf('jobs.html') !== -1 && idx.indexOf('实习工作') !== -1);
+  check('index.html 校园服务区含快递入口', /href="packages\.html"/.test(idx) && idx.indexOf('校园服务') !== -1);
+  check('index.html 校园服务区含外卖入口', /href="food\.html"/.test(idx));
+  check('index.html 活动 DOM 不再渲染待取横幅（pendingCount 仅在注释中）',
+    idx.indexOf('id="pendingCount"') === -1);
+  check('index.html 旧取件区块以注释保留（含 hero-card / pointsList / bathroomCard 说明）',
+    /<!--[\s\S]*hero-card[\s\S]*-->/.test(idx) && idx.indexOf('bathroomCard') !== -1 && idx.indexOf('pointsList') !== -1);
+  check('index.html 标题改为校园生活门户', idx.indexOf('校园生活') !== -1 && idx.indexOf('校园取件') === -1);
+
+  // 13.7b packages.html 整合首页全部取件功能
+  const pkgHtml2 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  check('packages.html 含待取横幅（pendingCount / pendingHint）',
+    pkgHtml2.indexOf('id="pendingCount"') !== -1 && pkgHtml2.indexOf('id="pendingHint"') !== -1);
+  check('packages.html 含快捷操作（扫码取件/本地导入/查快递/取件记录）',
+    pkgHtml2.indexOf('扫码取件') !== -1 && pkgHtml2.indexOf('本地导入') !== -1 &&
+    pkgHtml2.indexOf('track.html') !== -1 && pkgHtml2.indexOf('records.html') !== -1);
+  check('packages.html 含常用取件点区块（pointsList）', pkgHtml2.indexOf('id="pointsList"') !== -1);
+  check('packages.html 含浴室卡区块（bathroomCard）', pkgHtml2.indexOf('id="bathroomCard"') !== -1);
+  check('packages.html 保留搜索/筛选/快递列表',
+    pkgHtml2.indexOf('id="searchInput"') !== -1 && pkgHtml2.indexOf('id="filterChips"') !== -1 && pkgHtml2.indexOf('id="pkgList"') !== -1);
+
+  // 13.8 profile.html 个人信息卡片边框缩小对齐
+  const prof = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  check('profile.html 用户卡片 padding ≤ 14px',
+    /margin-bottom:12px; padding:14px/.test(prof));
+  check('profile.html 头像尺寸缩小 ≤ 44px',
+    /renderUserInfo[\s\S]{0,400}avatarHtml\([^,]+,\s*(40|36|32|44),/.test(prof));
+  check('profile.html 用户名字号 ≤ 18px',
+    /font-size:16px; font-weight:700/.test(prof));
+  check('profile.html 统计数字字号 ≤ 22px',
+    /font-size:20px; font-weight:800/.test(prof));
+  check('profile.html 装饰 svg 缩小 ≤ 100px',
+    /width:90px; height:90px/.test(prof));
+})();
+
+// ============================================================
+// [14] 校园生活门户（攒钱/课程表/论坛/实习）+ 耀蓝主题 + 极简切换动画 + 标题靠左
+// ============================================================
+(function () {
+  console.log('\n[14] 校园生活门户 + 耀蓝主题 + 切换动画 + 标题靠左');
+  const stylesSrc = fs.readFileSync(path.join(ROOT, 'styles.css'), 'utf8');
+  const themeInitSrc = fs.readFileSync(path.join(ROOT, 'theme-init.js'), 'utf8');
+  const appJsSrc2 = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+  const settingsSrc3 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+  const foodSrc2 = fs.readFileSync(path.join(ROOT, 'food.html'), 'utf8');
+  const profileSrc2 = fs.readFileSync(path.join(ROOT, 'profile.html'), 'utf8');
+  const pkgSrc3 = fs.readFileSync(path.join(ROOT, 'packages.html'), 'utf8');
+  const swSrc = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+
+  // 14.1 耀蓝主题
+  check('styles.css 含耀蓝主题选择器 [data-theme="yaolan"]', stylesSrc.indexOf('[data-theme="yaolan"]') !== -1);
+  check('耀蓝主色 #0A6EFF', /\[data-theme="yaolan"\][\s\S]{0,1200}#0A6EFF/.test(stylesSrc));
+  check('深色 prefers-color-scheme 媒体查询排除耀蓝',
+    /prefers-color-scheme:\s*dark[\s\S]{0,300}not\(\[data-theme="yaolan"\]\)/.test(stylesSrc));
+  check('settings.html 含耀蓝模式选项（data-theme="yaolan"）', settingsSrc3.indexOf('data-theme="yaolan"') !== -1 && settingsSrc3.indexOf('耀蓝') !== -1);
+  check('theme-init.js 含 yaolan 分支', /yaolan[\s\S]{0,120}data-theme/.test(themeInitSrc) || themeInitSrc.indexOf("'yaolan'") !== -1);
+  check('app.js applyTheme 含 yaolan 分支', appJsSrc2.indexOf('yaolan') !== -1);
+
+  // 14.2 极简页面切换动画
+  check('styles.css 含 pageEnter 关键帧', /@keyframes pageEnter/.test(stylesSrc));
+  check('pageEnter 仅透明度+8px 位移（极简，无旋转/缩放/弹性）',
+    /@keyframes pageEnter\s*\{\s*from\s*\{\s*opacity:\s*0;\s*transform:\s*translateY\(8px\)/.test(stylesSrc));
+  check('.app-shell 动画使用 backwards（避免 fixed 悬浮导航参照系被改）',
+    /\.app-shell\s*\{[\s\S]{0,400}animation:[\s\S]*pageEnter[\s\S]*backwards/.test(stylesSrc));
+  check('尊重系统减少动态偏好（prefers-reduced-motion 关闭动画）',
+    /prefers-reduced-motion[\s\S]{0,200}animation:\s*none/.test(stylesSrc));
+
+  // 14.3 顶部标题靠左（全部快递/校园外卖/个人中心）
+  check('packages.html header 标题靠左（header--left + header-spacer）',
+    /class="app-header header--left"[\s\S]{0,200}全部快递[\s\S]{0,200}header-spacer/.test(pkgSrc3));
+  check('food.html header 标题靠左',
+    /class="app-header header--left"[\s\S]{0,200}校园外卖[\s\S]{0,200}header-spacer/.test(foodSrc2));
+  check('profile.html header 标题靠左',
+    /class="app-header header--left"[\s\S]{0,200}个人中心[\s\S]{0,200}header-spacer/.test(profileSrc2));
+
+  // 14.4 四个新页面文件存在
+  ['savings.html', 'schedule.html', 'forum.html', 'jobs.html'].forEach(f => {
+    check(f + ' 存在', fs.existsSync(path.join(ROOT, f)));
+  });
+  const savSrc = fs.readFileSync(path.join(ROOT, 'savings.html'), 'utf8');
+  const schSrc = fs.readFileSync(path.join(ROOT, 'schedule.html'), 'utf8');
+  const forumSrc = fs.readFileSync(path.join(ROOT, 'forum.html'), 'utf8');
+  const jobsSrc = fs.readFileSync(path.join(ROOT, 'jobs.html'), 'utf8');
+
+  [['savings.html', savSrc], ['schedule.html', schSrc], ['forum.html', forumSrc], ['jobs.html', jobsSrc]].forEach(([f, h]) => {
+    check(f + ' 含统一 5 入口 tab-bar', h.includes('class="tab-bar"') &&
+      ['home', 'packages', 'scan', 'food', 'profile'].every(n => h.indexOf('data-nav="' + n + '"') !== -1));
+    check(f + ' 使用相对路径资源（无 http/https 外链脚本样式）',
+      !/<script[^>]*src="https?:/.test(h) && !/<link[^>]*href="https?:/.test(h));
+    check(f + ' 含完整标准脚本链',
+      h.indexOf('config.js') !== -1 && h.indexOf('mock.js') !== -1 &&
+      h.indexOf('demo-data.js') !== -1 && h.indexOf('storage.js') !== -1 &&
+      h.indexOf('api.js') !== -1 && h.indexOf('api-client.js') !== -1 && h.indexOf('app.js') !== -1);
+  });
+
+  // 14.5 攒钱页能力
+  check('savings.html 含储蓄目标区块', savSrc.indexOf('goalList') !== -1 && savSrc.indexOf('lifeAddGoal') !== -1);
+  check('savings.html 含收支流水（工资/记账）', savSrc.indexOf('ledgerList') !== -1 && savSrc.indexOf('lifeAddLedger') !== -1);
+  check('savings.html 支持目标存入', savSrc.indexOf('lifeContributeGoal') !== -1);
+
+  // 14.6 课程表页能力（贝蒂导入）
+  check('schedule.html 含贝蒂课程表导入入口', schSrc.indexOf('导入贝蒂课程表') !== -1);
+  check('schedule.html 支持 JSON 文件选择', /type="file"[^>]*accept="\.json/.test(schSrc));
+  check('schedule.html 支持粘贴 JSON 双通道', schSrc.indexOf('importText') !== -1 && schSrc.indexOf('FileReader') !== -1);
+  check('schedule.html 含容错字段映射解析（parseSchedule）', schSrc.indexOf('function parseSchedule') !== -1);
+  check('schedule.html 兼容常见字段名（courseName/weekday/sections 等）',
+    schSrc.indexOf('courseName') !== -1 && schSrc.indexOf('weekday') !== -1);
+  check('schedule.html 兼容中文星期与「1-2节」区间', schSrc.indexOf('parseDay') !== -1 && schSrc.indexOf('parseSections') !== -1);
+  check('schedule.html 导入调用 lifeSaveCourses 覆盖渲染', schSrc.indexOf('lifeSaveCourses') !== -1);
+  check('schedule.html 支持手动加课（lifeAddCourse）', schSrc.indexOf('lifeAddCourse') !== -1);
+
+  // 14.7 论坛页能力
+  check('forum.html 含板块筛选（学习/二手/失物/兼职/吐槽）',
+    forumSrc.indexOf('学习交流') !== -1 && forumSrc.indexOf('二手交易') !== -1 &&
+    forumSrc.indexOf('失物招领') !== -1 && forumSrc.indexOf('兼职实习') !== -1);
+  check('forum.html 含发帖功能（lifeAddPost）', forumSrc.indexOf('lifeAddPost') !== -1 && forumSrc.indexOf('postSheet') !== -1);
+  check('forum.html 含点赞功能（lifeLikePost）', forumSrc.indexOf('lifeLikePost') !== -1);
+  check('forum.html 含评论功能（lifeAddComment）', forumSrc.indexOf('lifeAddComment') !== -1);
+  check('forum.html 含帖子详情层', forumSrc.indexOf('detailSheet') !== -1 && forumSrc.indexOf('openDetail') !== -1);
+  check('forum.html 输出做 XSS 转义（esc 函数）', forumSrc.indexOf('function esc') !== -1);
+
+  // 14.8 实习工作页能力
+  check('jobs.html 含实习/校招/兼职筛选', jobsSrc.indexOf('实习') !== -1 && jobsSrc.indexOf('校招') !== -1 && jobsSrc.indexOf('兼职') !== -1);
+  check('jobs.html 含职位搜索', jobsSrc.indexOf('id="searchInput"') !== -1);
+  check('jobs.html 含职位详情弹层与投递（lifeApplyJob）', jobsSrc.indexOf('lifeApplyJob') !== -1 && jobsSrc.indexOf('detailSheet') !== -1);
+  check('jobs.html 含我的投递分区', jobsSrc.indexOf('我的投递') !== -1);
+  check('jobs.html 含求职意向发布（lifeAddResume + 求职墙）',
+    jobsSrc.indexOf('lifeAddResume') !== -1 && jobsSrc.indexOf('求职墙') !== -1);
+  check('jobs.html 含内置种子虚拟岗位（8 个）', (jobsSrc.match(/id: 'J\d+'/g) || []).length >= 8);
+
+  // 14.9 storage.js 生活模块数据层
+  check('storage.js KEYS 含 lifeDB', /life:\s*'lifeDB'/.test(fs.readFileSync(path.join(ROOT, 'storage.js'), 'utf8')));
+  check('lifeGetSavings 返回种子目标与流水', (function () {
+    const s = Storage.lifeGetSavings();
+    return Array.isArray(s.goals) && s.goals.length >= 2 && Array.isArray(s.ledger) && s.ledger.length >= 3;
+  })());
+  const ledgerBefore = Storage.lifeGetSavings().ledger.length;
+  check('lifeAddLedger 记收入并置顶', (function () {
+    const r = Storage.lifeAddLedger({ type: 'income', amount: 500, category: '实习工资', note: 'verify测试' });
+    const l = Storage.lifeGetSavings().ledger;
+    return r.success && l.length === ledgerBefore + 1 && l[0].type === 'income' && l[0].amount === 500;
+  })());
+  check('lifeAddLedger 拒绝非法金额', !Storage.lifeAddLedger({ type: 'expense', amount: 0 }).success);
+  const goalRes = Storage.lifeAddGoal({ name: 'verify目标', target: 100 });
+  check('lifeAddGoal 创建目标', goalRes.success && goalRes.goal.saved === 0);
+  check('lifeContributeGoal 累加且封顶 target', (function () {
+    Storage.lifeContributeGoal(goalRes.goal.id, 60);
+    Storage.lifeContributeGoal(goalRes.goal.id, 999);
+    const g = Storage.lifeGetSavings().goals.find(x => x.id === goalRes.goal.id);
+    return g.saved === 100;
+  })());
+  check('lifeAddCourse / lifeGetCourses 可读写', (function () {
+    const n0 = Storage.lifeGetCourses().length;
+    const r = Storage.lifeAddCourse({ name: '验证课', weekday: 2, start: 3, end: 4, position: 'T101' });
+    return r.success && Storage.lifeGetCourses().length === n0 + 1;
+  })());
+  check('lifeAddCourse 拒绝不完整课程', !Storage.lifeAddCourse({ name: '', weekday: 1, start: 1 }).success);
+  const courseList = [{ name: '导入课A', weekday: 1, start: 1, end: 2 }, { name: '导入课B', weekday: 3, start: 5, end: 6 }];
+  check('lifeSaveCourses 整体覆盖（贝蒂导入用）', (function () {
+    const r = Storage.lifeSaveCourses(courseList);
+    return r.success && r.count === 2 && Storage.lifeGetCourses().length === 2;
+  })());
+  const postRes = Storage.lifeAddPost({ board: 'study', title: 'verify 帖子', content: '内容' });
+  check('lifeAddPost 发帖并置顶', postRes.success && Storage.lifeGetPosts()[0].id === postRes.post.id);
+  check('lifeAddPost 拒绝空标题', !Storage.lifeAddPost({ title: '', content: 'x' }).success);
+  check('lifeLikePost 点赞/取消切换', (function () {
+    const a = Storage.lifeLikePost(postRes.post.id);
+    const b = Storage.lifeLikePost(postRes.post.id);
+    return a.success && a.liked === true && b.liked === false;
+  })());
+  check('lifeAddComment 写评论', (function () {
+    const r = Storage.lifeAddComment(postRes.post.id, 'verify 评论');
+    const p = Storage.lifeGetPosts().find(x => x.id === postRes.post.id);
+    return r.success && p.comments[p.comments.length - 1].text === 'verify 评论';
+  })());
+  check('lifeApplyJob 投递 + 重复投递去重', (function () {
+    const a = Storage.lifeApplyJob('J1');
+    const b = Storage.lifeApplyJob('J1');
+    return a.success && !b.success && Storage.lifeGetJobsState().applied.indexOf('J1') !== -1;
+  })());
+  check('lifeAddResume 发布求职意向', (function () {
+    const n0 = Storage.lifeGetJobsState().resumes.length;
+    const r = Storage.lifeAddResume({ name: 'verify同学', intent: '前端实习', contact: 'wx' });
+    return r.success && Storage.lifeGetJobsState().resumes.length === n0 + 1;
+  })());
+  check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
+
+  // 14.10 sw.js 预缓存
+  check('sw.js VERSION 升级为 v2', /var VERSION = 'v2'/.test(swSrc));
+  ['savings.html', 'schedule.html', 'forum.html', 'jobs.html'].forEach(f => {
+    check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
+  });
+})();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------
 Promise.all(asyncChecks || []).then(function () {

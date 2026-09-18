@@ -278,6 +278,166 @@
       text-align: center;
       margin-top: 10px;
     }
+
+    /* ===== 模式切换按钮（沉浸式平滑过渡） ===== */
+    .mode-switch {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      color: var(--color-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                  color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                  border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .mode-switch:active { transform: scale(0.94); }
+    .mode-switch svg { width: 14px; height: 14px; transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    /* 导入模式高亮 */
+    .mode-switch.mode-import {
+      background: rgba(245, 158, 11, 0.12);
+      border-color: rgba(245, 158, 11, 0.35);
+      color: #B45309;
+    }
+    .mode-switch.mode-import svg { transform: rotate(180deg); }
+
+    /* 模式提示横幅 */
+    .mode-banner {
+      margin: 0 16px 8px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 12px;
+      text-align: center;
+      background: rgba(37, 99, 235, 0.06);
+      color: var(--color-primary);
+      border: 1px dashed rgba(37, 99, 235, 0.25);
+      transition: background 0.35s, color 0.35s, border-color 0.35s;
+    }
+    .mode-banner.mode-import {
+      background: rgba(245, 158, 11, 0.08);
+      color: #B45309;
+      border-color: rgba(245, 158, 11, 0.35);
+    }
+
+    /* ===== 底部抽屉（导入确认） ===== */
+    .import-sheet {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      background: var(--color-surface);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.18);
+      padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
+      z-index: 450;
+      transform: translateY(100%);
+      transition: transform 0.45s cubic-bezier(0.32, 0.72, 0.16, 1);
+      max-height: 86vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .import-sheet.show { transform: translateY(0); }
+    .import-sheet-grabber {
+      width: 36px; height: 4px;
+      background: var(--color-border);
+      border-radius: 2px;
+      margin: 0 auto 14px;
+    }
+    .import-sheet-title {
+      font-size: 16px; font-weight: 700;
+      color: var(--color-text);
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .import-sheet-sub {
+      font-size: 12px; color: var(--color-text-sub);
+      text-align: center; margin-bottom: 18px;
+    }
+    .import-field-label {
+      font-size: 12px; color: var(--color-text-sub);
+      margin: 12px 0 8px;
+    }
+    .import-code-display {
+      background: var(--color-surface-alt);
+      border: 1.5px dashed var(--color-primary);
+      border-radius: 12px;
+      padding: 12px 16px;
+      text-align: center;
+      font-family: var(--font-mono);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--color-primary);
+      letter-spacing: 2px;
+    }
+    .chip-row {
+      display: flex; flex-wrap: wrap; gap: 8px;
+    }
+    .chip {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: var(--color-surface-alt);
+      color: var(--color-text-sub);
+      font-size: 13px;
+      border: 1px solid var(--color-border-light);
+      cursor: pointer;
+      transition: background 0.25s, color 0.25s, border-color 0.25s, transform 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chip:active { transform: scale(0.94); }
+    .chip.selected {
+      background: var(--color-primary);
+      color: #fff;
+      border-color: var(--color-primary);
+    }
+    .import-submit-btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #2563EB, #1D4ED8);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      margin-top: 22px;
+      cursor: pointer;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .import-submit-btn:active {
+      transform: scale(0.96);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    }
+    .import-sheet-close {
+      position: absolute;
+      top: 14px; right: 16px;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--color-surface-alt);
+      color: var(--color-text-sub);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      border: none;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .import-sheet-close:active { transform: scale(0.9); background: var(--color-border-light); }
+    .import-sheet-close svg { width: 14px; height: 14px; }
+
+    /* 抽屉遮罩 */
+    .import-mask {
+      position: fixed; inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      z-index: 440;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s;
+    }
+    .import-mask.show { opacity: 1; pointer-events: auto; }
   </style>
 </head>
 <body data-page="scan">
@@ -294,9 +454,19 @@
           <button class="scan-tool-btn" id="flashBtn" onclick="toggleFlash()" aria-label="闪光灯">
             <svg id="flashIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </button>
+          <!-- 模式切换按钮：取件模式 ↔ 导入本地模式（平滑过渡） -->
+          <button class="mode-switch" id="modeSwitch" onclick="toggleScanMode()" aria-label="切换扫码模式">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            <span id="modeLabel">取件模式</span>
+          </button>
           <button class="scan-tool-btn" onclick="openAlbum()" aria-label="相册识别">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           </button>
+        </div>
+
+        <!-- 模式提示横幅 -->
+        <div class="mode-banner anim-fade-in-up" id="modeBanner">
+          <span id="modeBannerText">当前为「取件模式」：扫描已到站快递的取件码完成取件</span>
         </div>
 
         <div class="scan-area anim-fade-in-up stagger-2">
@@ -371,14 +541,53 @@
     <div class="success-overlay-icon">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
     </div>
-    <div class="success-overlay-title">取件成功</div>
-    <div class="success-overlay-info">
+    <div class="success-overlay-title" id="successOverlayTitle">取件成功</div>
+    <div class="success-overlay-info" id="successOverlayInfo">
       <div class="success-overlay-info-row"><span class="success-overlay-info-label">快递公司</span><span class="success-overlay-info-value" id="successCompany"></span></div>
       <div class="success-overlay-info-row"><span class="success-overlay-info-label">运单号</span><span class="success-overlay-info-value" id="successTracking"></span></div>
       <div class="success-overlay-info-row"><span class="success-overlay-info-label">取件码</span><span class="success-overlay-info-value" id="successCode"></span></div>
       <div class="success-overlay-info-row"><span class="success-overlay-info-label">取件点</span><span class="success-overlay-info-value" id="successPoint"></span></div>
     </div>
-    <button class="success-overlay-btn" onclick="location.href='index.html'">完成</button>
+    <button class="success-overlay-btn" id="successOverlayBtn" onclick="location.href='index.html'">完成</button>
+  </div>
+
+  <!-- 导入本地快递抽屉（新功能：扫描快递架取件码标签 → 手动确认 → 导入本地 packageDB） -->
+  <div class="import-mask" id="importMask" onclick="closeImportSheet()"></div>
+  <div class="import-sheet" id="importSheet">
+    <div class="import-sheet-grabber"></div>
+    <button class="import-sheet-close" onclick="closeImportSheet()" aria-label="关闭">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="import-sheet-title">导入本地快递</div>
+    <div class="import-sheet-sub">扫描快递架上的取件码标签，确认后导入本地（不上传云端）</div>
+
+    <div class="import-field-label">取件码（已识别）</div>
+    <div class="import-code-display" id="importCodeDisplay">--</div>
+
+    <div class="import-field-label">快递公司</div>
+    <div class="chip-row" id="companyChips">
+      <span class="chip" data-company="顺丰" data-short="顺丰" data-color="#000000" onclick="selectChip(this, 'company')">顺丰</span>
+      <span class="chip" data-company="圆通" data-short="圆通" data-color="#FF6600" onclick="selectChip(this, 'company')">圆通</span>
+      <span class="chip" data-company="中通" data-short="中通" data-color="#1E73BE" onclick="selectChip(this, 'company')">中通</span>
+      <span class="chip" data-company="韵达" data-short="韵达" data-color="#0099CC" onclick="selectChip(this, 'company')">韵达</span>
+      <span class="chip" data-company="申通" data-short="申通" data-color="#FF9900" onclick="selectChip(this, 'company')">申通</span>
+      <span class="chip" data-company="京东" data-short="京东" data-color="#E1251B" onclick="selectChip(this, 'company')">京东</span>
+      <span class="chip" data-company="极兔" data-short="极兔" data-color="#D7000F" onclick="selectChip(this, 'company')">极兔</span>
+      <span class="chip" data-company="其他" data-short="其他" data-color="#64748B" onclick="selectChip(this, 'company')">其他</span>
+    </div>
+
+    <div class="import-field-label">取件点</div>
+    <div class="chip-row" id="pointChips">
+      <span class="chip" data-point="涵江校园驿站" data-type="station" onclick="selectChip(this, 'point')">涵江校园驿站</span>
+      <span class="chip" data-point="仙游校园驿站" data-type="station" onclick="selectChip(this, 'point')">仙游校园驿站</span>
+      <span class="chip" data-point="竹苑快递柜" data-type="locker" onclick="selectChip(this, 'point')">竹苑快递柜</span>
+      <span class="chip" data-point="菊苑快递柜" data-type="locker" onclick="selectChip(this, 'point')">菊苑快递柜</span>
+      <span class="chip" data-point="兰苑快递柜" data-type="locker" onclick="selectChip(this, 'point')">兰苑快递柜</span>
+      <span class="chip" data-point="楷苑快递柜" data-type="locker" onclick="selectChip(this, 'point')">楷苑快递柜</span>
+      <span class="chip" data-point="梅苑快递柜" data-type="locker" onclick="selectChip(this, 'point')">梅苑快递柜</span>
+    </div>
+
+    <button class="import-submit-btn" id="importSubmitBtn" onclick="submitImportLocal()">确认导入本地</button>
   </div>
 
   <!-- 隐藏元素：jsQR 解码画布 / 相册选择 -->
@@ -391,6 +600,7 @@
   <script src="storage.js"></script>
   <script src="perf.js"></script>
   <script src="api.js"></script>
+  <script src="api-client.js"></script>
   <script src="app.js"></script>
   <script src="libs/qr-scanner/jsQR.js"></script>
   <script src="libs/tesseract/tesseract.min.js"></script>
@@ -399,6 +609,41 @@
     // 权限：navigator.mediaDevices.getUserMedia（需要 localhost / https 环境）
     // 二维码：优先浏览器原生 BarcodeDetector，回退本地 libs/qr-scanner/jsQR.js
     // OCR：本地 libs/tesseract/（Tesseract.js），仅识别扫描框内数字，不上传任何图片
+
+    // 灰度模式：已通过真实手机号登录的非 demo 用户 → 扫码结果走后端校验
+    // 普通用户（demo / local）→ 仅本地匹配，不调后端
+    function isGrayScan() {
+      try {
+        if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) return false;
+        if (typeof ApiClient === 'undefined') return false;
+        return ApiClient.isLoggedIn();
+      } catch (e) { return false; }
+    }
+
+    // 灰度用户：调用后端 scanVerify 校验候选取件码归属
+    // 返回 { ok, allowPickup, packageId, message }
+    async function grayVerifyPickupCode(code, packageId) {
+      try {
+        var r = await ApiClient.scanVerify(code, packageId);
+        if (r.code === 0 && r.data) {
+          return { ok: true, allowPickup: r.data.allowPickup, packageId: r.data.packageId, message: r.data.message || '' };
+        }
+        return { ok: false, allowPickup: false, message: r.message || '该取件码不属于当前用户，请重新扫描' };
+      } catch (e) {
+        return { ok: false, allowPickup: false, message: '校验失败，请稍后重试' };
+      }
+    }
+
+    // 灰度用户：调用后端 scanConfirm 确认取件
+    async function grayConfirmPickup(packageId) {
+      try {
+        var r = await ApiClient.scanConfirm(packageId);
+        return { ok: r.code === 0, message: r.message, status: r.data ? r.data.status : '' };
+      } catch (e) {
+        return { ok: false, message: '取件失败，请稍后重试' };
+      }
+    }
+
     var SCAN = {
       stream: null,
       video: null,
@@ -421,6 +666,15 @@
       ocrPipe: undefined,      // ocr-worker.js：预处理 Worker（二值化/放大不占主线程）
       ocrPend: {},             // 待响应的预处理请求
       ocrSeq: 0,
+      // 新增：扫码模式 —— 'pickup' 取件模式（原流程）| 'import' 导入本地模式（新功能）
+      mode: 'pickup',
+      // 导入抽屉的选择状态
+      importSelectedCompany: null,
+      importSelectedPoint: null,
+      importSelectedColor: '#64748B',
+      importSelectedShort: '其他',
+      importSelectedType: 'station',
+      importCode: '',
     };
 
     document.addEventListener('DOMContentLoaded', function () {
@@ -774,19 +1028,42 @@
     }
 
     // OCR 文本 → 提取取件码 → 匹配本地快递库
-    function onOcrText(text) {
+    async function onOcrText(text) {
       if (SCAN.lastOcrText === text) return; // 同文本去重
       SCAN.lastOcrText = text;
+      // 导入本地模式：OCR 提取到取件码 → 直接打开导入抽屉
+      if (SCAN.mode === 'import') {
+        var code = extractPickupCode(text);
+        if (code && /^\d+-\d+-\d+$/.test(code)) {
+          pauseScan();
+          if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
+          flashSuccessFrame();
+          openImportSheet(code);
+        } else if (code) {
+          App.toast('识别到 ' + code + '，请确认是否为取件码', 2200);
+        }
+        return;
+      }
+      // 取件模式（原流程）：OCR 文本匹配本地快递库
       var result = API.resolveScanText(text);
       if (result.status === 'pending' && result.pkg) {
         pauseScan();
         if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
         flashSuccessFrame();
+        // 灰度模式：本地匹配后必须再走后端校验
+        if (isGrayScan()) {
+          var v = await grayVerifyPickupCode(result.pkg.pickupCode, result.pkg.id);
+          if (!v.ok || !v.allowPickup) {
+            App.toast(v.message || '该取件码不属于当前用户', 2400);
+            resumeScan();
+            return;
+          }
+        }
         showPickupConfirm(result.pkg);
       } else if (result.status === 'notfound') {
         // 识别到了文字但没匹配上：轻提示一次，不弹窗打断
-        var code = result.candidates && result.candidates[0];
-        if (code) App.toast('识别到 ' + code + '，未匹配到快递', 2200);
+        var c = result.candidates && result.candidates[0];
+        if (c) App.toast('识别到 ' + c + '，未匹配到快递', 2200);
       }
       // empty：无有效文字，静默继续
     }
@@ -799,16 +1076,60 @@
     }
 
     // ---------- 3. 扫码结果 → 本地快递数据 ----------
-    function onDecoded(text) {
+    async function onDecoded(text) {
       pauseScan();
       if (navigator.vibrate) { try { navigator.vibrate(80); } catch (e) {} }
       flashSuccessFrame();
+      // 导入本地模式：不走 API.resolveScanCode，直接提取取件码 → 打开导入抽屉
+      if (SCAN.mode === 'import') {
+        var code = extractPickupCode(text);
+        if (code) {
+          openImportSheet(code);
+        } else {
+          showScanFailed('未识别到取件码，请重新扫描或手动输入');
+        }
+        return;
+      }
+      // 取件模式（原流程）
       var result = API.resolveScanCode(text);
       if (result.status === 'pending' && result.pkg) {
+        // 灰度模式：本地匹配后必须再走后端校验，避免使用他人取件码
+        if (isGrayScan()) {
+          App.showLoading();
+          var v = await grayVerifyPickupCode(result.pkg.pickupCode, result.pkg.id);
+          App.hideLoading();
+          if (!v.ok || !v.allowPickup) {
+            showScanFailed(v.message || '该取件码不属于当前用户，请重新扫描');
+            return;
+          }
+        }
         showPickupConfirm(result.pkg);
       } else {
         showScanFailed(result.message || '未识别到快递二维码');
       }
+    }
+
+    // 从扫码原文中提取取件码（支持纯数字-数字-数字 / JSON / 纯文本）
+    function extractPickupCode(raw) {
+      if (!raw) return '';
+      var text = String(raw).trim();
+      // JSON 形式：{"qrCode":"8-3-267","pickupCode":"8-3-267"}
+      if (text.charAt(0) === '{') {
+        try {
+          var obj = JSON.parse(text);
+          if (obj && typeof obj === 'object') {
+            return obj.qrCode || obj.pickupCode || obj.code || '';
+          }
+        } catch (e) { /* 非法 JSON，按纯文本处理 */ }
+      }
+      // 纯取件码（如 8-3-267 / 9-2-345）
+      if (/^\d+-\d+-\d+$/.test(text)) return text;
+      // 从文本中提取第一个 数字-数字-数字 模式
+      var m = text.match(/\d+-\d+-\d+/);
+      if (m) return m[0];
+      // 兜底：4 位以上纯数字/字母组合
+      m = text.match(/[A-Z0-9-]{4,}/);
+      return m ? m[0] : text;
     }
 
     function showScanFailed(message) {
@@ -838,13 +1159,24 @@
         onConfirm: async function () {
           App.showLoading();
           try {
-            var res = await API.confirmPickup(pkg.id);
+            // 灰度模式：走后端 scanConfirm；本地/demo 模式走 API.confirmPickup
+            var success = false;
+            var failMsg = '';
+            if (isGrayScan()) {
+              var r = await grayConfirmPickup(pkg.id);
+              success = r.ok;
+              failMsg = r.message;
+            } else {
+              var res = await API.confirmPickup(pkg.id);
+              success = !!(res.data && res.data.success);
+              failMsg = res.data && res.data.message;
+            }
             App.hideLoading();
-            if (res.data.success) {
+            if (success) {
               stopCamera();
               showSuccessOverlay(pkg);
             } else {
-              App.showModal({ title: '取件失败', icon: 'error', desc: res.data.message, confirmText: '知道了' });
+              App.showModal({ title: '取件失败', icon: 'error', desc: failMsg || '取件失败', confirmText: '知道了' });
               resumeScan();
             }
           } catch (e) {
@@ -1005,7 +1337,7 @@
         html += '请在浏览器权限弹窗中允许访问相机，<br>或在系统设置中开启相机权限<br>';
       }
       if (location.protocol === 'file:') {
-        html += '<span style="display:inline-block;margin-top:8px;color:var(--color-warning);">提示：当前以本地文件方式打开，浏览器禁止调用摄像头。<br>请在项目目录运行 <b>node server.js</b>，然后访问<br>http://localhost:3000/scan.html</span>';
+        html += '<span style="display:inline-block;margin-top:8px;color:var(--color-warning);">提示：当前以本地文件方式打开，浏览器禁止调用摄像头。<br>请运行 <b>backend/start-backend.cmd</b>（或在 backend 目录执行 npm start），然后访问<br>https://localhost:3000/scan.html</span>';
       }
       return html;
     }
@@ -1052,13 +1384,163 @@
       }, 350);
     }
 
-    function handleManualScan(code) {
+    async function handleManualScan(code) {
+      // 导入本地模式：手动输入直接进入导入抽屉
+      if (SCAN.mode === 'import') {
+        flashSuccessFrame();
+        openImportSheet(code);
+        return;
+      }
+      // 取件模式（原流程）
       var result = API.resolveScanCode(code);
       if (result.status === 'pending' && result.pkg) {
+        // 灰度模式：手动输入同样必须走后端校验
+        if (isGrayScan()) {
+          App.showLoading();
+          var v = await grayVerifyPickupCode(result.pkg.pickupCode, result.pkg.id);
+          App.hideLoading();
+          if (!v.ok || !v.allowPickup) {
+            showScanFailed(v.message || '该取件码不属于当前用户，请重新输入');
+            return;
+          }
+        }
         showPickupConfirm(result.pkg);
       } else {
         showScanFailed(result.message || '未识别到快递二维码');
       }
+    }
+
+    // ---------- 3.5 模式切换 + 导入本地抽屉（新功能） ----------
+    // 按钮平滑过渡：mode-switch / mode-banner 通过 CSS transition 平滑变色
+    function toggleScanMode() {
+      SCAN.mode = (SCAN.mode === 'pickup') ? 'import' : 'pickup';
+      var btn = document.getElementById('modeSwitch');
+      var label = document.getElementById('modeLabel');
+      var banner = document.getElementById('modeBanner');
+      var bannerText = document.getElementById('modeBannerText');
+      var tip = document.getElementById('scanTip');
+      if (SCAN.mode === 'import') {
+        btn.classList.add('mode-import');
+        label.textContent = '导入模式';
+        banner.classList.add('mode-import');
+        bannerText.textContent = '当前为「导入模式」：扫描快递架上的取件码标签，将快递导入本地列表';
+        tip.textContent = '将快递架上的取件码标签对准扫描框';
+      } else {
+        btn.classList.remove('mode-import');
+        label.textContent = '取件模式';
+        banner.classList.remove('mode-import');
+        bannerText.textContent = '当前为「取件模式」：扫描已到站快递的取件码完成取件';
+        tip.textContent = '将取件码对准扫描框，支持二维码与面单数字';
+      }
+    }
+
+    // 打开导入抽屉（从底部滑入，沉浸式过渡）
+    function openImportSheet(code) {
+      SCAN.importCode = code;
+      document.getElementById('importCodeDisplay').textContent = code;
+      // 重置选择
+      SCAN.importSelectedCompany = null;
+      SCAN.importSelectedPoint = null;
+      var companyChips = document.querySelectorAll('#companyChips .chip');
+      companyChips.forEach(function (c) { c.classList.remove('selected'); });
+      var pointChips = document.querySelectorAll('#pointChips .chip');
+      pointChips.forEach(function (c) { c.classList.remove('selected'); });
+      // 默认选中顺丰 + 涵江校园驿站
+      var defaultCompany = document.querySelector('#companyChips .chip[data-company="顺丰"]');
+      if (defaultCompany) selectChip(defaultCompany, 'company');
+      var defaultPoint = document.querySelector('#pointChips .chip[data-point="涵江校园驿站"]');
+      if (defaultPoint) selectChip(defaultPoint, 'point');
+      // 停止摄像头避免抽屉滚动时画面干扰
+      pauseScan();
+      // 显示遮罩 + 抽屉（CSS 过渡自动平滑滑入）
+      document.getElementById('importMask').classList.add('show');
+      document.getElementById('importSheet').classList.add('show');
+    }
+
+    function closeImportSheet() {
+      document.getElementById('importMask').classList.remove('show');
+      document.getElementById('importSheet').classList.remove('show');
+      // 抽屉关闭后恢复扫码循环
+      setTimeout(function () {
+        if (SCAN.stream && !document.getElementById('successOverlay').classList.contains('show')) {
+          resumeScan();
+        }
+      }, 350);
+    }
+
+    // 选择快递公司/取件点 chip
+    function selectChip(el, type) {
+      var container = el.parentElement;
+      var siblings = container.querySelectorAll('.chip');
+      siblings.forEach(function (s) { s.classList.remove('selected'); });
+      el.classList.add('selected');
+      if (type === 'company') {
+        SCAN.importSelectedCompany = el.getAttribute('data-company');
+        SCAN.importSelectedShort = el.getAttribute('data-short') || SCAN.importSelectedCompany;
+        SCAN.importSelectedColor = el.getAttribute('data-color') || '#64748B';
+      } else if (type === 'point') {
+        SCAN.importSelectedPoint = el.getAttribute('data-point');
+        SCAN.importSelectedType = el.getAttribute('data-type') || 'station';
+      }
+    }
+    window.selectChip = selectChip;
+    window.toggleScanMode = toggleScanMode;
+    window.closeImportSheet = closeImportSheet;
+    window.openImportSheet = openImportSheet;
+    window.submitImportLocal = submitImportLocal;
+
+    // 提交导入本地 —— 调用 Storage.addLocalPackage，不走云端
+    function submitImportLocal() {
+      if (!SCAN.importCode) {
+        App.toast('取件码为空，请重新扫描');
+        return;
+      }
+      if (!SCAN.importSelectedCompany) {
+        App.toast('请选择快递公司');
+        return;
+      }
+      if (!SCAN.importSelectedPoint) {
+        App.toast('请选择取件点');
+        return;
+      }
+      var result = Storage.addLocalPackage({
+        pickupCode: SCAN.importCode,
+        company: SCAN.importSelectedCompany,
+        shortName: SCAN.importSelectedShort,
+        logoColor: SCAN.importSelectedColor,
+        pickupPoint: SCAN.importSelectedPoint,
+        type: SCAN.importSelectedType,
+        sender: '扫描导入',
+      });
+      if (result.success) {
+        // 关闭抽屉 → 显示沉浸式成功 overlay
+        document.getElementById('importMask').classList.remove('show');
+        document.getElementById('importSheet').classList.remove('show');
+        stopCamera();
+        showImportSuccessOverlay(result.pkg);
+      } else {
+        App.showModal({
+          title: '导入失败',
+          icon: 'warning',
+          desc: result.message || '导入失败，请稍后重试',
+          confirmText: '知道了',
+          onConfirm: function () { App.closeModal(); closeImportSheet(); },
+        });
+      }
+    }
+
+    // 导入成功的沉浸式 overlay（复用 success-overlay 结构，但标题改为"已导入本地"）
+    function showImportSuccessOverlay(pkg) {
+      var overlay = document.getElementById('successOverlay');
+      document.getElementById('successOverlayTitle').textContent = '已导入本地';
+      document.getElementById('successCompany').textContent = pkg.company;
+      document.getElementById('successTracking').textContent = pkg.trackingNo;
+      document.getElementById('successCode').textContent = pkg.pickupCode;
+      document.getElementById('successPoint').textContent = pkg.pickupPoint;
+      var btn = document.getElementById('successOverlayBtn');
+      btn.textContent = '去查看快递';
+      btn.onclick = function () { location.href = 'packages.html'; };
+      overlay.classList.add('show');
     }
 
     // 页面离开时释放摄像头
