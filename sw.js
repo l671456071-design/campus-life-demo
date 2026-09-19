@@ -8,7 +8,7 @@
 // 用户数据安全：仅缓存 App 外壳与静态资源；localStorage 业务数据不经过 SW
 'use strict';
 
-var VERSION = 'v9';
+var VERSION = 'v10';
 var CACHE_NAME = 'campus-life-' + VERSION;
 
 // 预缓存：App 外壳（页面 + 核心脚本 + 3D/扫码本地库 + 图标）

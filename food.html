@@ -67,29 +67,33 @@
     }
     .section-title .more svg { width: 13px; height: 13px; }
 
-    /* 店铺卡片 */
+    /* 店铺卡片（大图 · 少字） */
     .shop-card {
       display: flex;
       gap: 12px;
-      padding: 14px;
-      background: var(--color-surface);
-      border: 1px solid var(--color-border-light);
+      padding: 12px;
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border-soft);
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
       border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-sm);
       cursor: pointer;
       transition: box-shadow 0.2s, transform 0.15s;
       position: relative;
     }
     .shop-card:active { transform: scale(0.98); }
     .shop-card--closed { opacity: 0.55; }
+    /* 大图：92×92 方形招牌，铺满卡片左侧 */
     .shop-logo {
-      width: 62px; height: 62px;
-      border-radius: var(--radius-md);
+      width: 92px; height: 92px;
+      border-radius: 16px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 32px; line-height: 1;
+      font-size: 44px; line-height: 1;
       flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.04);
     }
-    .shop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    .shop-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
     .shop-head { display: flex; align-items: center; gap: 6px; }
     .shop-name { font-size: 15px; font-weight: 700; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .shop-open-badge {
@@ -97,19 +101,33 @@
       background: var(--color-success-light); color: var(--color-accent-hover); flex-shrink: 0;
     }
     .shop-open-badge.closed { background: var(--color-bg); color: var(--color-text-hint); }
-    .shop-stats { display: flex; align-items: center; gap: 8px; margin-top: 5px; font-size: 12px; color: var(--color-text-sub); flex-wrap: wrap; }
+    /* 只留一行核心数据：评分 · 月售 · 时长 */
+    .shop-stats { display: flex; align-items: center; gap: 5px; margin-top: 6px; font-size: 12px; color: var(--color-text-sub); white-space: nowrap; overflow: hidden; }
     .shop-rating { color: #F59E0B; font-weight: 700; }
-    .shop-notice { font-size: 12px; color: var(--color-text-hint); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .shop-promos { display: flex; gap: 6px; margin-top: 7px; flex-wrap: wrap; }
+    .shop-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--color-border); flex-shrink: 0; }
+    /* 优惠最多一条 */
+    .shop-promos { display: flex; gap: 6px; margin-top: 7px; overflow: hidden; }
     .shop-promo {
       display: inline-flex; align-items: center;
       font-size: 11px; font-weight: 600; color: #E4423A;
       border: 1px solid #FFD7D4; border-radius: 4px;
       padding: 1px 6px; background: #FFF7F6;
+      white-space: nowrap; flex-shrink: 0;
     }
     [data-theme="dark"] .shop-promo { background: #3B1D1A; border-color: #7C2D26; color: #FCA5A5; }
-    .shop-tags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
-    .shop-tag { font-size: 11px; color: var(--color-primary); background: var(--color-primary-lighter); border-radius: 4px; padding: 1px 6px; }
+
+    /* 分类导航：两行网格（7 项 = 4+3），不再横向滑动 */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .cat-grid .chip {
+      justify-content: center;
+      padding: 9px 0;
+      font-size: 13px;
+    }
 
     /* 校区切换 tabs */
     .campus-tabs {
@@ -210,8 +228,8 @@
           <input type="text" id="searchInput" placeholder="搜索店铺 / 菜品">
         </div>
 
-        <!-- 分类导航 -->
-        <div class="filter-chips anim-fade-in-up stagger-1" id="catChips" style="margin-top:12px;"></div>
+        <!-- 分类导航：两行网格 -->
+        <div class="cat-grid anim-fade-in-up stagger-1" id="catChips"></div>
 
         <!-- 进行中订单 -->
         <div id="activeOrderBox"></div>
@@ -333,34 +351,26 @@
           '</div>';
       }
 
-      // ---- 店铺卡片 ----
+      // ---- 店铺卡片（大图少字：招牌 92px + 一行数据 + 至多一条优惠） ----
       function shopCard(r, index) {
         var stagger = index < 6 ? ' stagger-' + (index + 1) : '';
         var closed = r.isOpen ? '' : ' shop-card--closed';
         var openBadge = r.isOpen
           ? '<span class="shop-open-badge">营业中</span>'
           : '<span class="shop-open-badge closed">休息中</span>';
-        var feeText = r.deliveryFee === 0 ? '免配送费' : '配送 ¥' + money(r.deliveryFee);
-        var promos = '';
-        if (r.promo) {
-          promos += '<span class="shop-promo">满' + money(r.promo.full) + '减' + money(r.promo.cut) + '</span>';
-        }
-        (r.tags || []).forEach(function (t) {
-          if (t !== '满' + money(r.promo ? r.promo.full : 0) + '减' + money(r.promo ? r.promo.cut : 0)) promos += '<span class="shop-promo">' + t + '</span>';
-        });
+        // 优惠只保留一条：优先满减，其次第一个标签
+        var promoText = r.promo ? ('满' + money(r.promo.full) + '减' + money(r.promo.cut)) : ((r.tags && r.tags[0]) || '');
+        var promo = promoText ? '<span class="shop-promo">' + promoText + '</span>' : '';
         return '<div class="shop-card anim-fade-in-up' + stagger + closed + '" onclick="location.href=\'food-detail.html?id=' + r.id + '\'">' +
           '<div class="shop-logo" style="background:' + (r.color || '#FEF3C7') + '22;">' + (r.emoji || '🍽️') + '</div>' +
           '<div class="shop-body">' +
             '<div class="shop-head"><span class="shop-name">' + r.name + '</span>' + openBadge + '</div>' +
             '<div class="shop-stats">' +
               '<span class="shop-rating">★ ' + r.rating + '</span>' +
-              '<span>月售 ' + r.monthlySales + '</span>' +
-              '<span>约 ' + r.deliveryTime + ' 分钟</span>' +
-              '<span>' + feeText + '</span>' +
-              '<span>¥' + money(r.minOrder) + ' 起送</span>' +
+              '<span class="shop-dot"></span><span>月售 ' + r.monthlySales + '</span>' +
+              '<span class="shop-dot"></span><span>约 ' + r.deliveryTime + ' 分钟</span>' +
             '</div>' +
-            (r.notice ? '<div class="shop-notice">' + r.notice + '</div>' : '') +
-            (promos ? '<div class="shop-promos">' + promos + '</div>' : '') +
+            (promo ? '<div class="shop-promos">' + promo + '</div>' : '') +
           '</div>' +
         '</div>';
       }

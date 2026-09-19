@@ -488,6 +488,9 @@
           building: building,
           room: room
         };
+        // 先写 name/avatar，再写宿舍——saveUserDorm 内部会重读 user 并回写，
+        // 若先调它会把页面上刚改的昵称用旧值覆盖回去（昵称改不动的根因）
+        Storage.saveUser(user);
         Storage.saveUserDorm(dorm);
       } else {
         // 未选宿舍：清除结构化数据
@@ -503,7 +506,7 @@
       }
 
       App.toastSuccess('已保存');
-      setTimeout(function () { location.href = 'myhome.html'; }, 600);
+      setTimeout(function () { location.href = 'profile.html'; }, 600);
     }
 
     // ---- 我的相册（导入 / 发帖 / 删除）----

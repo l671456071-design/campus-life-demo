@@ -180,6 +180,7 @@
 
       var CALIB = 94; // dBFS→dB SPL 经验校准偏移（手机麦克风，非专业仪器）
       var audioCtx = null, analyser = null, stream = null, buf = null, rafId = null;
+      var useFloatData = true; // 老 Safari 无 getFloatTimeDomainData 时自动降级字节版
       var running = false;
       var smooth = 0, maxV = 0, sumV = 0, countV = 0;
       var alertCooldown = 0;
@@ -205,10 +206,22 @@
 
       function frame() {
         if (!running || !analyser) return;
-        analyser.getFloatTimeDomainData(buf);
-        var sum = 0;
-        for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-        var rms = Math.sqrt(sum / buf.length);
+        // Float / Byte 双通道取数（老 Safari 走字节版）
+        var rms;
+        if (useFloatData) {
+          analyser.getFloatTimeDomainData(buf);
+          var sum = 0;
+          for (var i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+          rms = Math.sqrt(sum / buf.length);
+        } else {
+          analyser.getByteTimeDomainData(buf);
+          var sum2 = 0;
+          for (var j = 0; j < buf.length; j++) {
+            var v = (buf[j] - 128) / 128;
+            sum2 += v * v;
+          }
+          rms = Math.sqrt(sum2 / buf.length);
+        }
         var db = rms > 1e-7 ? 20 * Math.log10(rms) + CALIB : 0;
         db = Math.max(0, Math.min(140, db));
         // 指数平滑，数字不乱跳
@@ -229,33 +242,63 @@
 
       async function start() {
         if (running) return;
+        var btn = document.getElementById('dbToggle');
+        // 即时反馈：权限申请可能 pending 数秒（弹窗/等待授权），按钮先进入请求态
+        btn.textContent = '正在请求麦克风…';
+        btn.classList.add('on');
+        function resetBtn() { btn.textContent = '开始测量'; btn.classList.remove('on'); }
+        // ① 环境能力检测：非安全上下文（http://）下 mediaDevices 不存在，此前会被误报成"权限"问题
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          resetBtn();
+          App.showModal({
+            title: '无法访问麦克风',
+            desc: '当前页面不是安全上下文（需 https:// 或 localhost）。请通过线上地址访问后再使用分贝仪。',
+            confirmText: '知道了',
+            onConfirm: function () { App.closeModal(); },
+          });
+          return;
+        }
+        // ② 申请麦克风：按错误类型给出准确原因（此前一律提示权限）
         try {
           stream = await navigator.mediaDevices.getUserMedia({
             audio: { echoCancellation: false, autoGainControl: false, noiseSuppression: false },
           });
         } catch (e) {
+          resetBtn();
+          var reason = '浏览器弹窗被拒绝或系统关闭了麦克风权限';
+          if (e && e.name === 'NotAllowedError') reason = '你（或系统）拒绝了麦克风权限，请在浏览器地址栏权限设置中允许后重试';
+          else if (e && e.name === 'NotFoundError') reason = '未检测到可用的麦克风设备';
+          else if (e && e.name === 'NotReadableError') reason = '麦克风被其他应用占用，请关闭后重试';
           App.showModal({
-            title: '需要麦克风权限',
-            desc: '请在浏览器弹窗中允许使用麦克风；本地页面（file://）无法调用麦克风，需通过 https 访问。',
+            title: '麦克风不可用',
+            desc: reason,
             confirmText: '知道了',
             onConfirm: function () { App.closeModal(); },
           });
           return;
         }
         var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) { App.toast('当前浏览器不支持音频分析'); return; }
+        if (!AC) { resetBtn(); App.toast('当前浏览器不支持音频分析'); return; }
         audioCtx = new AC();
+        // ③ 关键修复：移动端自动播放策略下 AudioContext 常处于 suspended，
+        //    不 resume 时分析器输出恒为 0dB，表现为"启动了但数字不动"
+        if (audioCtx.state === 'suspended') {
+          try { await audioCtx.resume(); } catch (e2) { /* 用户手势上下文中一般可 resume */ }
+        }
         var srcNode = audioCtx.createMediaStreamSource(stream);
         analyser = audioCtx.createAnalyser();
         analyser.fftSize = 2048;
         analyser.smoothingTimeConstant = 0.3;
         srcNode.connect(analyser);
-        buf = new Float32Array(analyser.fftSize);
+        // ④ 老 Safari（<14.1）无 getFloatTimeDomainData，自动降级字节版
+        useFloatData = typeof analyser.getFloatTimeDomainData === 'function';
+        buf = useFloatData ? new Float32Array(analyser.fftSize) : new Uint8Array(analyser.fftSize);
         running = true;
         smooth = 0;
         var btn = document.getElementById('dbToggle');
         btn.textContent = '停止测量';
         btn.classList.add('on');
+        document.getElementById('dbLevel').textContent = '正在测量';
         rafId = requestAnimationFrame(frame);
       }
 

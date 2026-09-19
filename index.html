@@ -12,8 +12,18 @@
   <link rel="stylesheet" href="styles.css">
   <script src="theme-init.js"></script>
   <style>
-    /* ===== 生活门户首页（单色调 · 大留白 · 每屏一个焦点） ===== */
-    .home-hello { padding: 16px 16px 12px; }
+    /* ===== 生活门户首页（纯色背景 · AI 置顶 · 大图标） ===== */
+    /* 用户偏好：纯色背景（关闭环境光色场，亮/暗主题都回落到 --color-bg） */
+    body[data-page="home"] .app-shell,
+    [data-theme="dark"] body[data-page="home"] .app-shell,
+    :root:not([data-theme="light"]):not([data-theme="yaolan"]) body[data-page="home"] .app-shell {
+      background: var(--color-bg);
+      background-attachment: scroll;
+    }
+    /* 底部遮挡修复：加大底部留白，全部应用展开后的内容不被悬浮 tab-bar 压住 */
+    body[data-page="home"] .app-content { padding-bottom: calc(124px + env(safe-area-inset-bottom)); }
+
+    .home-hello { padding: 14px 16px 12px; }
     .home-hello .hello-title { font-size: 22px; font-weight: 800; color: var(--color-text); letter-spacing: 0.2px; }
     .home-hello .hello-date { font-size: 13px; color: var(--color-text-sub); margin-top: 4px; }
 
@@ -43,10 +53,10 @@
     .shader-caption .cap-title { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: .3px; }
     .shader-caption .cap-sub { font-size: 12px; color: rgba(255,255,255,.72); margin-top: 3px; }
 
-    /* —— AI 搜索栏：玻璃胶囊 —— */
+    /* —— AI 搜索栏：置顶第一位 —— */
     .ai-search-bar {
       display: flex; align-items: center; gap: 10px;
-      margin: 2px 16px 0;
+      margin: 12px 16px 0;
       background: var(--glass-bg);
       -webkit-backdrop-filter: var(--glass-blur);
       backdrop-filter: var(--glass-blur);
@@ -83,7 +93,7 @@
     }
     .quick-item:active { transform: scale(0.93); }
     .quick-icon {
-      width: 52px; height: 52px; border-radius: 17px;
+      width: 64px; height: 64px; border-radius: 20px;
       background: var(--glass-bg);
       -webkit-backdrop-filter: var(--glass-blur);
       backdrop-filter: var(--glass-blur);
@@ -91,8 +101,8 @@
       box-shadow: var(--glass-highlight), var(--shadow-sm);
       display: flex; align-items: center; justify-content: center;
     }
-    .quick-icon svg { width: 24px; height: 24px; }
-    .quick-label { font-size: 12.5px; font-weight: 600; color: var(--color-text); }
+    .quick-icon svg { width: 30px; height: 30px; }
+    .quick-label { font-size: 13px; font-weight: 600; color: var(--color-text); }
 
     /* —— 全部应用：四宫格，默认折叠 —— */
     .all-apps-wrap {
@@ -104,7 +114,7 @@
     .all-apps-wrap.collapsed::after {
       content: '';
       position: absolute; left: 0; right: 0; bottom: 0; height: 48px;
-      background: linear-gradient(180deg, rgba(248,250,252,0), var(--color-bg));
+      background: linear-gradient(180deg, rgba(0,0,0,0), var(--color-bg));
       pointer-events: none;
     }
     .more-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
@@ -166,22 +176,8 @@
       </div>
     </header>
     <main class="app-content" id="mainContent">
-      <div class="home-hello anim-fade-in-up">
-        <div class="hello-title" id="helloName">你好，同学</div>
-        <div class="hello-date" id="helloDate"></div>
-      </div>
-
-      <!-- Spark 徽章（光雨 Canvas 凭证）：首页第一视觉锚点 -->
-      <div class="shader-frame anim-fade-in-up stagger-1">
-        <div class="spark-badge" id="sparkBadge" data-state="loading" data-variant="badge"></div>
-        <div class="shader-caption">
-          <div class="cap-title">Spark 徽章</div>
-          <div class="cap-sub">光雨与卷曲噪声余烬组成的凭证 · Ultimate</div>
-        </div>
-      </div>
-
-      <!-- AI 搜索栏（伪输入，点击进入 AI 对话页） -->
-      <a href="ai.html" class="ai-search-bar anim-fade-in-up stagger-2" id="aiSearchBar">
+      <!-- AI 搜索栏：置顶第一位 -->
+      <a href="ai.html" class="ai-search-bar anim-fade-in-up stagger-1" id="aiSearchBar">
         <span class="ai-search-ic">
           <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l1.6 4.8L18.5 8l-4.9 1.6L12 14.5l-1.6-4.9L5.5 8l4.9-1.2z"/><path d="M19 14l.8 2.4L22 17l-2.2.6L19 20l-.8-2.4L16 17l2.2-.6z"/></svg>
         </span>
@@ -191,7 +187,22 @@
         <span class="ai-search-tag">AI 助手</span>
       </a>
 
-      <!-- 常用功能：4 个，每个功能全页只出现一次 -->
+      <!-- 问候语 -->
+      <div class="home-hello anim-fade-in-up">
+        <div class="hello-title" id="helloName">你好，同学</div>
+        <div class="hello-date" id="helloDate"></div>
+      </div>
+
+      <!-- Spark 徽章（光雨 Canvas 凭证） -->
+      <div class="shader-frame anim-fade-in-up stagger-2">
+        <div class="spark-badge" id="sparkBadge" data-state="loading" data-variant="badge"></div>
+        <div class="shader-caption">
+          <div class="cap-title">Spark 徽章</div>
+          <div class="cap-sub">光雨与卷曲噪声余烬组成的凭证 · Ultimate</div>
+        </div>
+      </div>
+
+      <!-- 常用功能：4 个大图标，每个功能全页只出现一次 -->
       <div class="life-section anim-fade-in-up stagger-3">
         <div class="section-header"><span class="section-title">常用</span></div>
         <div class="quick-grid">

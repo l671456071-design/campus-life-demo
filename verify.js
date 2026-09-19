@@ -1419,7 +1419,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 已跟进到 v9（[21]）', /var VERSION = 'v9'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v10（[22]）', /var VERSION = 'v10'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1816,8 +1816,10 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('decibel.html 85dB 警戒线提醒 + 震动 + 完整分级（0-120dB）',
     dbSrc.indexOf('dbAlert') !== -1 && dbSrc.indexOf('85') !== -1 &&
     dbSrc.indexOf('vibrate') !== -1 && dbSrc.indexOf('疼痛阈值') !== -1);
-  check('decibel.html 权限拒绝与 file:// 兜底 + 切后台停麦克',
-    dbSrc.indexOf('需要麦克风权限') !== -1 && /visibilitychange/.test(dbSrc));
+  check('decibel.html 权限/环境错误分类提示 + 切后台停麦克（v10：NotAllowed/NotFound/NotReadable + mediaDevices 检测 + AudioContext resume）',
+    dbSrc.indexOf('NotAllowedError') !== -1 && dbSrc.indexOf('NotReadableError') !== -1 &&
+    dbSrc.indexOf('navigator.mediaDevices || !navigator.mediaDevices.getUserMedia') !== -1 &&
+    dbSrc.indexOf('audioCtx.resume()') !== -1 && /visibilitychange/.test(dbSrc));
 
   // 18.8 健身
   check('fitness.html 周一到周日部位训练（FOCUSES + fitAddItem/fitRemoveItem + 换部位）',
@@ -2183,9 +2185,73 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     badgeSrc9.indexOf('<canvas id="c"') !== -1 &&
     !/<script[^>]+src=/.test(badgeSrc9) && !/<link[^>]+href="http/.test(badgeSrc9));
 
-  // 21.7 缓存
-  check('sw.js v9 且预缓存 spark-badge.html',
-    /var VERSION = 'v9';/.test(swSrc9) && swSrc9.indexOf("'./spark-badge.html'") !== -1);
+  // 21.7 缓存（版本号由最新发布块断言）
+  check('sw.js 预缓存 spark-badge.html', swSrc9.indexOf("'./spark-badge.html'") !== -1);
+})();
+
+// ============================================================
+// [22] v10 改版：外卖分类两行+卡片大图少字 / 首页 AI 置顶+纯色底+大图标 /
+//              昵称保存 bug 修复（宿舍分支覆盖）/ 分贝仪启动修复
+// ============================================================
+(function () {
+  console.log('\n[22] v10：外卖改版/首页布局/昵称bug/分贝仪修复');
+  const foodSrc10 = fs.readFileSync(path.join(ROOT, 'food.html'), 'utf8');
+  const idxSrc10 = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  const peSrc10 = fs.readFileSync(path.join(ROOT, 'profile-edit.html'), 'utf8');
+  const dbSrc10 = fs.readFileSync(path.join(ROOT, 'decibel.html'), 'utf8');
+
+  // 22.1 校园外卖
+  check('food.html 分类两行网格（.cat-grid 4 列，7 项=4+3，不横向滑动）',
+    foodSrc10.indexOf('.cat-grid') !== -1 &&
+    /grid-template-columns:\s*repeat\(4,\s*1fr\)/.test(foodSrc10) &&
+    /class="cat-grid[^"]*"\s+id="catChips"/.test(foodSrc10));
+  check('food.html 店铺卡大图（.shop-logo 92px 圆角16）',
+    /width:\s*92px;\s*height:\s*92px/.test(foodSrc10) &&
+    /border-radius:\s*16px/.test(foodSrc10));
+  check('food.html 卡片减文字（无店铺公告 shop-notice 渲染，数据一行 shop-dot 分隔，配送费/起送价移除）',
+    foodSrc10.indexOf('shop-notice') === -1 && foodSrc10.indexOf('shop-dot') !== -1 &&
+    foodSrc10.indexOf('起送') === -1 && foodSrc10.indexOf('feeText') === -1);
+  check('food.html 优惠最多一条（promo 优先满减、否则首个 tag）',
+    /promoText\s*=\s*r\.promo\s*\?/.test(foodSrc10) && foodSrc10.indexOf('r.tags && r.tags[0]') !== -1);
+  check('food.html 保留分片渲染与左标题头（App.renderChunked + header--left 校园外卖）',
+    foodSrc10.indexOf('App.renderChunked(listEl') !== -1 &&
+    /class="app-header header--left"[\s\S]{0,200}校园外卖/.test(foodSrc10));
+
+  // 22.2 首页
+  check('index.html AI 搜索栏置顶（main 内第一个元素，先于问候语）',
+    idxSrc10.indexOf('<main class="app-content" id="mainContent">') < idxSrc10.indexOf('id="aiSearchBar"') &&
+    idxSrc10.indexOf('id="aiSearchBar"') < idxSrc10.indexOf('id="helloName"'));
+  check('index.html 纯色背景（home 页关闭环境光色场，回落 --color-bg）',
+    /body\[data-page="home"\] \.app-shell[\s\S]{0,120}background:\s*var\(--color-bg\)/.test(idxSrc10));
+  check('index.html 底部遮挡修复（app-content padding-bottom 124px + 折叠遮罩用 var(--color-bg)）',
+    /padding-bottom:\s*calc\(124px \+ env\(safe-area-inset-bottom\)\)/.test(idxSrc10) &&
+    idxSrc10.indexOf('linear-gradient(180deg, rgba(0,0,0,0), var(--color-bg))') !== -1);
+  check('index.html 常用 4 个大图标（.quick-icon 64px / svg 30px / label 13px）',
+    /width:\s*64px;\s*height:\s*64px;\s*border-radius:\s*20px/.test(idxSrc10) &&
+    /\.quick-icon svg \{ width: 30px; height: 30px; \}/.test(idxSrc10));
+  check('index.html Spark 徽章 hero 保留（AI 置顶后位于问候语之后）',
+    idxSrc10.indexOf('id="sparkBadge"') !== -1 &&
+    idxSrc10.indexOf('id="sparkBadge"') > idxSrc10.indexOf('id="helloName"'));
+
+  // 22.3 昵称 bug 修复
+  check('profile-edit.html 先 saveUser 再 saveUserDorm（昵称不再被宿舍回写覆盖）',
+    peSrc10.indexOf('Storage.saveUser(user);') !== -1 &&
+    peSrc10.indexOf('Storage.saveUser(user);') < peSrc10.indexOf('Storage.saveUserDorm(dorm);') &&
+    peSrc10.indexOf('若先调它会把页面上刚改的昵称用旧值覆盖回去') !== -1);
+  check('profile-edit.html 保存后回个人中心（profile.html，不再跳 myhome）',
+    /location\.href\s*=\s*'profile\.html'/.test(peSrc10) &&
+    peSrc10.indexOf("location.href = 'myhome.html'") === -1);
+
+  // 22.4 分贝仪修复
+  check('decibel.html 启动修复（mediaDevices 缺失检测 + resume + 错误分类 + Float/Byte 降级 + pending 反馈）',
+    dbSrc10.indexOf('!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia') !== -1 &&
+    /audioCtx\.state === 'suspended'/.test(dbSrc10) && dbSrc10.indexOf('audioCtx.resume()') !== -1 &&
+    dbSrc10.indexOf('NotReadableError') !== -1 && dbSrc10.indexOf('useFloatData') !== -1 &&
+    dbSrc10.indexOf('正在请求麦克风') !== -1);
+
+  // 22.5 缓存版本 v10
+  const swSrc10 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  check('sw.js 版本升级 v10', /var VERSION = 'v10';/.test(swSrc10));
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------
