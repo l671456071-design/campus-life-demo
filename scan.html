@@ -1049,15 +1049,18 @@
       SCAN.ocrLoading = true;
       document.getElementById('scanTip').textContent = '正在启动本地 OCR 引擎…';
       try {
-        var worker = Tesseract.createWorker({
-          workerPath: 'libs/tesseract/worker.min.js',
-          corePath: 'libs/tesseract/core',
-          langPath: 'libs/tesseract/lang',
+        // workerPath 等必须是绝对 URL：tesseract 经 blob: URL 创建 Worker，
+        // blob 作用域内相对路径 importScripts 会报 "URL is invalid"
+        var libUrl = function (p) { return new URL(p, location.href).href; };
+        // 本地 tesseract.js 为 v4：createWorker(lang, oem, options) 一步到位，
+        // 返回的 worker 已完成加载与初始化（v2 的 load/loadLanguage 在 v4 不存在）
+        var worker = await Tesseract.createWorker('eng', 1, {
+          workerPath: libUrl('libs/tesseract/worker.min.js'),
+          corePath: libUrl('libs/tesseract/core'),
+          langPath: libUrl('libs/tesseract/lang'),
+          gzip: true,
           logger: function () {},
         });
-        await worker.load();
-        await worker.loadLanguage('eng');
-        await worker.initialize('eng');
         // 限定识别范围：数字、大写字母、短横线、冒号（取件码字符集）
         await worker.setParameters({
           tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-: ',

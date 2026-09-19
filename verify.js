@@ -280,12 +280,13 @@ appFiles.forEach(f => {
 const vendorDefaultHits = cdnHits.filter(f => f.startsWith('libs/tesseract/') || f.startsWith('libs/three/'));
 const appHits = cdnHits.filter(f => !f.startsWith('libs/') && !f.startsWith('assets/'));
 check('应用代码无 CDN / 无在线地图 API 依赖', appHits.length === 0, appHits.join('; '));
-check('三方库内置默认 URL 均被本地路径覆盖', (() => {
+check('三方库内置默认 URL 均被本地路径覆盖（v11：workerPath 改 new URL 绝对地址，仍指向本地 libs）', (() => {
   if (!vendorDefaultHits.length) return true;
   const sh = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
-  return sh.includes("workerPath: 'libs/tesseract/worker.min.js'")
-    && sh.includes("corePath: 'libs/tesseract/core'")
-    && sh.includes("langPath: 'libs/tesseract/lang'");
+  return sh.includes("new URL(p, location.href).href")
+    && sh.includes("libUrl('libs/tesseract/worker.min.js')")
+    && sh.includes("libUrl('libs/tesseract/core')")
+    && sh.includes("libUrl('libs/tesseract/lang')");
 })(), '库内置默认: ' + vendorDefaultHits.join('; '));
 
 // ---------- 5. 二次升级结构验收 ----------
@@ -427,7 +428,7 @@ check('config.js isDemo 恒为 false 常量', /isDemo:\s*false/.test(configSrc))
 
 // 6.6 每个功能页都在 storage.js 之前引入 config.js，且引入 storage.js 的页面同时引入 demo-data.js
 // （本地化升级报告.html 是说明文档；dev-login.html / gray 是刻意自包含的服务器分发页，均不参与本项检查）
-const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html', 'about.html', 'website.html', 'spark-badge.html']);
+const SELF_CONTAINED_PAGES = new Set(['本地化升级报告.html', 'dev-login.html', 'about.html', 'website.html', 'spark-badge.html', 'spark.html']);
 const demoScriptPages = fs.readdirSync(ROOT)
   .filter(f => f.endsWith('.html') && !SELF_CONTAINED_PAGES.has(f));
 let scriptIssues = [];
@@ -1419,7 +1420,7 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   check('lifeAddResume 拒绝缺少意向', !Storage.lifeAddResume({ name: 'x', intent: '' }).success);
 
   // 14.10 sw.js 预缓存
-  check('sw.js VERSION 已跟进到 v10（[22]）', /var VERSION = 'v10'/.test(swSrc));
+  check('sw.js VERSION 已跟进到 v11（[23]）', /var VERSION = 'v11'/.test(swSrc));
   ['savings.html', 'schedule.html', 'forum.html', 'jobs.html',
    'myhome.html', 'about.html', 'website.html'].forEach(f => {
     check('sw.js 预缓存 ' + f, swSrc.indexOf("'./" + f + "'") !== -1);
@@ -1605,8 +1606,8 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
   const setSrc3 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
   check('profile.html 已移除「分享我的作品」入口与死代码',
     profSrc4.indexOf('分享我的作品') === -1 && profSrc4.indexOf('showShareModal') === -1);
-  check('settings.html 显示/性能选项 AI 渐变图标（ai-ico + aiGrad）',
-    setSrc3.indexOf('class="ai-ico"') !== -1 && setSrc3.indexOf('id="aiGrad"') !== -1 &&
+  check('settings.html 选项图标 ai-ico（v11：分组标题 emoji 化后 aiGrad 渐变 defs 已移除，ai-ico 保留 7 个）',
+    setSrc3.indexOf('class="ai-ico"') !== -1 && setSrc3.indexOf('id="aiGrad"') === -1 &&
     (setSrc3.match(/class="ai-ico"/g) || []).length === 7);
   check('settings.html emoji 选项已替换（无 🌓🌙⚙️🔋🚀）',
     ['🌓', '🌙', '⚙️', '🔋', '🚀'].every(e => setSrc3.indexOf(e) === -1));
@@ -2249,9 +2250,61 @@ check('exitTrial 清理本地体验痕迹并回灰度页',
     dbSrc10.indexOf('NotReadableError') !== -1 && dbSrc10.indexOf('useFloatData') !== -1 &&
     dbSrc10.indexOf('正在请求麦克风') !== -1);
 
-  // 22.5 缓存版本 v10
+  // 22.5 缓存（版本号由最新发布块断言）
   const swSrc10 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  check('sw.js 版本升级 v10', /var VERSION = 'v10';/.test(swSrc10));
+  check('sw.js 版本机制（campus-life 缓存名）', /var VERSION = 'v\d+';/.test(swSrc10) && swSrc10.indexOf("'campus-life-' + VERSION") !== -1);
+})();
+
+// ============================================================
+// [23] v11 改版：设置页重构（统一图标/性能精简/退出红卡/关于置底）/
+//              tesseract worker 绝对路径修复 / Spark 独立官网
+// ============================================================
+(function () {
+  console.log('\n[23] v11：设置重构/tesseract修复/Spark独立站');
+  const setSrc11 = fs.readFileSync(path.join(ROOT, 'settings.html'), 'utf8');
+  const scanSrc11 = fs.readFileSync(path.join(ROOT, 'scan.html'), 'utf8');
+  const detailSrc11 = fs.readFileSync(path.join(ROOT, 'detail.html'), 'utf8');
+  const sparkSrc11 = fs.readFileSync(path.join(ROOT, 'spark.html'), 'utf8');
+  const swSrc11 = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+
+  // 23.1 设置页
+  check('settings.html 分组标题统一 emoji 图标（📢🎨⚡🔒ℹ️）',
+    ['📢', '🎨', '⚡', '🔒', 'ℹ️'].every(e => setSrc11.indexOf(e) !== -1) &&
+    setSrc11.indexOf('group-title-ai') === -1 && setSrc11.indexOf('aiGrad') === -1);
+  check('settings.html 性能模式精简（当前状态 perfNow + 设备 perfDevice + 三选一，无长说明 perfTierDesc）',
+    setSrc11.indexOf('id="perfNow"') !== -1 && setSrc11.indexOf('id="perfDevice"') !== -1 &&
+    setSrc11.indexOf('id="perfDot"') !== -1 && setSrc11.indexOf('perfTierDesc') === -1 &&
+    setSrc11.indexOf('根据设备能力自动调整') === -1);
+  check('settings.html 退出登录独立红卡（.logout-card 红字，账号安全组内不再有退出项）',
+    setSrc11.indexOf('logout-card') !== -1 &&
+    /class="logout-card"[^>]*onclick="showLogoutConfirm\(\)"/.test(setSrc11) &&
+    setSrc11.indexOf('style="color:var(--color-danger);">退出登录') === -1);
+  check('settings.html 关于软件固定底部（ℹ️ 组在 footer DOM 前，版本 v10.0.0 + 版权）',
+    setSrc11.indexOf('关于软件') < setSrc11.indexOf('<div class="settings-footer') &&
+    setSrc11.indexOf('v10.0.0') !== -1 && setSrc11.indexOf('© 2026 Campus Life') !== -1);
+  check('settings.html 设置卡玻璃化（settings-card 走 glass tokens）',
+    /\.settings-card\s*\{[\s\S]*?var\(--glass-bg\)[\s\S]*?var\(--glass-blur\)/.test(setSrc11));
+
+  // 23.2 tesseract worker 路径修复
+  check('scan.html OCR worker 绝对 URL（new URL(p, location.href)，无相对 workerPath）',
+    scanSrc11.indexOf("new URL(p, location.href).href") !== -1 &&
+    !/workerPath:\s*'libs\//.test(scanSrc11));
+  check('detail.html 身份码 OCR worker 绝对 URL（同修）',
+    detailSrc11.indexOf("new URL(p, location.href).href") !== -1 &&
+    !/workerPath:\s*'libs\//.test(detailSrc11));
+
+  // 23.3 Spark 独立官网
+  check('spark.html 独立站（全屏光雨 hero + 打开应用 CTA + 深色玻璃功能网格）',
+    sparkSrc11.indexOf('id="heroBg"') !== -1 && sparkSrc11.indexOf("frame.src = 'spark-badge.html'") !== -1 &&
+    sparkSrc11.indexOf('href="index.html"') !== -1 && sparkSrc11.indexOf('btn-hero--primary') !== -1 &&
+    sparkSrc11.indexOf('g-card') !== -1);
+  check('spark.html 独立设计（无 app 壳：无 tab-bar/styles.css 依赖，自带深色样式）',
+    sparkSrc11.indexOf('tab-bar') === -1 && sparkSrc11.indexOf('styles.css') === -1 &&
+    sparkSrc11.indexOf('IntersectionObserver') !== -1);
+
+  // 23.4 缓存 v11
+  check('sw.js v11 且预缓存 spark.html',
+    /var VERSION = 'v11';/.test(swSrc11) && swSrc11.indexOf("'./spark.html'") !== -1);
 })();
 
 // ---------- 汇总（等待 Promise 类断言落定后输出） ----------

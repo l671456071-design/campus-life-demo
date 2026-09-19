@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>校园生活 Campus Life · Spark</title>
+<meta name="description" content="校园生活 Campus Life —— 一站式校园生活助手：扫码取件、AI 问答、3D 地图、课程外卖。Spark 光雨视觉官方站。">
+<style>
+  /* ===== Spark 独立站：深色光雨 · 单一强调色 · 大字品牌 ===== */
+  :root {
+    --ink: #F8FAFC;
+    --ink-sub: rgba(248, 250, 252, 0.66);
+    --ink-hint: rgba(248, 250, 252, 0.42);
+    --accent: #60A5FA;
+    --glass: rgba(255, 255, 255, 0.06);
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font);
+    background: #05070D;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* —— Hero：全屏光雨凭证 —— */
+  .hero {
+    position: relative;
+    min-height: 100svh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 24px;
+    overflow: hidden;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    opacity: 0.9;
+  }
+  .hero-bg iframe { width: 100%; height: 100%; border: 0; display: block; }
+  /* 上下暗角，保证文字对比度 */
+  .hero::before, .hero::after {
+    content: '';
+    position: absolute; left: 0; right: 0;
+    pointer-events: none;
+  }
+  .hero::before { top: 0; height: 34%; background: linear-gradient(180deg, rgba(5,7,13,.78), rgba(5,7,13,0)); }
+  .hero::after { bottom: 0; height: 46%; background: linear-gradient(0deg, #05070D 4%, rgba(5,7,13,.6) 42%, rgba(5,7,13,0)); }
+  .hero-inner { position: relative; z-index: 2; max-width: 640px; }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 15px;
+    border-radius: 999px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    font-size: 12.5px; font-weight: 600; letter-spacing: .4px;
+    color: var(--ink-sub);
+    animation: rise .8s .1s cubic-bezier(.22,.61,.36,1) backwards;
+  }
+  .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: #34D399; box-shadow: 0 0 8px #34D399; }
+  .hero h1 {
+    margin-top: 22px;
+    font-size: clamp(44px, 11vw, 84px);
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1.05;
+    animation: rise .8s .22s cubic-bezier(.22,.61,.36,1) backwards;
+  }
+  .hero h1 .en {
+    display: block;
+    margin-top: 6px;
+    font-size: clamp(15px, 3.4vw, 22px);
+    font-weight: 600;
+    letter-spacing: 5px;
+    color: var(--accent);
+  }
+  .hero p {
+    margin: 20px auto 0;
+    max-width: 460px;
+    font-size: 15.5px;
+    line-height: 1.8;
+    color: var(--ink-sub);
+    animation: rise .8s .34s cubic-bezier(.22,.61,.36,1) backwards;
+  }
+  .hero-cta {
+    display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+    margin-top: 34px;
+    animation: rise .8s .46s cubic-bezier(.22,.61,.36,1) backwards;
+  }
+  .btn-hero {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 15px 34px;
+    border-radius: 999px;
+    font-size: 15px; font-weight: 700;
+    text-decoration: none;
+    transition: transform .2s, box-shadow .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-hero:active { transform: scale(.96); }
+  .btn-hero--primary {
+    background: linear-gradient(180deg, #3B82F6, #2563EB);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 10px 32px rgba(37, 99, 235, .45);
+  }
+  .btn-hero--ghost {
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border: 1px solid var(--glass-border);
+    color: var(--ink);
+  }
+  .scroll-hint {
+    position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    z-index: 2; font-size: 11px; letter-spacing: 3px; color: var(--ink-hint);
+    animation: pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+
+  /* —— 功能区：深色玻璃网格 —— */
+  .section { position: relative; padding: 96px 24px 20px; max-width: 920px; margin: 0 auto; }
+  .section-kicker { font-size: 12px; font-weight: 700; letter-spacing: 3px; color: var(--accent); text-transform: uppercase; }
+  .section h2 { margin-top: 12px; font-size: clamp(26px, 5.6vw, 38px); font-weight: 800; letter-spacing: -.5px; }
+  .section .sub { margin-top: 10px; font-size: 14.5px; color: var(--ink-sub); line-height: 1.8; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin-top: 34px;
+  }
+  .g-card {
+    padding: 22px 20px;
+    border-radius: 20px;
+    background: var(--glass);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    transition: transform .25s, border-color .25s;
+  }
+  .g-card:hover { transform: translateY(-3px); border-color: rgba(96, 165, 250, 0.4); }
+  .g-emoji { font-size: 26px; }
+  .g-name { margin-top: 12px; font-size: 15.5px; font-weight: 700; }
+  .g-desc { margin-top: 6px; font-size: 13px; line-height: 1.7; color: var(--ink-sub); }
+
+  /* —— 底部 CTA + 版权 —— */
+  .final {
+    text-align: center;
+    padding: 110px 24px 90px;
+  }
+  .final h2 { font-size: clamp(26px, 5.6vw, 40px); font-weight: 800; letter-spacing: -.5px; }
+  .final p { margin-top: 12px; font-size: 14.5px; color: var(--ink-sub); }
+  .final .btn-hero { margin-top: 30px; }
+  .foot {
+    text-align: center;
+    padding: 0 24px calc(40px + env(safe-area-inset-bottom));
+    font-size: 12px; color: var(--ink-hint); line-height: 2;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-badge, .hero h1, .hero p, .hero-cta { animation: none; }
+    .scroll-hint { animation: none; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- Hero：全屏 Spark 光雨（复用应用内自包含场景 spark-badge.html） -->
+  <header class="hero">
+    <div class="hero-bg" id="heroBg" aria-hidden="true"></div>
+    <div class="hero-inner">
+      <span class="hero-badge"><span class="dot"></span>PWA · 离线可用 · 数据不出设备</span>
+      <h1>校园生活<span class="en">CAMPUS LIFE</span></h1>
+      <p>扫码取件、AI 问答、3D 校园地图、课程与外卖——一个 App 装下你在校园的每一天。光雨与卷曲噪声余烬组成的 Spark 徽章，是我们给每一位同学的凭证。</p>
+      <div class="hero-cta">
+        <a class="btn-hero btn-hero--primary" href="index.html">打开应用 →</a>
+        <a class="btn-hero btn-hero--ghost" href="#features">了解功能</a>
+      </div>
+    </div>
+    <span class="scroll-hint">SCROLL</span>
+  </header>
+
+  <!-- 功能 -->
+  <section class="section" id="features">
+    <div class="section-kicker">Features</div>
+    <h2>装进口袋的校园管家</h2>
+    <p class="sub">Apple Liquid Glass 设计语言 · SF Pro 字体 · 819 项自动化验收全绿</p>
+    <div class="grid">
+      <div class="g-card"><div class="g-emoji">📷</div><div class="g-name">扫码取件</div><div class="g-desc">OCR 空闲预加载不白屏，GPU 扫描线稳定 60fps，识别节流不发热。</div></div>
+      <div class="g-card"><div class="g-emoji">✨</div><div class="g-name">AI 双引擎</div><div class="g-desc">本地规则引擎秒答 + DeepSeek 云端深度问答，断网也不哑火。</div></div>
+      <div class="g-card"><div class="g-emoji">🗺</div><div class="g-name">3D 校园地图</div><div class="g-desc">Three.js 本地渲染，聚合标记一键导航最近驿站。</div></div>
+      <div class="g-card"><div class="g-emoji">📦</div><div class="g-name">快递管理</div><div class="g-desc">扫码 / 手动双录入，全部清零一键归零，记录不丢失。</div></div>
+      <div class="g-card"><div class="g-emoji">🗓</div><div class="g-name">课程表</div><div class="g-desc">Excel 一键导入，真实起止时钟，上课备注全链路。</div></div>
+      <div class="g-card"><div class="g-emoji">🍜</div><div class="g-name">校园外卖</div><div class="g-desc">两行分类大图店铺卡，制作配送状态实时可查。</div></div>
+    </div>
+  </section>
+
+  <!-- 底部 CTA -->
+  <section class="final">
+    <h2>现在，把校园装进口袋</h2>
+    <p>添加到主屏幕，离线也能用。</p>
+    <a class="btn-hero btn-hero--primary" href="index.html">进入校园生活 →</a>
+  </section>
+
+  <footer class="foot">
+    校园生活 Campus Life · Spark Official Site<br>
+    © 2026 Campus Life · Made with ❤️ and light rain
+  </footer>
+
+  <script>
+    // 光雨场景懒挂载：离开视口/切后台即卸载省 GPU（与 App 内同策略）
+    (function () {
+      var host = document.getElementById('heroBg');
+      var frame = null;
+      function mount() {
+        if (frame) return;
+        frame = document.createElement('iframe');
+        frame.title = 'Spark badge light rain';
+        frame.setAttribute('sandbox', 'allow-scripts');
+        frame.setAttribute('loading', 'lazy');
+        frame.src = 'spark-badge.html';
+        host.appendChild(frame);
+      }
+      function unmount() { if (frame) { frame.remove(); frame = null; } }
+      function sync(vis) { if (vis && document.visibilityState !== 'hidden') mount(); else unmount(); }
+      if ('IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) { sync(entries[0].isIntersecting); }, { rootMargin: '60px' }).observe(host);
+      } else { mount(); }
+      document.addEventListener('visibilitychange', function () { sync(!!frame); });
+    })();
+  </script>
+</body>
+</html>

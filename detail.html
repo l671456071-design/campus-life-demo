@@ -302,15 +302,16 @@
       async function ensureIdcOcrWorker() {
         if (_idcOcrWorker) return _idcOcrWorker;
         if (typeof Tesseract === 'undefined') throw new Error('ocr unavailable');
-        var worker = Tesseract.createWorker({
-          workerPath: 'libs/tesseract/worker.min.js',
-          corePath: 'libs/tesseract/core',
-          langPath: 'libs/tesseract/lang',
+        // workerPath 必须是绝对 URL（blob Worker 内相对 importScripts 会 invalid）
+        var libUrl = function (p) { return new URL(p, location.href).href; };
+        // tesseract.js v4：一步创建就绪 worker（v2 的 load/loadLanguage 已不存在）
+        var worker = await Tesseract.createWorker('eng', 1, {
+          workerPath: libUrl('libs/tesseract/worker.min.js'),
+          corePath: libUrl('libs/tesseract/core'),
+          langPath: libUrl('libs/tesseract/lang'),
+          gzip: true,
           logger: function () {},
         });
-        await worker.load();
-        await worker.loadLanguage('eng');
-        await worker.initialize('eng');
         await worker.setParameters({
           tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-',
           tessedit_pageseg_mode: '6',

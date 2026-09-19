@@ -17,17 +17,23 @@
       margin-bottom: 16px;
     }
     .settings-group-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
       font-size: 13px;
       color: var(--color-text-sub);
       padding: 0 16px 8px;
       font-weight: 500;
     }
+    .group-emoji { font-size: 14px; line-height: 1; }
     .settings-card {
-      background: var(--color-surface);
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
       border-radius: var(--radius-lg);
       overflow: hidden;
-      box-shadow: var(--shadow-sm);
-      border: 1px solid var(--color-border-light);
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
+      border: 1px solid var(--glass-border-soft);
     }
     .settings-item {
       display: flex;
@@ -142,15 +148,53 @@
     }
     .ai-ico svg { width: 17px; height: 17px; stroke: #fff; }
     .theme-option.active .ai-ico { box-shadow: 0 0 0 2px var(--color-primary), 0 4px 12px rgba(59, 130, 246, .35); }
-    .group-title-ai { display: flex; align-items: center; gap: 7px; }
-    .group-title-ai svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* 性能模式：当前状态 + 设备信息 + 三选一（精简，无长说明） */
+    .perf-status {
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px 4px;
+      font-size: 14px; color: var(--color-text);
+    }
+    .perf-status b { font-weight: 700; }
+    .perf-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      background: var(--color-accent);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
+    .perf-dot.tier-medium { background: var(--color-primary); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+    .perf-dot.tier-low { background: var(--color-warning); box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15); }
+    .perf-device {
+      padding: 2px 16px 12px;
+      font-size: 12px; color: var(--color-text-sub);
+    }
+
+    /* 退出登录：独立红卡 */
+    .logout-card {
+      background: var(--glass-bg);
+      -webkit-backdrop-filter: var(--glass-blur);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      box-shadow: var(--glass-highlight), var(--shadow-sm);
+      border-radius: var(--radius-lg);
+      padding: 15px 0;
+      text-align: center;
+      color: var(--color-danger);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.15s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .logout-card:active { transform: scale(0.98); background: var(--color-danger-light); }
 
     .settings-footer {
       text-align: center;
-      padding: 20px 16px 30px;
+      padding: 22px 16px 30px;
       font-size: 12px;
       color: var(--color-text-hint);
+      line-height: 1.9;
     }
+    .settings-footer .foot-ver { font-weight: 600; color: var(--color-text-sub); }
   </style>
 </head>
 <body data-page="settings">
@@ -170,7 +214,7 @@
 
         <!-- 通知设置 -->
         <div class="settings-group anim-fade-in-up stagger-1">
-          <div class="settings-group-title">通知设置</div>
+          <div class="settings-group-title"><span class="group-emoji">📢</span>通知设置</div>
           <div class="settings-card">
             <div class="settings-item" onclick="toggleNotify('pickup')">
               <div class="settings-item-icon" style="background:var(--color-danger-light);">
@@ -206,12 +250,8 @@
         </div>
 
         <!-- 外观设置 -->
-        <svg width="0" height="0" style="position:absolute;"><defs><linearGradient id="aiGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3B82F6"/><stop offset="1" stop-color="#22D3EE"/></linearGradient></defs></svg>
         <div class="settings-group anim-fade-in-up stagger-2">
-          <div class="settings-group-title group-title-ai">
-            <svg viewBox="0 0 24 24" fill="url(#aiGrad)"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9z"/><path d="M19 3l.7 2 .3 1 1 .3 2 .7-2 .7-1 .3-.3 1-.7 2-.7-2-.3-1-1-.3-2-.7 2-.7 1-.3.3-1z"/></svg>
-            外观设置
-          </div>
+          <div class="settings-group-title"><span class="group-emoji">🎨</span>外观设置</div>
           <div class="settings-card">
             <div style="padding: 14px 16px 10px;">
               <div class="settings-item-title" style="font-size:14px;">显示模式</div>
@@ -237,17 +277,15 @@
           </div>
         </div>
 
-        <!-- 性能模式 -->
+        <!-- 性能模式：当前状态 + 设备信息 + 三选一 -->
         <div class="settings-group anim-fade-in-up stagger-3">
-          <div class="settings-group-title group-title-ai">
-            <svg viewBox="0 0 24 24" fill="url(#aiGrad)"><path d="M13 2L4 13.5h6.5L10 22l9-11.5h-6.5z"/></svg>
-            性能模式
-          </div>
+          <div class="settings-group-title"><span class="group-emoji">⚡</span>性能模式</div>
           <div class="settings-card">
-            <div style="padding: 14px 16px 10px;">
-              <div class="settings-item-title" style="font-size:14px;">渲染与识别性能</div>
-              <div class="settings-item-desc" id="perfTierDesc">根据设备能力自动调整 3D 地图画质、动画与扫码频率</div>
+            <div class="perf-status">
+              <span class="perf-dot" id="perfDot"></span>
+              当前：<b id="perfNow">自动</b>
             </div>
+            <div class="perf-device" id="perfDevice">正在评估设备能力…</div>
             <div class="theme-options">
               <div class="theme-option" data-perf="auto" onclick="setPerfMode('auto')">
                 <div class="theme-option-icon"><span class="ai-ico"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 5 5 1.7-5 1.7L12 16.5l-1.7-5.1-5-1.7 5-1.7z"/><path d="M18.5 14.5l.6 1.8 1.8.6-1.8.6-.6 1.8-.6-1.8-1.8-.6 1.8-.6z"/></svg></span></div>
@@ -267,7 +305,7 @@
 
         <!-- 账号安全 -->
         <div class="settings-group anim-fade-in-up stagger-4">
-          <div class="settings-group-title">账号安全</div>
+          <div class="settings-group-title"><span class="group-emoji">🔒</span>账号安全</div>
           <div class="settings-card">
             <div class="settings-item" onclick="showChangePasswordTip()">
               <div class="settings-item-icon" style="background:var(--color-primary-light);">
@@ -281,23 +319,17 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
             </div>
-            <div class="settings-item" onclick="showLogoutConfirm()">
-              <div class="settings-item-icon" style="background:var(--color-danger-light);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-              </div>
-              <div class="settings-item-body">
-                <div class="settings-item-title" style="color:var(--color-danger);">退出登录</div>
-              </div>
-              <div class="settings-item-arrow">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </div>
-            </div>
           </div>
+        </div>
+
+        <!-- 退出登录：独立红色卡片 -->
+        <div class="settings-group anim-fade-in-up stagger-4">
+          <div class="logout-card" id="logoutCard" onclick="showLogoutConfirm()">退出登录</div>
         </div>
 
         <!-- 灰度体验会话：退出产品体验（仅从灰度页「一键体验」进入时可见） -->
         <div class="settings-group anim-fade-in-up stagger-4" id="trialExitGroup" style="display:none;">
-          <div class="settings-group-title">产品体验</div>
+          <div class="settings-group-title"><span class="group-emoji">🧪</span>产品体验</div>
           <div class="settings-card">
             <div class="settings-item" onclick="exitTrial()">
               <div class="settings-item-icon" style="background:#FEF3C7;">
@@ -314,9 +346,9 @@
           </div>
         </div>
 
-        <!-- 关于软件 -->
-        <div class="settings-group anim-fade-in-up stagger-4">
-          <div class="settings-group-title">关于软件</div>
+        <!-- 关于软件（固定底部） -->
+        <div class="settings-group anim-fade-in-up stagger-5">
+          <div class="settings-group-title"><span class="group-emoji">ℹ️</span>关于软件</div>
           <div class="settings-card">
             <div class="settings-item" onclick="showAbout()">
               <div class="settings-item-icon" style="background:var(--color-accent-light);">
@@ -325,7 +357,7 @@
               <div class="settings-item-body">
                 <div class="settings-item-title">版本信息</div>
               </div>
-              <span class="settings-item-value">v1.0.0</span>
+              <span class="settings-item-value">v10.0.0</span>
               <div class="settings-item-arrow">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
               </div>
@@ -367,7 +399,8 @@
         </div>
 
         <div class="settings-footer anim-fade-in-up stagger-5">
-          校园取件 v1.0.0 · Made with ❤️
+          <span class="foot-ver">校园生活 Campus Life v10.0.0</span><br>
+          © 2026 Campus Life · Made with ❤️
         </div>
 
       </div>
@@ -390,8 +423,8 @@
       initPerfMode();
       // demo 模式：退出登录改为重置演示数据
       if (typeof APP_CONFIG !== 'undefined' && APP_CONFIG.isDemo) {
-        var item = document.querySelector('.settings-item[onclick="showLogoutConfirm()"] .settings-item-title');
-        if (item) item.textContent = '重置演示数据';
+        var card = document.getElementById('logoutCard');
+        if (card) card.textContent = '重置演示数据';
       }
       // 灰度「一键体验」会话：显示退出产品体验入口
       try {
@@ -434,7 +467,8 @@
     function initPerfMode() {
       var mode = Storage.getSettings().perfMode || 'auto';
       highlightPerfOption(mode);
-      updatePerfTierDesc(mode);
+      updatePerfNow(mode);
+      updatePerfDevice();
     }
 
     // ---- 通知开关 ----
@@ -481,11 +515,7 @@
     }
 
     // ---- 性能模式（自动 / 省电 / 高性能）----
-    var PERF_MODE_DESC = {
-      auto:  '根据设备能力自动调整 3D 地图画质、动画与扫码频率',
-      saver: '降低地图画质、动画与摄像头分析频率，优先续航',
-      perf:  '更高 3D 画质与动画效果（不超过浏览器/系统限制）',
-    };
+    var PERF_MODE_NAME = { auto: '自动', saver: '省电', perf: '高性能' };
     var PERF_TIER_NAME = { high: '高性能档', medium: '均衡档', low: '省电档' };
 
     function setPerfMode(mode) {
@@ -493,10 +523,10 @@
       settings.perfMode = mode;
       Storage.saveSettings(settings);
       highlightPerfOption(mode);
-      updatePerfTierDesc(mode);
+      updatePerfNow(mode);
       // 通知 perf.js 立即切换档位（3D 地图等页面下次读取即生效）
       if (typeof Perf !== 'undefined' && Perf.setMode) Perf.setMode(mode);
-      App.toast(mode === 'auto' ? '已恢复自动性能模式' : (mode === 'saver' ? '已切换省电模式' : '已切换高性能模式'));
+      App.toast('已切换' + (PERF_MODE_NAME[mode] || '自动') + '模式');
     }
 
     function highlightPerfOption(mode) {
@@ -506,17 +536,32 @@
       });
     }
 
-    function updatePerfTierDesc(mode) {
-      var desc = document.getElementById('perfTierDesc');
-      if (!desc) return;
-      var text = PERF_MODE_DESC[mode] || PERF_MODE_DESC.auto;
-      if (typeof Perf !== 'undefined' && Perf.caps) {
-        text += '。设备评估：' + (PERF_TIER_NAME[Perf.autoLevel] || Perf.autoLevel) +
-          '（' + Perf.caps.cpuCores + ' 核 CPU' +
-          (Perf.caps.webgl2 ? ' · WebGL2' : (Perf.caps.webgl ? ' · WebGL' : '')) +
-          (Perf.caps.webgpu ? ' · WebGPU 可用' : '') + '）';
+    // 当前状态行：模式 + 实际档位 + 状态点颜色
+    function updatePerfNow(mode) {
+      var now = document.getElementById('perfNow');
+      var dot = document.getElementById('perfDot');
+      var tier = 'medium';
+      try {
+        if (typeof Perf !== 'undefined' && Perf.tierKey) tier = Perf.tierKey();
+      } catch (e) {}
+      if (now) now.textContent = (PERF_MODE_NAME[mode] || '自动') + ' · ' + (PERF_TIER_NAME[tier] || '均衡档');
+      if (dot) {
+        dot.className = 'perf-dot' + (tier === 'medium' ? ' tier-medium' : tier === 'low' ? ' tier-low' : '');
       }
-      desc.textContent = text;
+    }
+
+    // 设备信息行：一行小字，不再堆长说明
+    function updatePerfDevice() {
+      var el = document.getElementById('perfDevice');
+      if (!el) return;
+      if (typeof Perf === 'undefined' || !Perf.caps) { el.textContent = '设备信息不可用'; return; }
+      var caps = Perf.caps;
+      var parts = [caps.cpuCores + ' 核 CPU'];
+      if (caps.webgl2) parts.push('WebGL2');
+      else if (caps.webgl) parts.push('WebGL');
+      if (caps.webgpu) parts.push('WebGPU');
+      if (caps.deviceMemory) parts.push('约 ' + caps.deviceMemory + 'GB 内存');
+      el.textContent = '你的设备：' + parts.join(' · ');
     }
 
     // ---- 退出登录 ----
@@ -571,12 +616,12 @@
     // ---- 关于 / 协议 ----
     function showAbout() {
       App.showModal({
-        title: '关于校园取件',
+        title: '关于校园生活',
         desc: '<div style="text-align:center;line-height:2;">' +
-          '<div style="font-size:18px;font-weight:700;">校园取件 v1.0.0</div>' +
-          '<div style="font-size:13px;color:var(--color-text-sub);">便捷的校园快递管理助手</div>' +
+          '<div style="font-size:18px;font-weight:700;">校园生活 Campus Life v10.0.0</div>' +
+          '<div style="font-size:13px;color:var(--color-text-sub);">一站式校园生活助手 · Apple Liquid Glass 设计</div>' +
           '<div style="font-size:12px;color:var(--color-text-hint);margin-top:8px;">' +
-            '版本：1.0.0<br>构建日期：2026.09</div>' +
+            '版本：10.0.0<br>© 2026 Campus Life</div>' +
           '</div>',
         confirmText: '知道了'
       });
